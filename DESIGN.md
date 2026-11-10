@@ -98,7 +98,7 @@ Sizes grow from the phone mocks (390px wide) to the desktop mocks (1440px). Step
 | `--step-display-3` | 36 | 49 | Section headings | `--leading-display` |
 | `--step-display-4` | 28 | 40 | Contact email | `--leading-heading` |
 | `--step-display-5` | 28 | 35 | Project names | `--leading-heading` |
-| `--step-lede` | 26 | 35 | About lede | `--leading-lede` |
+| `--step-lede` | 25 | 35 | About lede | `--leading-lede` |
 | `--step-display-6` | 28 | 32 | Results numbers | `--leading-none` |
 | `--step-display-7` | 26 | 32 | Case study section headings | `--leading-heading` |
 | `--step-display-8` | 24 | 29 | Experience roles | `--leading-heading` |
