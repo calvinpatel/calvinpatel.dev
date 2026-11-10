@@ -9,5 +9,6 @@
     "artifact-design": "off",
     "artifact-diagramming": "off"
   },
-  "disableClaudeAiConnectors": true
+  "disableClaudeAiConnectors": true,
+  "autoMemoryEnabled": false
 }
