@@ -66,7 +66,7 @@ Deploys happen through Workers Builds. Don't run `wrangler deploy` unless Cal as
 **Building**
 
 10. Build order: the static shell, then each section, then the interactive pieces, then the data, then motion last. Each interactive piece is built with its keyboard, touch, and reduced-motion behavior at the same time, not afterward.
-11. Check visually before calling a piece done. Take Playwright screenshots at 375, 768, 1440, and 1920px wide and compare them against the artboards and DESIGN.md.
+11. Check visually before calling a piece done. Take Playwright screenshots at 375, 768, 1440, and 1920px wide and compare them against the artboards and DESIGN.md. Save each one as .playwright-mcp/<page>-<width>.png, so Cal can review them.
 12. Commit after every piece that works, and push to GitHub.
 
 **Neuron data**
