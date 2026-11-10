@@ -1,0 +1,236 @@
+/* calvinpatel.dev design tokens (lives at src/styles/tokens.css)
+
+   The single source of truth. Code reads every color, size, and timing from
+   here and never hard-codes one. Canvas and SVG scripts read these values at
+   startup with getComputedStyle(document.documentElement).getPropertyValue().
+   DESIGN.md explains each token and the reasons behind it.
+
+   Dark only for v1.
+
+   Breakpoints (media queries can't read custom properties, so they're listed here):
+     760px  hero, Projects rows, Experience rows, and case study results
+            change to their phone layouts below this width
+     900px  About photo and Contact figure stack below this width
+
+   Fluid sizes run from the 390px phone mocks to the 1440px desktop mocks.
+   Steps written as a plain vw value keep the chosen mock's own formula. */
+
+:root {
+  color-scheme: dark;
+
+  /* ---------------------------------------------------------------------
+     Color: interface. Named by job. The grays carry a trace of DAPI blue's
+     hue (OKLCH chroma 0.007, hue 268). Ratios are against --color-bg.
+     --------------------------------------------------------------------- */
+  --color-bg:             #000000;
+  --color-surface:        #0e1014;  /* figure boxes */
+  --color-border:         #212327;  /* edge of a surface; decoration only (1.21:1) */
+  --color-hairline:       #2c2e32;  /* thin rules; decoration only (1.54:1) */
+  --color-text:           #dddfe4;  /* 15.75:1 */
+  --color-text-secondary: #caccd1;  /* 13.07:1 */
+  --color-text-muted:     #aaacb1;  /*  9.25:1 */
+  --color-link-underline: #67696d;  /*  3.82:1; brightens to --color-text on hover */
+  --color-selection:      #3b3d41;
+  --color-focus:          var(--color-text);
+  --focus-width:          2px;
+  --focus-offset:         4px;
+  --link-underline-offset: 4px;
+  --label-shadow:         0 0 2px #000, 0 0 8px #000;  /* brain labels only */
+  --radius:               12px;     /* figure boxes */
+
+  /* No UI accent color: links are the text color and marked by their underline. */
+
+  /* ---------------------------------------------------------------------
+     Color: illustration. Never used for text or interface.
+     --------------------------------------------------------------------- */
+  --ink:             var(--color-text);  /* all line art: dividers, dendrite, raster, Skills wiring, synapse */
+  --fluor-gfp:       #44e07c;
+  --fluor-tdtomato:  #ff5a4a;
+  --fluor-dapi:      #4f6dff;
+
+  /* Opacity floors for things drawn near or as information */
+  --ink-meaningful-min: 0.41;  /* --ink opacity for line art that carries information (3:1) */
+  --dim-text-min:       0.53;  /* dimmed labels are --color-text at this opacity or more (4.5:1),
+                                  whatever color they have at rest */
+
+  /* Neuron layer behind any text, including every brain label position.
+     The brightest pixel, counting signals, soma glows, and overlaps, stays at
+     or under this luminance. Over black that equals these channel opacities. */
+  --canvas-cap-luminance: 0.053;
+  --canvas-cap-gfp:       0.33;
+  --canvas-cap-tdtomato:  0.45;
+  --canvas-cap-dapi:      0.53;
+
+  /* ---------------------------------------------------------------------
+     Type
+     --------------------------------------------------------------------- */
+  --font-display: "Fraunces", Georgia, serif;
+  --font-text:    "IBM Plex Sans", system-ui, sans-serif;  /* 400, 400 italic, 500; also every arrow: Fraunces has no → */
+  --display-settings: "SOFT" 100, "WONK" 1;  /* optical size stays automatic */
+  --display-tracking: -0.01em;
+  --weight-regular: 400;
+  --weight-medium:  500;  /* brain-label names only */
+
+  /* Display steps, Fraunces.               phone (390) → 1440 */
+  --step-display-1: clamp(3rem, 5.5vw, 5rem);          /* 48 → 79, hero name */
+  --step-display-2: clamp(2.75rem, 5vw, 4.5rem);       /* 44 → 72, case study title */
+  --step-display-3: clamp(2.25rem, 3.4vw, 3.25rem);    /* 36 → 49, section headings */
+  --step-display-4: clamp(1.75rem, 2.8vw, 2.75rem);    /* 28 → 40, Contact email */
+  --step-display-5: clamp(1.75rem, 2.4vw, 2.25rem);    /* 28 → 35, project names, About lede */
+  --step-display-6: clamp(1.75rem, 2.2vw, 2.5rem);     /* 28 → 32, results numbers */
+  --step-display-7: clamp(1.625rem, 1.4857rem + 0.5714vw, 2rem);  /* 26 → 32, case study section headings */
+  --step-display-8: clamp(1.5rem, 2vw, 1.875rem);      /* 24 → 29, Experience roles */
+  --size-mark: 1.375rem;                               /* 22, the CP mark (fixed) */
+
+  /* Text steps, IBM Plex Sans.             phone (390) → 1440 */
+  --step-text-1: clamp(1.1875rem, 1.1179rem + 0.2857vw, 1.375rem);  /* 19 → 22, case study lede */
+  --step-text-2: clamp(1.125rem, 1.45vw, 1.3125rem);                /* 18 → 21, hero sentences */
+  --step-text-3: clamp(1.0625rem, 1.0393rem + 0.0952vw, 1.125rem);  /* 17 → 18, long reading text */
+  --step-text-4: 1rem;                                              /* 16, body, links */
+  --step-text-5: clamp(0.875rem, 0.8518rem + 0.0952vw, 0.9375rem);  /* 14 → 15, nav, result labels */
+  --step-text-6: 0.875rem;                                          /* 14, status, dates, captions */
+  --step-text-7: 0.8125rem;                                         /* 13, smallest text anywhere */
+
+  --leading-none:    1;     /* hero name, case study title, results numbers, CP mark */
+  --leading-display: 1.05;  /* section headings */
+  --leading-heading: 1.15;  /* headings that can wrap */
+  --leading-lede:    1.25;  /* About lede, brain-label names */
+  --leading-label:   1.4;   /* small labels, dates, captions */
+  --leading-snug:    1.45;  /* hero sentences, ledes, short descriptions */
+  --leading-body:    1.6;   /* body text */
+  --leading-prose:   1.7;   /* long reading text */
+
+  /* ---------------------------------------------------------------------
+     Spacing                                 phone (390) → 1440
+     --------------------------------------------------------------------- */
+  --space-3xs:     0.25rem;                                     /*   4 */
+  --space-2xs:     0.5rem;                                      /*   8, stacked lines, link rows */
+  --space-xs:      0.75rem;                                     /*  12, tight gaps */
+  --space-s:       clamp(1rem, 0.9071rem + 0.3810vw, 1.25rem);  /* 16 → 20, gaps inside an entry */
+  --space-m:       clamp(1.5rem, 1.3143rem + 0.7619vw, 2rem);   /* 24 → 32, between items */
+  --space-l:       clamp(2rem, 1.6286rem + 1.5238vw, 3rem);     /* 32 → 48, heading to content */
+  --space-xl:      clamp(3rem, 2.4429rem + 2.2857vw, 4.5rem);   /* 48 → 72, wide gaps, case study parts */
+  --space-section: clamp(5rem, 4.0714rem + 3.8095vw, 7.5rem);   /* 80 → 120, top and bottom of a section */
+  --gutter:        clamp(20px, 5vw, 64px);                      /* page side margins */
+
+  /* ---------------------------------------------------------------------
+     Layout
+     --------------------------------------------------------------------- */
+  --page-max:          1320px;  /* includes gutters: 1192px of content at full width */
+  --reading-max:       680px;   /* case study column, About story */
+  --measure:           66ch;    /* descriptions */
+  --dendrite-margin:   40px;    /* About's dendrite column beside the story (20px edge on phones) */
+  --about-photo:       340px;   /* desktop photo column; 300px max on phones, 4:5 */
+  --hero-brain:        58%;     /* of the hero's content width */
+  --hero-text-min:     360px;
+  --col-status:        160px;   /* Projects rows: status | text | links */
+  --col-links:         200px;
+  --col-dates:         200px;   /* Experience rows: dates | text */
+  --col-gap:           32px;
+  --contact-figure:    430px;   /* Contact: figure | contact block */
+  --axon-node-spacing: 80px;    /* desktop dividers; phones use four even sheaths */
+  --tap-min:           44px;
+
+  /* ---------------------------------------------------------------------
+     Drawings. Measurements from the chosen artboards, in CSS px at every
+     width (drawings are drawn at their real size, never scaled). Opacities
+     apply to --ink. DESIGN.md's Drawings section explains each one.
+     --------------------------------------------------------------------- */
+  --line: 1px;                        /* default stroke for all line art */
+
+  /* Experience spike raster: a 16px band with the baseline through its middle */
+  --raster-band:          16px;       /* also the cursor's height */
+  --raster-baseline-op:   0.1;        /* decoration */
+  --raster-tick:          6px;        /* year marks, centered on the baseline */
+  --raster-tick-op:       0.28;       /* decoration */
+  --raster-spike:         12px;       /* centered on the baseline */
+  --raster-spike-stroke:  1.2px;      /* round ends; rests at --ink-rest */
+  --raster-pitch:         4px;        /* spike to spike inside a burst */
+  --raster-ft-burst-min:  3;          /* full-time: 3 to 4 spikes per burst */
+  --raster-ft-burst-max:  4;
+  --raster-ft-gap-min:    11px;       /* full-time: burst to burst */
+  --raster-ft-gap-max:    23px;
+  --raster-pt-burst-max:  2;          /* part-time: 1 to 2 spikes per burst */
+  --raster-pt-gap-min:    22px;
+  --raster-pt-gap-max:    44px;
+  --raster-marker:        18px;       /* ongoing role: a vertical line at full ink */
+  --raster-marker-stroke: 1.6px;
+
+  /* Myelinated axon dividers (Projects, case study, Contact) */
+  --axon-band:            28px;       /* the axon runs through its middle */
+  --axon-op:              0.5;
+  --axon-soma:            12px;       /* diameter; first divider only; flashes like a node */
+  --hillock-length:       20px;       /* tapers from 9px wide at the soma to 1.4px */
+  --hillock-width:        9px;
+  --hillock-op:           0.35;
+  --sheath-length:        72px;       /* pitch is --axon-node-spacing, leaving 8px gaps */
+  --sheath-height:        7px;
+  --sheath-fill-op:       0.07;
+  --sheath-edge-op:       0.34;
+  --lamella-stroke:       0.6px;      /* two lines per sheath, 1.6px either side of the axon */
+  --lamella-inset:        10px;       /* from each end of the sheath */
+  --lamella-op:           0.2;
+  --node-radius:          1.8px;      /* nodes of Ranvier, in the gaps; rest at --ink-rest */
+  --terminal-length:      82px;       /* last divider: the axon splits this far from its end */
+  --bouton-radius:        2.6px;
+
+  /* About dendrite */
+  --dendrite-trunk-op:    0.4;
+  --dendrite-branch-op:   0.55;
+  --dendrite-pruned-op:   0.32;       /* the medical-school branch */
+  --dendrite-cone-op:     0.6;        /* the growth cone */
+  --dendrite-soma:        9px;        /* diameter; 6px on phones */
+
+  /* Skills wiring */
+  --wire-op:              0.41;       /* at rest: carries information, so it sits on the floor */
+  --wire-traced-op:       0.85;
+  --wire-traced-stroke:   1.4px;
+  --wire-dimmed-op:       0.05;       /* lines only; labels follow --dim-text-min */
+  --wire-row:             22px;       /* skill to skill */
+  --wire-group-gap:       12px;       /* extra space between skill groups */
+  --wire-skill-dot:       6px;        /* diameters; phones use 5px and 8px for skills and places */
+  --wire-group-dot:       10px;
+  --wire-place-dot:       12px;
+  --wire-label-halo:      5px;        /* black outline behind group labels */
+
+  /* ---------------------------------------------------------------------
+     Motion. DESIGN.md's Motion section says where each value is used.
+     Speeds are unitless px per ms; scripts parseFloat them.
+     --------------------------------------------------------------------- */
+
+  /* Signals: the hero's neuron layer and the brain callouts */
+  --signal-dendrite:    0.32;
+  --signal-axon:        1.15;
+  --signal-backprop:    0.55;    /* also the pulse along a brain callout */
+  --membrane-tau:       260ms;
+  --fire-threshold:     1;
+  --refractory:         420ms;
+  --spontaneous-window: 5000ms;  /* the layer fires on its own only this long after load */
+
+  /* Section drawings: each plays once, the first time it is fully in view */
+  --hop:          130ms;   /* node to node along an axon; the stagger step */
+  --flash-in:     120ms;   /* a node, spike, or tip brightening */
+  --flash-out:    400ms;   /* then fading back to rest */
+  --ink-rest:     0.45;    /* resting opacity of axon nodes and raster spikes */
+  --sweep:        2700ms;  /* Experience cursor across one row */
+  --sweep-cursor: 0.7;     /* cursor opacity */
+  --grow:         600ms;   /* About: one dendrite segment */
+  --draw:         450ms;   /* About: one branch */
+  --grow-stagger: 400ms;   /* About: between parts */
+
+  /* Contact's one-time sequence, measured from the first hop */
+  --contact-release:  350ms;   /* vesicles release */
+  --contact-receptor: 800ms;   /* receptor band brightens */
+  --contact-underline: 1000ms; /* email underline brightens */
+  --contact-settle:   900ms;   /* receptor band and underline easing back to rest */
+
+  /* Interface */
+  --hover:            300ms;  /* lobe highlight */
+  --fade:             200ms;  /* labels and small parts appearing */
+  --fade-out:         120ms;  /* labels leaving */
+  --shelf:            140ms;  /* brain label shelf growing */
+  --shelf-text-delay: 70ms;
+
+  --ease-travel: linear;                       /* anything moving along a path at a set speed */
+  --ease-out:    cubic-bezier(0.2, 0.8, 0.2, 1); /* anything that appears, grows, or fades */
+}
