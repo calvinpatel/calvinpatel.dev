@@ -241,7 +241,7 @@ Each divider is a `--axon-band` (28px) strip with the axon through its middle. C
 
 ### Dendrite (About)
 
-- **Desktop.** A `--dendrite-margin` (40px) column left of the story, with a 20px gap. The trunk is a `--line` line at `--dendrite-trunk-op` down the column's center (x = 20), from 12px below the top of the first paragraph to 20px past the end of the last.
+- **Desktop.** A `--dendrite-margin` (40px) column left of the story, with a 20px gap. The trunk is a `--line` line at `--dendrite-trunk-op` down the column's center (x = 20), from 12px below the top of the first paragraph to the growth cone's tip, 6px below the top of the last paragraph.
 - **Turning points.** Each is drawn in a 40 × 48 box at the top of its paragraph (the growth cone's box is 40 × 20, set 2px down). Branches are `--line` lines with round ends.
 
 ```
@@ -255,7 +255,7 @@ Each divider is a `--axon-band` (28px) strip with the axon through its middle. C
                             tips: radius 1.3 at (13, 15.5), (20, 17.5), (27, 15.5), full ink
 ```
 
-- **Phones.** The dendrite sits in the 20px left edge. Each box is 16 × 32 at left −20px, with the trunk at x = 8; the cone's box is 16 × 16, set 7px down, with no tip dots.
+- **Phones.** The dendrite sits in the 20px left edge. Each box is 16 × 32 at left −20px, with the trunk at x = 8; the cone's box is 16 × 16, set 7px down, with no tip dots. The trunk ends at the cone's tip, 7px below the top of the last paragraph.
 
 ```
 1. soma: circle (8, 10), diameter 6px; branch M8 22 Q5 18 2 14

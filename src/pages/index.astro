@@ -2,6 +2,7 @@
 // The home page: the hero, then the five sections in site.md's order.
 import { getEntry } from 'astro:content';
 
+import About from '../components/About.astro';
 import Hero from '../components/Hero.astro';
 import Layout from '../components/Layout.astro';
 import Section from '../components/Section.astro';
@@ -9,9 +10,21 @@ import { copyText } from '../lib/copy.ts';
 
 const site = (await getEntry('site', 'site'))!.data;
 const hero = (await getEntry('hero', 'hero'))!.data;
+
+// Each section's content, by its id. A section not listed yet has only its heading.
+const content: Partial<Record<string, typeof About>> = { about: About };
 ---
 
 <Layout title={copyText(hero.name)} description={hero.lines.map(copyText).join(' ')} home>
   <Hero />
-  {site.sections.map((section) => <Section id={section.id} label={section.label} />)}
+  {
+    site.sections.map((section) => {
+      const Content = content[section.id];
+      return (
+        <Section id={section.id} label={section.label}>
+          {Content && <Content />}
+        </Section>
+      );
+    })
+  }
 </Layout>

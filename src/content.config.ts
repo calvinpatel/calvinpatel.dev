@@ -132,7 +132,7 @@ const about = defineCollection({
   schema: ({ image }) =>
     z
       .object({
-        lede: text,
+        lede: z.tuple([text, text]), // each sentence starts its own line
         // Five paragraphs, one per turning point of the margin dendrite:
         // soma, pruned branch, both sides, two branches, growth cone.
         story: z.array(inline).length(5),

@@ -1,0 +1,162 @@
+---
+// The About section: the lede, the photo, and the story with the dendrite down
+// its margin. In the page's source the photo comes right after the lede, which
+// is where it sits below 900px; on desktop the grid moves it beside the story.
+import { Image } from 'astro:assets';
+import { getEntry } from 'astro:content';
+
+import Copy from './Copy.astro';
+import Dendrite from './Dendrite.astro';
+import { copyText } from '../lib/copy.ts';
+
+const about = (await getEntry('about', 'about'))!.data;
+
+// The photo's two display widths, --about-photo-phone and --about-photo. An
+// <img>'s attributes can't read custom properties, so both are restated here,
+// like the breakpoint. Each gets a file for 1x, 2x, and 3x screens, so a phone
+// downloads a file made for its own width.
+const PHOTO = { phone: 300, desktop: 340 };
+const widths = [1, 2, 3].flatMap((density) => [PHOTO.phone * density, PHOTO.desktop * density]);
+const sizes = `(width < 900px) ${PHOTO.phone}px, ${PHOTO.desktop}px`;
+---
+
+<div class="about">
+  <p class="lede display">
+    {
+      about.lede.map((line) => (
+        <span>
+          <Copy text={line} />
+        </span>
+      ))
+    }
+  </p>
+  {
+    about.photo && (
+      <figure class="photo">
+        <Image
+          src={about.photo.src}
+          alt={copyText(about.photo.alt)}
+          widths={widths}
+          sizes={sizes}
+          width={PHOTO.desktop * 2}
+        />
+        {about.photo.caption && (
+          <figcaption>
+            <Copy text={about.photo.caption} />
+          </figcaption>
+        )}
+      </figure>
+    )
+  }
+  <div class="story">
+    <Dendrite piece="trunk" />
+    {
+      about.story.map((paragraph, i) => (
+        <p>
+          <Dendrite piece={i} />
+          <Copy text={paragraph} />
+        </p>
+      ))
+    }
+  </div>
+</div>
+
+<style>
+  /* The dendrite margin and its gap, then the story at its reading width, then
+     the photo column. Any spare width stays on the right. */
+  .about {
+    --story-inset: calc(var(--dendrite-margin) + var(--dendrite-gap));
+
+    display: grid;
+    grid-template-columns: minmax(0, calc(var(--story-inset) + var(--reading-max))) var(--about-photo);
+    justify-content: start;
+    gap: var(--space-l) var(--space-xl);
+  }
+
+  .lede {
+    grid-column: 1 / -1;
+    font-size: var(--step-display-5);
+    line-height: var(--leading-lede);
+  }
+
+  /* Each sentence starts its own line. */
+  .lede span {
+    display: block;
+    text-wrap: balance;
+  }
+
+  .photo {
+    --photo-ratio: 4 / 5;
+
+    grid-column: 2;
+    grid-row: 2;
+    align-self: start;
+  }
+
+  .photo img {
+    width: 100%;
+    height: auto;
+    aspect-ratio: var(--photo-ratio);
+    object-fit: cover;
+    border-radius: var(--radius);
+  }
+
+  figcaption {
+    margin-top: var(--space-2xs);
+    color: var(--color-text-muted);
+    font-size: var(--step-text-6);
+    line-height: var(--leading-label);
+  }
+
+  /* One row per paragraph. The first column has no width: it holds only the
+     dendrite's trunk, which spans the rows (Dendrite.astro). */
+  .story {
+    /* The trunk reads this to cross the gap above the last paragraph. */
+    --story-gap: var(--space-s);
+
+    display: grid;
+    grid-template-columns: 0 minmax(0, 1fr);
+    row-gap: var(--story-gap);
+    grid-column: 1;
+    grid-row: 2;
+    padding-left: var(--story-inset);
+    color: var(--color-text-secondary);
+    font-size: var(--step-text-3);
+    line-height: var(--leading-prose);
+  }
+
+  /* Each paragraph places its own turning point. */
+  .story p {
+    position: relative;
+    grid-column: 2;
+  }
+
+  @media (width < 900px) {
+    /* One column: the lede, the photo, then the story. */
+    .about {
+      grid-template-columns: minmax(0, 1fr);
+    }
+
+    .photo,
+    .story {
+      grid-column: auto;
+      grid-row: auto;
+    }
+
+    .photo {
+      width: min(100%, var(--about-photo-phone));
+    }
+
+    .story {
+      max-width: calc(var(--story-inset) + var(--reading-max));
+    }
+  }
+
+  @media (width < 760px) {
+    /* The dendrite moves into the page's left edge, so the story keeps its
+       full width. */
+    .about {
+      --story-inset: 0px;
+    }
+  }
+</style>

@@ -1,0 +1,202 @@
+---
+// One piece of the About dendrite (DESIGN.md, Drawings: Dendrite): the trunk,
+// or the turning point at the top of one story paragraph. About.astro places
+// them: the trunk as the story's first child, and each turning point inside
+// its paragraph, which is `position: relative`. Every piece is positioned
+// from the paragraphs themselves, so the drawing stays with the text when it
+// wraps or is enlarged.
+//
+// Drawn fully grown: the resting state and the reduced-motion state. The
+// growing animation comes with the motion step.
+//
+// The trunk is a single piece on purpose. Built as one stretch per paragraph,
+// it showed a brighter pixel row where two stretches met, at 1x and 3x.
+//
+// Each turning point is drawn twice at its real pixel size: in a 40px box for
+// the desktop margin, and in a 16px box for the phone's left edge. The path
+// data and circle positions below are DESIGN.md's, unchanged.
+
+interface Props {
+  /** `'trunk'`, or a paragraph's place in the story, counting from 0. */
+  piece: 'trunk' | number;
+}
+
+// The five turning points, in story order.
+const PARTS = ['soma', 'pruned', 'both-sides', 'two-branches', 'cone'] as const;
+
+const { piece } = Astro.props;
+const part = piece === 'trunk' ? undefined : PARTS[piece];
+
+// The trunk spans the story's rows from the first paragraph's down to the top
+// of the last one's.
+const trunkRows = `1 / span ${PARTS.length - 1}`;
+---
+
+{piece === 'trunk' && <span class="trunk" style={`grid-row: ${trunkRows}`} aria-hidden="true" />}
+{
+  part && (
+    <span class="turn" data-part={part} aria-hidden="true">
+      {part === 'soma' && (
+        <>
+          <svg class="wide" width="40" height="48">
+            <path class="branch" d="M20 32 Q13 27 7 18 M11 23 L3 24" />
+            <circle class="cell" cx="20" cy="12" />
+          </svg>
+          <svg class="narrow" width="16" height="32">
+            <path class="branch" d="M8 22 Q5 18 2 14" />
+            <circle class="cell" cx="8" cy="10" />
+          </svg>
+        </>
+      )}
+      {part === 'pruned' && (
+        <>
+          <svg class="wide" width="40" height="48">
+            <path class="pruned" d="M20 14 Q11 18 5 29" />
+            <circle class="bouton" cx="5" cy="30" r="2" />
+          </svg>
+          <svg class="narrow" width="16" height="32">
+            <path class="pruned" d="M8 12 Q5 15 2 20" />
+            <circle class="bouton" cx="1.6" cy="21" r="1.5" />
+          </svg>
+        </>
+      )}
+      {part === 'both-sides' && (
+        <>
+          <svg class="wide" width="40" height="48">
+            <path class="branch" d="M20 16 Q12 11 6 3 M10 8 L2 11 M20 26 Q27 22 34 14" />
+          </svg>
+          <svg class="narrow" width="16" height="32">
+            <path class="branch" d="M8 14 Q5 10 2 5 M8 22 Q5 22 2 25" />
+          </svg>
+        </>
+      )}
+      {part === 'two-branches' && (
+        <>
+          <svg class="wide" width="40" height="48">
+            <path class="branch" d="M20 14 Q12 10 5 2 M20 24 Q12 27 5 35 M9 30 L3 27" />
+          </svg>
+          <svg class="narrow" width="16" height="32">
+            <path class="branch" d="M8 12 Q5 9 2 5 M8 20 Q5 22 2 26" />
+          </svg>
+        </>
+      )}
+      {part === 'cone' && (
+        <>
+          <svg class="wide" width="40" height="20">
+            <path class="prongs" d="M20 4 L13 15 M20 4 L20 17 M20 4 L27 15" />
+            <circle cx="13" cy="15.5" r="1.3" />
+            <circle cx="20" cy="17.5" r="1.3" />
+            <circle cx="27" cy="15.5" r="1.3" />
+          </svg>
+          <svg class="narrow" width="16" height="16">
+            <path class="prongs" d="M8 0 L4 9 M8 0 L8 11 M8 0 L12 9" />
+          </svg>
+        </>
+      )}
+    </span>
+  )
+}
+
+<style>
+  /* The drawing's geometry, from DESIGN.md's Dendrite section. These belong
+     with the path data above rather than in tokens.css. Positions are measured
+     from a paragraph's top left corner. */
+  .trunk,
+  .turn {
+    --box-left: calc(-1 * (var(--dendrite-margin) + var(--dendrite-gap))); /* the 40px margin, then the gap */
+    --trunk-x: 20px; /* the trunk's center, from the box's left edge */
+    --trunk-start: 12px; /* below the first paragraph's top: the soma's center */
+    --trunk-end: 6px; /* below the last paragraph's top: the growth cone's tip */
+    --cone-drop: 2px; /* the cone's box sits this far below its paragraph's top */
+
+    color: var(--ink);
+    pointer-events: none;
+  }
+
+  /* The story is a grid with one row per paragraph, and the trunk sits in its
+     empty first column, which starts at the paragraphs' left edge. It spans
+     the rows down to the top of the last paragraph, and its margins carry it
+     from the soma to the cone's tip. */
+  .trunk {
+    grid-column: 1;
+    justify-self: start;
+    width: var(--line);
+    margin-top: var(--trunk-start);
+    margin-bottom: calc(-1 * (var(--story-gap) + var(--trunk-end)));
+    margin-left: calc(var(--box-left) + var(--trunk-x) - var(--line) / 2);
+    background: currentColor;
+    opacity: var(--dendrite-trunk-op);
+  }
+
+  .turn {
+    position: absolute;
+    top: 0;
+    left: var(--box-left);
+  }
+
+  .turn[data-part='cone'] {
+    top: var(--cone-drop);
+  }
+
+  svg {
+    overflow: visible;
+  }
+
+  .narrow {
+    display: none;
+  }
+
+  path {
+    fill: none;
+    stroke: currentColor;
+    stroke-width: var(--line);
+    stroke-linecap: round;
+  }
+
+  circle {
+    fill: currentColor;
+  }
+
+  .branch {
+    opacity: var(--dendrite-branch-op);
+  }
+
+  .pruned {
+    opacity: var(--dendrite-pruned-op);
+  }
+
+  .prongs {
+    opacity: var(--dendrite-cone-op);
+  }
+
+  .bouton {
+    opacity: var(--ink-rest);
+  }
+
+  .cell {
+    r: calc(var(--dendrite-soma) / 2);
+  }
+
+  .narrow .cell {
+    r: calc(var(--dendrite-soma-phone) / 2);
+  }
+
+  @media (width < 760px) {
+    /* The phone shapes, in the page's left edge. */
+    .trunk,
+    .turn {
+      --box-left: -20px;
+      --trunk-x: 8px;
+      --trunk-end: 7px;
+      --cone-drop: 7px;
+    }
+
+    .wide {
+      display: none;
+    }
+
+    .narrow {
+      display: block;
+    }
+  }
+</style>

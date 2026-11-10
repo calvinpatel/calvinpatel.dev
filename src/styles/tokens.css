@@ -123,7 +123,9 @@
   --reading-max:       680px;   /* case study column, About story */
   --measure:           66ch;    /* descriptions */
   --dendrite-margin:   40px;    /* About's dendrite column beside the story (20px edge on phones) */
-  --about-photo:       340px;   /* desktop photo column; 300px max on phones, 4:5 */
+  --dendrite-gap:      20px;    /* between the dendrite column and the story */
+  --about-photo:       340px;   /* desktop photo column, 4:5 */
+  --about-photo-phone: 300px;   /* the photo's widest below 900px, 4:5 */
   --hero-brain:        58%;     /* of the hero's content width */
   --hero-text-min:     360px;
   --col-status:        160px;   /* Projects rows: status | text | links */
@@ -182,7 +184,8 @@
   --dendrite-branch-op:   0.55;
   --dendrite-pruned-op:   0.32;       /* the medical-school branch */
   --dendrite-cone-op:     0.6;        /* the growth cone */
-  --dendrite-soma:        9px;        /* diameter; 6px on phones */
+  --dendrite-soma:        9px;        /* diameter */
+  --dendrite-soma-phone:  6px;        /* diameter below 760px */
 
   /* Skills wiring */
   --wire-op:              0.41;       /* at rest: carries information, so it sits on the floor */

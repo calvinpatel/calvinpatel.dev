@@ -1,8 +1,10 @@
 ---
-# About. The lede is set in Fraunces; the story has exactly five paragraphs,
-# one per turning point of the dendrite in the margin (soma, pruned branch,
-# both sides, two branches, growth cone).
-lede: Medicine taught me what clinicians need. Engineering lets me build it.
+# About. The lede is set in Fraunces, each sentence on its own line; the story
+# has exactly five paragraphs, one per turning point of the dendrite in the
+# margin (soma, pruned branch, both sides, two branches, growth cone).
+lede:
+  - Medicine taught me what clinicians need.
+  - Engineering lets me build it.
 
 story:
   - >-
