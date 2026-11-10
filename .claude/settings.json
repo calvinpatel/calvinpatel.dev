@@ -4,7 +4,10 @@
     "theme-factory": "off",
     "web-artifacts-builder": "off",
     "algorithmic-art": "off",
-    "docs": "off"
+    "docs": "off",
+    "dataviz": "off",
+    "artifact-design": "off",
+    "artifact-diagramming": "off"
   },
   "disableClaudeAiConnectors": true
 }
