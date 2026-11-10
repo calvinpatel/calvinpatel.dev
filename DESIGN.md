@@ -97,7 +97,8 @@ Sizes grow from the phone mocks (390px wide) to the desktop mocks (1440px). Step
 | `--step-display-2` | 44 | 72 | Case study title | `--leading-none` |
 | `--step-display-3` | 36 | 49 | Section headings | `--leading-display` |
 | `--step-display-4` | 28 | 40 | Contact email | `--leading-heading` |
-| `--step-display-5` | 28 | 35 | Project names; About lede | `--leading-heading`; `--leading-lede` |
+| `--step-display-5` | 28 | 35 | Project names | `--leading-heading` |
+| `--step-lede` | 26 | 35 | About lede | `--leading-lede` |
 | `--step-display-6` | 28 | 32 | Results numbers | `--leading-none` |
 | `--step-display-7` | 26 | 32 | Case study section headings | `--leading-heading` |
 | `--step-display-8` | 24 | 29 | Experience roles | `--leading-heading` |
@@ -147,7 +148,7 @@ Spacing inside sections follows the artboards, using the nearest token from this
 - **Hero.** A text column of at least `--hero-text-min` (360px) on the left, and the brain at `--hero-brain` (58% of the hero's content width) on the right. The name and hero sentences sit middle left.
 - **Projects rows.** Status (`--col-status`, 160px) | text | links (`--col-links`, 200px), with `--col-gap` (32px) between columns.
 - **Experience rows.** Dates and location (`--col-dates`, 200px) | text, with `--col-gap` between.
-- **About.** The dendrite margin (`--dendrite-margin`, 40px) beside the story, the story at 680px, and the photo column (`--about-photo`, 340px) to the right.
+- **About.** The dendrite margin (`--dendrite-margin`, 40px) and its gap (`--dendrite-gap`, 20px) beside the story, the story at 680px, and the photo column (`--about-photo`, 340px) to the right. Below 900px the photo is at most `--about-photo-phone` (300px) wide.
 - **Contact.** The figure (`--contact-figure`, 430px) | the contact block.
 
 ### Breakpoints
@@ -185,7 +186,7 @@ Media queries can't read custom properties, so these widths are written as numbe
 
 **Case study page** (for example, `/projects/notepilot`). The top bar, then the status, the title, the lede, and the links, with the axon's soma and hillock under that block. A divider comes before each part (What it does, The hard part, Results, What's next). On desktop the dividers match the 680px reading column; on phones they run the full screen width. Section headings use `--step-display-7`. The comma diagram sits in the margin beside the hard part's third paragraph on desktop, and full width right after that paragraph on phones. The branching terminal replaces the line above "Back to projects."
 
-**About.** The heading, the opener as a Fraunces lede, then the story with the photo to its right. "Prelude" links to the Projects section and "NotePilot" to its case study. A thin dendrite grows down the margin beside the story. It has a soma at the first paragraph, a fainter pruned branch at medical school, branches on both sides at building, two branches at today, and a growth cone lined up with the last paragraph. On phones, the dendrite moves into the 20px left edge so the story keeps its full width, with each turning point as a single short twig angled toward the edge. The photo sits right after the opener, up to 300px wide at 4:5.
+**About.** The heading, the opener as a Fraunces lede, then the story with the photo to its right. "Prelude" links to the Projects section and "NotePilot" to its case study. A thin dendrite grows down the margin beside the story. It has a soma at the first paragraph, a fainter pruned branch at medical school, branches on both sides at building, two branches at today, and a growth cone lined up with the last paragraph. On phones, the dendrite moves into the 20px left edge so the story keeps its full width, with each turning point as a single short twig angled toward the edge. The photo sits right after the opener, up to `--about-photo-phone` (300px) wide at 4:5.
 
 **Experience.** Six entries, newest first. Each entry is preceded by a full-width spike raster on one shared time axis from 2020 to now, with spikes across that role's dates (see Drawings).
 - Spike density shows only full-time (dense) versus part-time (sparse).
@@ -241,7 +242,7 @@ Each divider is a `--axon-band` (28px) strip with the axon through its middle. C
 
 ### Dendrite (About)
 
-- **Desktop.** A `--dendrite-margin` (40px) column left of the story, with a 20px gap. The trunk is a `--line` line at `--dendrite-trunk-op` down the column's center (x = 20), from 12px below the top of the first paragraph to the growth cone's tip, 6px below the top of the last paragraph.
+- **Desktop.** A `--dendrite-margin` (40px) column left of the story, with a `--dendrite-gap` (20px) gap. The trunk is a `--line` line at `--dendrite-trunk-op` down the column's center (x = 20), from 12px below the top of the first paragraph to the growth cone's tip, 6px below the top of the last paragraph.
 - **Turning points.** Each is drawn in a 40 × 48 box at the top of its paragraph (the growth cone's box is 40 × 20, set 2px down). Branches are `--line` lines with round ends.
 
 ```
@@ -258,7 +259,7 @@ Each divider is a `--axon-band` (28px) strip with the axon through its middle. C
 - **Phones.** The dendrite sits in the 20px left edge. Each box is 16 × 32 at left −20px, with the trunk at x = 8; the cone's box is 16 × 16, set 7px down, with no tip dots. The trunk ends at the cone's tip, 7px below the top of the last paragraph.
 
 ```
-1. soma: circle (8, 10), diameter 6px; branch M8 22 Q5 18 2 14
+1. soma: circle (8, 10), diameter --dendrite-soma-phone (6px); branch M8 22 Q5 18 2 14
 2. pruned: M8 12 Q5 15 2 20; bouton radius 1.5 at (1.6, 21)
 3. M8 14 Q5 10 2 5 M8 22 Q5 22 2 25
 4. M8 12 Q5 9 2 5 M8 20 Q5 22 2 26
