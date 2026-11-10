@@ -37,8 +37,11 @@ story:
     Off the clock, I'm at the gym, on a basketball court, or teaching myself to
     crochet, with slight success so far.
 
-# The photo is added during the build, once it's in src/assets/:
-# photo:
-#   src: ../assets/calvin.jpg
-#   alt: (Calvin's alt text)
+# The photo sits beside the story on desktop and right after the lede on
+# phones, at 4:5. Astro resizes and compresses it at build time.
+photo:
+  src: ../assets/calvin.jpg
+  alt: >-
+    Calvin Patel smiling in his University of Maryland School of Medicine white
+    coat, with a stethoscope around his neck.
 ---
