@@ -318,6 +318,15 @@ const skills = defineCollection({
     }),
 });
 
+// --- Credits page (/credits) --------------------------------------------------
+// The heading and intro. The list under them comes from public/cells/index.json,
+// one credit line per neuron, so it follows the cells as they change.
+
+const credits = defineCollection({
+  loader: file('credits.md'),
+  schema: z.object({ heading: text, intro: inline }).strict(),
+});
+
 // --- Contact -----------------------------------------------------------------
 
 const contact = defineCollection({
@@ -325,4 +334,4 @@ const contact = defineCollection({
   schema: z.object({ email: z.email(), links: z.array(link).min(1) }).strict(),
 });
 
-export const collections = { site, hero, about, projects, caseStudies, experience, skills, contact };
+export const collections = { site, hero, about, projects, caseStudies, experience, skills, credits, contact };
