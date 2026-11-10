@@ -159,7 +159,7 @@ Media queries can't read custom properties, so these widths are written as numbe
 
 ## Components
 
-**Links.** A link keeps the color of the text around it, with an underline in `--color-link-underline` set `--link-underline-offset` (4px) below the text. On hover, the underline brightens to `--color-text` instantly; nothing else changes. Visited links look the same as unvisited ones.
+**Links.** A link keeps the color of the text around it, with an underline in `--color-link-underline` set `--link-underline-offset` (4px) below the text. On hover, the underline brightens to `--color-text` instantly; nothing else changes. Visited links look the same as unvisited ones. The top bar's section links and the CP mark are the one exception: no underline at rest, and the standard underline appears on hover.
 
 **Focus.** Every link and every brain lobe shows a ring on keyboard focus: `--focus-width` (2px) solid in `--color-focus`, with `--focus-offset` (4px) of space. Use `:focus-visible`, and never remove the ring without replacing it with this one.
 

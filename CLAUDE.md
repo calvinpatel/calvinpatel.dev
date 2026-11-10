@@ -28,7 +28,7 @@ Cal Patel's portfolio site. It reads as a nervous system: real neuron reconstruc
 ├── data/swc/          raw downloaded reconstructions + sources.csv
 ├── scripts/           swc_to_web.py
 ├── tests/             test_swc_to_web.py, copy.test.ts
-└── docs/              cell-web-v1.md (the neuron file format)
+└── docs/              cell-web-v1.md (the neuron file format), design/ (chosen artboards, 1x PNG)
 ```
 
 ## Commands
