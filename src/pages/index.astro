@@ -1,16 +1,17 @@
 ---
+// The home page: the hero, then the five sections in site.md's order.
+import { getEntry } from 'astro:content';
+
+import Hero from '../components/Hero.astro';
+import Layout from '../components/Layout.astro';
+import Section from '../components/Section.astro';
+import { copyText } from '../lib/copy.ts';
+
+const site = (await getEntry('site', 'site'))!.data;
+const hero = (await getEntry('hero', 'hero'))!.data;
 ---
 
-<html lang="en">
-	<head>
-		<meta charset="utf-8" />
-		<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-		<link rel="icon" href="/favicon.ico" />
-		<meta name="viewport" content="width=device-width" />
-		<meta name="generator" content={Astro.generator} />
-		<title>Astro</title>
-	</head>
-	<body>
-		<h1>Astro</h1>
-	</body>
-</html>
+<Layout title={copyText(hero.name)} description={hero.lines.map(copyText).join(' ')} home>
+  <Hero />
+  {site.sections.map((section) => <Section id={section.id} label={section.label} />)}
+</Layout>

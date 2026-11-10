@@ -77,6 +77,8 @@ const site = defineCollection({
   schema: z
     .object({
       mark: text,
+      markLabel: z.object({ home: text, elsewhere: text }).strict(), // read out after the mark's visible text
+      navLabel: text, // the top bar nav's name for screen readers
       sections: z
         .array(
           z

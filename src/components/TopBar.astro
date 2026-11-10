@@ -1,0 +1,127 @@
+---
+// The top bar: the CP mark and the five section links. On phones the links
+// move into a full-width second row under the mark.
+import { getEntry } from 'astro:content';
+
+import { copyText } from '../lib/copy.ts';
+import Copy from './Copy.astro';
+
+interface Props {
+  home?: boolean;
+}
+
+const { home = false } = Astro.props;
+const site = (await getEntry('site', 'site'))!.data;
+
+// On the home page the links scroll within the page. Elsewhere they lead back
+// to it.
+const sectionHref = (id: string) => (home ? `#${id}` : `/#${id}`);
+const markLabel = home ? site.markLabel.home : site.markLabel.elsewhere;
+---
+
+<header class="top-bar">
+  {/* The mark's name for a screen reader starts with its visible text (WCAG
+      2.5.3), then the label from site.md: "CP, Calvin Patel, home". The whole
+      name sits in the hidden span, because browsers put a space between two
+      separate boxes of text and would say "CP , Calvin Patel, home". */}
+  <a class="mark display" href={home ? '#top' : '/'}
+    ><span aria-hidden="true"><Copy text={site.mark} /></span><span class="visually-hidden"
+      ><Copy text={site.mark} />, <Copy text={markLabel} /></span
+    ></a
+  >
+  <nav aria-label={copyText(site.navLabel)}>
+    <ul role="list">
+      {
+        site.sections.map((section) => (
+          <li>
+            <a href={sectionHref(section.id)}>
+              <Copy text={section.label} />
+            </a>
+          </li>
+        ))
+      }
+    </ul>
+  </nav>
+</header>
+
+<style>
+  /* In normal flow, so enlarged text can wrap the links without covering
+     anything. It spans the window, as on the artboards. */
+  .top-bar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    column-gap: var(--space-m);
+    padding: var(--space-2xs) var(--gutter);
+  }
+
+  /* Every link is a tap-height box; the text sits in its middle. */
+  a {
+    display: inline-flex;
+    align-items: center;
+    min-height: var(--tap-min);
+    text-decoration-line: none;
+  }
+
+  a:hover {
+    text-decoration-line: underline;
+  }
+
+  .mark {
+    position: relative; /* holds the visually hidden label */
+    min-width: var(--tap-min);
+    font-size: var(--size-mark);
+    line-height: var(--leading-none);
+  }
+
+  ul {
+    display: flex;
+    flex-wrap: wrap;
+    column-gap: var(--space-s);
+  }
+
+  nav a {
+    font-size: var(--step-text-5);
+    line-height: var(--leading-snug);
+  }
+
+  /* Touch screens: short words such as "About" get a full-width target too. */
+  @media (pointer: coarse) {
+    nav a {
+      justify-content: center;
+      min-width: var(--tap-min);
+    }
+  }
+
+  @media (width < 760px) {
+    .top-bar {
+      flex-direction: column;
+      align-items: stretch;
+      padding-bottom: 0;
+    }
+
+    .mark {
+      align-self: flex-start;
+    }
+
+    ul {
+      justify-content: space-between;
+      column-gap: 0;
+    }
+
+    nav a {
+      justify-content: center;
+      min-width: var(--tap-min);
+    }
+
+    /* The row's two ends line up with the page's side margins. */
+    li:first-child a {
+      justify-content: flex-start;
+    }
+
+    li:last-child a {
+      justify-content: flex-end;
+    }
+  }
+</style>

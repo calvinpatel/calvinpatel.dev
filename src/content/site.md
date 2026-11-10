@@ -4,6 +4,13 @@
 # its brain label. DESIGN.md fixes which lobe leads to which section.
 mark: CP
 
+# What a screen reader says for the top bar. The mark's name is its visible
+# text, then one of these: the first on the home page, the second elsewhere.
+markLabel:
+  home: Calvin Patel, back to top
+  elsewhere: Calvin Patel, home
+navLabel: Sections
+
 sections:
   - id: about
     label: About

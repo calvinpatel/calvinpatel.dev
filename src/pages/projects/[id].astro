@@ -1,0 +1,35 @@
+---
+// A case study page, one per file in src/content/case-studies/, at
+// /projects/<project id>. Its title comes from the project it names.
+import { getCollection, getEntry } from 'astro:content';
+
+import Copy from '../../components/Copy.astro';
+import Layout from '../../components/Layout.astro';
+import { copyText } from '../../lib/copy.ts';
+
+export async function getStaticPaths() {
+  const studies = await getCollection('caseStudies');
+  return Promise.all(
+    studies.map(async (study) => ({
+      params: { id: study.data.project },
+      props: { project: (await getEntry('projects', study.data.project))!.data },
+    })),
+  );
+}
+
+const { project } = Astro.props;
+const hero = (await getEntry('hero', 'hero'))!.data;
+---
+
+<Layout title={`${copyText(project.name)} – ${copyText(hero.name)}`}>
+  <div class="container page">
+    <h1><Copy text={project.name} /></h1>
+  </div>
+</Layout>
+
+<style>
+  h1 {
+    font-size: var(--step-display-2);
+    line-height: var(--leading-none);
+  }
+</style>

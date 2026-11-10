@@ -1,0 +1,31 @@
+---
+// One home-page section: its id for the top bar and brain links, its heading
+// from site.md, and then its content.
+import Copy from './Copy.astro';
+
+interface Props {
+  id: string;
+  label: string;
+}
+
+const { id, label } = Astro.props;
+---
+
+<section id={id} aria-labelledby={`${id}-heading`}>
+  <div class="container">
+    <h2 id={`${id}-heading`}><Copy text={label} /></h2>
+    <slot />
+  </div>
+</section>
+
+<style>
+  section {
+    padding-block: var(--space-section);
+  }
+
+  h2 {
+    margin-bottom: var(--space-l);
+    font-size: var(--step-display-3);
+    line-height: var(--leading-display);
+  }
+</style>

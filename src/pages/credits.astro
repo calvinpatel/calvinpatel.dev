@@ -1,0 +1,24 @@
+---
+// The Credits page, linked from the footer on every page.
+import { getEntry } from 'astro:content';
+
+import Copy from '../components/Copy.astro';
+import Layout from '../components/Layout.astro';
+import { copyText } from '../lib/copy.ts';
+
+const credits = (await getEntry('credits', 'credits'))!.data;
+const hero = (await getEntry('hero', 'hero'))!.data;
+---
+
+<Layout title={`${copyText(credits.heading)} – ${copyText(hero.name)}`}>
+  <div class="container page">
+    <h1><Copy text={credits.heading} /></h1>
+  </div>
+</Layout>
+
+<style>
+  h1 {
+    font-size: var(--step-display-3);
+    line-height: var(--leading-display);
+  }
+</style>

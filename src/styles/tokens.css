@@ -64,8 +64,11 @@
   /* ---------------------------------------------------------------------
      Type
      --------------------------------------------------------------------- */
-  --font-display: "Fraunces", Georgia, serif;
-  --font-text:    "IBM Plex Sans", system-ui, sans-serif;  /* 400, 400 italic, 500; also every arrow: Fraunces has no → */
+  /* Astro's fonts API names the self-hosted families and sets these two
+     variables; the families and their fallbacks are in astro.config.mjs. */
+  --font-display: var(--font-fraunces);  /* Fraunces, then Georgia, serif */
+  --font-text:    var(--font-plex);      /* IBM Plex Sans 400, 400 italic, 500, then system-ui, sans-serif;
+                                            also every arrow: Fraunces has no → */
   --display-settings: "SOFT" 100, "WONK" 1;  /* optical size stays automatic */
   --display-tracking: -0.01em;
   --weight-regular: 400;

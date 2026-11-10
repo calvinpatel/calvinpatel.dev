@@ -1,0 +1,83 @@
+---
+// The hero: the name and the two hero sentences, middle left, beside the
+// column reserved for the brain. The brain and the neuron canvas come later.
+import { getEntry } from 'astro:content';
+
+import Copy from './Copy.astro';
+
+const hero = (await getEntry('hero', 'hero'))!.data;
+---
+
+<section class="hero">
+  <div class="container grid">
+    <div class="text">
+      <h1><Copy text={hero.name} /></h1>
+      <p>
+        {
+          hero.lines.map((line) => (
+            <span>
+              <Copy text={line} />
+            </span>
+          ))
+        }
+      </p>
+    </div>
+    {/* The brain's column. Empty until the brain navigation is built. */}
+    <div class="brain"></div>
+  </div>
+</section>
+
+<style>
+  /* With the top bar above it, the hero fills the first screen. */
+  .hero {
+    display: flex;
+    align-items: center;
+    min-height: calc(100svh - var(--top-bar-height));
+  }
+
+  .grid {
+    display: grid;
+    grid-template-columns: minmax(min(var(--hero-text-min), 100%), 1fr) minmax(0, var(--hero-brain));
+    align-items: center;
+    gap: var(--space-l);
+    padding-block: var(--space-l);
+  }
+
+  .text {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-s);
+    min-width: 0;
+  }
+
+  h1 {
+    font-size: var(--step-display-1);
+    line-height: var(--leading-none);
+  }
+
+  p {
+    color: var(--color-text-secondary);
+    font-size: var(--step-text-2);
+    line-height: var(--leading-snug);
+  }
+
+  /* Each sentence starts its own line. */
+  span {
+    display: block;
+    text-wrap: balance;
+  }
+
+  @media (width < 760px) {
+    /* The text sits above the brain's area, which takes the rest of the
+       first screen. */
+    .hero {
+      align-items: stretch;
+    }
+
+    .grid {
+      grid-template-columns: minmax(0, 1fr);
+      grid-template-rows: auto 1fr;
+      align-items: stretch;
+    }
+  }
+</style>

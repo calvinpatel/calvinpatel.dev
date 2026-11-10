@@ -1,0 +1,14 @@
+---
+// Prints one content field: links, italics, and curly quotes (src/lib/copy.ts).
+// Every component renders visible copy through this, and uses copyText for
+// attributes and the page title.
+import { copyHtml } from '../lib/copy.ts';
+
+interface Props {
+  text: string;
+}
+
+const { text } = Astro.props;
+---
+
+<Fragment set:html={copyHtml(text)} />

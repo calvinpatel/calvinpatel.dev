@@ -1,0 +1,40 @@
+---
+// The footer: the neuron credit line with its Credits link, and the copyright.
+import { getEntry } from 'astro:content';
+
+import Copy from './Copy.astro';
+
+const { footer } = (await getEntry('site', 'site'))!.data;
+---
+
+<footer>
+  <div class="container">
+    <div class="row">
+      <p>
+        <Copy text={footer.credit} />{' '}<a href="/credits"><Copy text={footer.creditsLabel} /></a>
+      </p>
+      <p><Copy text={footer.copyright} /></p>
+    </div>
+  </div>
+</footer>
+
+<style>
+  .row {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: var(--space-xs) var(--space-m);
+    border-top: var(--line) solid var(--color-hairline);
+    padding-block: var(--space-s) var(--space-l);
+    color: var(--color-text-muted);
+    font-size: var(--step-text-7);
+    line-height: var(--leading-label);
+  }
+
+  @media (width < 760px) {
+    .row {
+      flex-direction: column;
+      gap: var(--space-2xs);
+    }
+  }
+</style>
