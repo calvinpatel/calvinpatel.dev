@@ -1,0 +1,10 @@
+{
+  "enabledPlugins": { "frontend-design@claude-plugins-official": false },
+  "skillOverrides": {
+    "theme-factory": "off",
+    "web-artifacts-builder": "off",
+    "algorithmic-art": "off",
+    "docs": "off"
+  },
+  "disableClaudeAiConnectors": true
+}
