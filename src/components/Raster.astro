@@ -16,8 +16,10 @@
 //   - The year marks, spikes, and marker, which the script adds at the row's
 //     real width and redraws when that width changes. Spacing is in px, so a
 //     narrower row holds fewer spikes, not tighter ones. Where each one goes
-//     is worked out in src/lib/raster.ts; their sizes are set in the styles
-//     below, and the script only moves each one to its place.
+//     is worked out in src/lib/raster.ts, which centers every spike and the
+//     marker on a pixel so each row is equally sharp on a 1x screen. Their
+//     sizes are set in the styles below, and the script only moves each one
+//     to its place.
 import type { Role } from '../lib/raster.ts';
 
 interface Props extends Role {
@@ -82,30 +84,40 @@ const { start, end, schedule, axisStart, now } = Astro.props;
     );
   }
 
-  function draw(row: HTMLElement, width: number) {
+  // `left` is the row's left end across the page. The pattern uses it to put
+  // each spike and the marker on a pixel center.
+  function draw(row: HTMLElement, left: number, width: number) {
     const { start = '', end = '', schedule, axisStart, now = '' } = row.dataset;
     const { ticks, spikes, marker } = rasterRow(
       { start, end, schedule: schedule as Schedule },
       { startYear: Number(axisStart), now },
       width,
       pattern,
+      left,
     );
     place(row.querySelector('.ticks')!, ticks);
     place(row.querySelector('.spikes')!, spikes);
     place(row.querySelector('.marker')!, marker === null ? [] : [marker]);
   }
 
-  // Draws each row when it is first measured and again whenever its width
-  // changes.
-  const drawn = new WeakMap<Element, number>();
-  const rows = new ResizeObserver((entries) => {
-    for (const { target, contentRect } of entries) {
-      if (drawn.get(target) === contentRect.width) continue;
-      drawn.set(target, contentRect.width);
-      draw(target as HTMLElement, contentRect.width);
+  // Draws each row when it is first measured, and again whenever its width or
+  // its place across the page changes. A row can move without changing width:
+  // past --page-max the centered column slides as the window widens. The
+  // page's own size is watched for that.
+  const rows = document.querySelectorAll<HTMLElement>('[data-raster]');
+  const drawn = new WeakMap<Element, string>();
+  const sizes = new ResizeObserver(() => {
+    for (const row of rows) {
+      const box = row.getBoundingClientRect();
+      const left = box.left + window.scrollX;
+      const state = `${left} ${box.width}`;
+      if (drawn.get(row) === state) continue;
+      drawn.set(row, state);
+      draw(row, left, box.width);
     }
   });
-  document.querySelectorAll('[data-raster]').forEach((row) => rows.observe(row));
+  rows.forEach((row) => sizes.observe(row));
+  sizes.observe(document.documentElement);
 </script>
 
 <style>

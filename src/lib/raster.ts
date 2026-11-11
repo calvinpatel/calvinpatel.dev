@@ -8,6 +8,10 @@
 //     seeded by the role's own dates and schedule, so the pattern is the same
 //     on every load and every build.
 //   - Spacing is in px, so a narrower row holds fewer spikes, not tighter ones.
+//   - Each role's start and the marker move by up to half a pixel so that
+//     every spike and the marker are centered on a pixel. A spike is a little
+//     over 1px wide, so it then sits mostly in one pixel column on a 1x
+//     screen, and every row looks equally sharp.
 //
 // No DOM and no Astro imports, so Node can run tests/raster.test.ts against it
 // directly. Every size comes in through `pattern`, which the script fills from
@@ -37,8 +41,8 @@ export interface Pattern {
 
 export interface Row {
   ticks: number[]; // January 1 of every year on the axis
-  spikes: number[]; // left to right
-  marker: number | null; // the ongoing role's marker, at the "now" end
+  spikes: number[]; // left to right, each on a pixel center
+  marker: number | null; // the ongoing role's marker, on the pixel center nearest the "now" end
 }
 
 /** The 32-bit FNV-1a hash of a string's UTF-8 bytes. */
@@ -86,10 +90,16 @@ export function dateToX(date: number, axis: Axis, width: number): number {
   return ((date - start) / (dayStart(axis.now) - start)) * width;
 }
 
-/** One row's year marks, spikes, and marker at a given width. */
-export function rasterRow(role: Role, axis: Axis, width: number, pattern: Pattern): Row {
+/**
+ * One row's year marks, spikes, and marker at a given width. `left` is the
+ * row's left end in px from the page's left edge, which is what the spikes
+ * and the marker are lined up with the pixels by.
+ */
+export function rasterRow(role: Role, axis: Axis, width: number, pattern: Pattern, left = 0): Row {
   const now = dayStart(axis.now);
   const x = (date: number) => dateToX(Math.min(date, now), axis, width);
+  // The nearest pixel center, n + 0.5px across the page, as a position in the row.
+  const toPixelCenter = (position: number) => Math.round(left + position - 0.5) + 0.5 - left;
 
   const ticks: number[] = [];
   for (let year = axis.startYear; newYear(year) <= now; year++) ticks.push(x(newYear(year)));
@@ -97,11 +107,13 @@ export function rasterRow(role: Role, axis: Axis, width: number, pattern: Patter
   // Months are inclusive: a role runs from the first day of its start month
   // through the last day of its end month, so its spikes stop before the next
   // month starts. The ongoing role runs to "now", and its spikes stop one
-  // pitch short of the marker there.
+  // pitch short of the marker there. Spacing is in whole pixels, so once the
+  // first spike is on a pixel center the rest are too.
   const ongoing = role.end === 'present';
-  const from = x(monthStart(role.start));
+  const from = toPixelCenter(x(monthStart(role.start)));
+  const marker = ongoing ? toPixelCenter(width) : null;
   const end = ongoing ? width : x(monthStart(role.end, 1));
-  const fits = (spike: number) => (ongoing ? spike <= end - pattern.pitch : spike < end);
+  const fits = (spike: number) => (marker === null ? spike < end : spike <= marker - pattern.pitch);
 
   const random = mulberry32(fnv1a(`${role.start}|${role.end}|${role.schedule}`));
   const whole = ([min, max]: [number, number]) => min + Math.floor(random() * (max - min + 1));
@@ -120,5 +132,5 @@ export function rasterRow(role: Role, axis: Axis, width: number, pattern: Patter
     first = last + gap;
   }
 
-  return { ticks, spikes, marker: ongoing ? width : null };
+  return { ticks, spikes, marker };
 }

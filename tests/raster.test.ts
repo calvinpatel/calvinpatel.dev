@@ -39,6 +39,8 @@ const WIDTHS = [280, 335, 691.2, 1192];
 // than a pixel.
 const EPSILON = 1e-6;
 const near = (a: number, b: number) => Math.abs(a - b) < EPSILON;
+// A role's start and the marker move this far at most, to reach a pixel center.
+const HALF_PIXEL = 0.5;
 
 // A role's dates as UTC milliseconds, worked out here rather than taken from
 // the module: the first day of the start month to the end of the end month's
@@ -111,12 +113,28 @@ test('the same inputs always give the same spikes', () => {
     assert.deepEqual(rasterRow({ ...role }, { ...AXIS }, width, PATTERN), row);
   });
 
-  // Pinned, so a change to the hash, the generator, or the order of draws shows.
-  const pinned = rasterRow(ROLES[3], AXIS, 1192, PATTERN);
-  assert.deepEqual(
-    pinned.spikes.map((x) => x.toFixed(2)),
-    ['246.01', '250.01', '254.01', '269.01', '273.01', '277.01', '281.01'],
-  );
+  // Pinned, so a change to the hash, the generator, or the order of draws
+  // shows. The role starts at 246.01px, which moves to the pixel center at
+  // 246.5px; in a row that itself starts half a pixel across, to 246px.
+  assert.deepEqual(rasterRow(ROLES[3], AXIS, 1192, PATTERN).spikes, [246.5, 250.5, 254.5, 269.5, 273.5, 277.5, 281.5]);
+  assert.deepEqual(rasterRow(ROLES[3], AXIS, 1192, PATTERN, 116.5).spikes, [246, 250, 254, 269, 273, 277, 281]);
+});
+
+test('every spike and the marker sit on a pixel center, at most half a pixel from their dates', () => {
+  // Where a row's left end can fall: on a pixel, half way, or anywhere.
+  for (const left of [0, 0.5, 116.5, 37.65, 20.3]) {
+    for (const role of ROLES) {
+      for (const width of WIDTHS) {
+        const { spikes, marker } = rasterRow(role, AXIS, width, PATTERN, left);
+        const offCenter = (x: number) => Math.abs(((left + x) % 1) - HALF_PIXEL);
+        for (const x of spikes) assert.ok(offCenter(x) < EPSILON, `a spike at ${left} + ${x}`);
+        assert.ok(Math.abs(spikes[0] - dateToX(span(role)[0], AXIS, width)) <= HALF_PIXEL + EPSILON);
+        if (marker === null) continue;
+        assert.ok(offCenter(marker) < EPSILON, `the marker at ${left} + ${marker}`);
+        assert.ok(Math.abs(marker - width) <= HALF_PIXEL + EPSILON);
+      }
+    }
+  }
 });
 
 test('roles with different dates or schedules get different patterns', () => {
@@ -162,8 +180,11 @@ test("every spike falls inside its role's dates, months inclusive", () => {
   everyRow([...ROLES, ...LONG], (role, width, row) => {
     const [start, end] = span(role).map((date) => dateToX(date, AXIS, width));
     assert.ok(row.spikes.length > 0);
-    assert.ok(near(row.spikes[0], start), 'the first spike sits on the first day of the start month');
-    for (const x of row.spikes) assert.ok(x >= start - EPSILON && x <= end + EPSILON, `${x} outside ${start} to ${end}`);
+    // The first spike sits on the pixel center nearest the first day of the
+    // start month, so it can fall up to half a pixel before it. No spike
+    // passes the end.
+    assert.ok(Math.abs(row.spikes[0] - start) <= HALF_PIXEL + EPSILON, `the first spike, ${row.spikes[0]}, is not at ${start}`);
+    for (const x of row.spikes) assert.ok(x <= end + EPSILON, `${x} is past ${end}`);
   });
 });
 
@@ -182,8 +203,8 @@ test('a role ending 2021-07 runs through July 31', () => {
 test("the ongoing role's marker sits at the now end, and its spikes stop a pitch short", () => {
   everyRow(ROLES, (role, width, row) => {
     if (role.end !== 'present') return assert.equal(row.marker, null);
-    assert.equal(row.marker, width);
-    assert.ok(row.spikes.at(-1)! <= width - PATTERN.pitch + EPSILON);
+    assert.ok(row.marker !== null && Math.abs(row.marker - width) <= HALF_PIXEL + EPSILON);
+    assert.ok(row.spikes.at(-1)! <= row.marker - PATTERN.pitch + EPSILON);
   });
 });
 
