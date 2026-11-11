@@ -1,0 +1,343 @@
+---
+// One Skills wiring diagram (DESIGN.md, Drawings: Wiring diagram). Without
+// `group` it is the desktop diagram: every skill flows into its group, and
+// each group out to the places its skills were used. With `group` it is that
+// one group's own diagram, each skill wired straight to its own places.
+// Skills.astro shows one layout or the other.
+//
+// Drawn at rest. Tracing comes with the motion step: every dot, label, and
+// wire is already tagged with the skill, group, or place it belongs to
+// (data-skill, data-group, data-place, and data-places for a skill's places),
+// so tracing can attach without a redraw.
+//
+// Two layers:
+//
+//   - Every dot, label, and wire is in the page's HTML, with its copy and its
+//     tags, and the diagram's height is set in CSS from the number of rows.
+//     The page is the same height before the script runs.
+//   - The script puts each one in its place at the diagram's real width, and
+//     again whenever that width changes. Where each one goes is worked out in
+//     src/lib/wiring.ts, which keeps every dot and wire on whole pixels.
+//     Sizes, colors, and text are set in the styles below, and the script
+//     only moves things.
+//
+// Decorative to a screen reader: Skills.astro hides it and gives the same
+// connections as a plain list.
+import type { CollectionEntry } from 'astro:content';
+
+import { copyText } from '../lib/copy.ts';
+import { DESKTOP, LABEL_DROP_EM, desktopPlaceWires, desktopRows, groupPlaces, groupRows, groupWires } from '../lib/wiring.ts';
+import type { Structure } from '../lib/wiring.ts';
+
+interface Props {
+  /** skills.md. */
+  skills: CollectionEntry<'skills'>['data'];
+  /** Which group's own diagram this is, counting from 0. Leave it out for the desktop diagram. */
+  group?: number;
+}
+
+const { skills, group } = Astro.props;
+
+const whole: Structure = {
+  places: skills.places.map((place) => place.id),
+  groups: skills.groups.map(({ skills: own }) => ({ skills: own.map((skill) => ({ places: skill.places })) })),
+};
+
+// Every skill, numbered down the whole section, so a skill carries the same
+// number in the desktop diagram and in its group's own.
+let count = 0;
+const numbered = skills.groups.map((entry, g) => entry.skills.map((skill) => ({ ...skill, number: count++, group: g })));
+
+const placeLabel = new Map(skills.places.map((place) => [place.id, place.label]));
+
+// What this diagram draws: every skill and place, or one group's skills and
+// the places they use.
+const drawnSkills = group === undefined ? numbered.flat() : numbered[group];
+const drawnPlaces = group === undefined ? whole.places : groupPlaces(whole, group);
+
+// The diagram's height depends only on skills.md, so CSS can reserve it.
+const { rows, gaps } = desktopRows(whole);
+const reserve =
+  group === undefined
+    ? `--rows: ${rows}; --gaps: ${gaps}; --first-row: ${DESKTOP.firstRow}px; --room-below: ${DESKTOP.roomBelow}px`
+    : `--rows: ${groupRows(whole, group)}`;
+
+const drop = `${LABEL_DROP_EM}em`;
+---
+
+<div class="wiring" data-wiring={group === undefined ? 'desktop' : 'group'} style={reserve}>
+  <svg>
+    {
+      /* One layer for the wires. Its opacity is the layer's, so wires that
+         cross or converge don't brighten where they overlap. */
+    }
+    <g class="wires">
+      {
+        group === undefined
+          ? [
+              drawnSkills.map((skill) => <path data-skill={skill.number} data-group={skill.group} data-places={skill.places.join(' ')} />),
+              desktopPlaceWires(whole).map((wire) => <path data-group={wire.group} data-place={wire.place} />),
+            ]
+          : groupWires(whole, group).map((wire) => <path data-skill={drawnSkills[wire.skill].number} data-place={wire.place} />)
+      }
+    </g>
+    {
+      drawnSkills.map((skill) => (
+        <g class="skill" data-skill={skill.number} data-group={skill.group} data-places={skill.places.join(' ')}>
+          <circle />
+          <text dy={drop}>{copyText(skill.name)}</text>
+        </g>
+      ))
+    }
+    {
+      group === undefined &&
+        skills.groups.map((entry, g) => (
+          <g class="group" data-group={g}>
+            <circle />
+            <text>{copyText(entry.name)}</text>
+          </g>
+        ))
+    }
+    {
+      drawnPlaces.map((place) => (
+        <g class="place" data-place={place}>
+          <circle />
+          <text dy={drop}>{copyText(placeLabel.get(place)!)}</text>
+        </g>
+      ))
+    }
+  </svg>
+</div>
+
+<script>
+  import { tokenReader } from '../lib/tokens.ts';
+  import { desktopLayout, groupLayout, px, rowPitch, wirePath } from '../lib/wiring.ts';
+  import type { Fit, Node, Structure, Wire } from '../lib/wiring.ts';
+
+  // The diagrams' sizes, from tokens.css.
+  const token = tokenReader();
+  const wireRow = token('--wire-row');
+  const labelLeading = token('--leading-label');
+  const desktopSizes = {
+    groupGap: token('--wire-group-gap'),
+    skillDot: token('--wire-skill-dot'),
+    groupDot: token('--wire-group-dot'),
+    placeDot: token('--wire-place-dot'),
+  };
+  const groupSizes = {
+    skillDot: token('--wire-skill-dot-phone'),
+    placeDot: token('--wire-place-dot-phone'),
+  };
+
+  const diagrams = [...document.querySelectorAll<HTMLElement>('[data-wiring]')];
+  const groupDiagrams = diagrams.filter((diagram) => diagram.dataset.wiring === 'group');
+
+  // A diagram's shape, read back from the tags on its skills and places: the
+  // places top to bottom, and each skill's places, group by group. A group's
+  // own diagram comes out as one group.
+  function structureOf(diagram: Element): Structure {
+    const groups: Structure['groups'] = [];
+    let current: string | undefined;
+    for (const skill of diagram.querySelectorAll<SVGGElement>('.skill')) {
+      if (skill.dataset.group !== current) groups.push({ skills: [] });
+      current = skill.dataset.group;
+      groups.at(-1)!.skills.push({ places: skill.dataset.places!.split(' ') });
+    }
+    const places = [...diagram.querySelectorAll<SVGGElement>('.place')].map((place) => place.dataset.place!);
+    return { places, groups };
+  }
+  const structures = new Map(diagrams.map((diagram) => [diagram, structureOf(diagram)]));
+
+  // Each node's dot and label, in the order the page lists them.
+  function placeNodes(diagram: Element, selector: string, nodes: Node[]) {
+    diagram.querySelectorAll(selector).forEach((node, i) => {
+      const { dot, label } = nodes[i];
+      const circle = node.querySelector('circle')!;
+      circle.setAttribute('cx', px(dot.x));
+      circle.setAttribute('cy', px(dot.y));
+      const text = node.querySelector('text')!;
+      text.setAttribute('x', px(label.x));
+      text.setAttribute('y', px(label.y));
+    });
+  }
+
+  function placeWires(diagram: Element, wires: Wire[]) {
+    diagram.querySelectorAll('.wires path').forEach((path, i) => path.setAttribute('d', wirePath(wires[i])));
+  }
+
+  // The widest label of one kind across every group's diagram, in px.
+  const longest = (selector: string) =>
+    Math.max(
+      0,
+      ...groupDiagrams.flatMap((diagram) =>
+        [...diagram.querySelectorAll<SVGTextElement>(selector)].map((text) => text.getComputedTextLength()),
+      ),
+    );
+
+  // Dev only. The desktop diagram shows from 45rem of content (Skills.astro),
+  // a threshold measured from the longest skill label when it was set. A
+  // longer name added to skills.md later would start left of the content box
+  // without anything failing, so say so here.
+  const warned = new Set<string>();
+  function warnOutside(diagram: Element, width: number) {
+    // Before the fonts load, the fallback font's widths would be measured.
+    if (document.fonts.status !== 'loaded') return;
+    for (const text of diagram.querySelectorAll<SVGTextElement>('.skill text, .place text')) {
+      const box = text.getBBox();
+      const over = Math.max(-box.x, box.x + box.width - width);
+      const label = text.textContent ?? '';
+      if (over <= 0.01 || warned.has(label)) continue;
+      warned.add(label);
+      console.warn(
+        `Skills: the label "${label}" runs ${over.toFixed(1)}px outside the content box at ${width}px wide. ` +
+          "The desktop diagram's 45rem threshold in Skills.astro is measured from the longest label: raise it, " +
+          'and update the note in src/lib/wiring.ts, the header of tokens.css, and DESIGN.md.',
+      );
+    }
+  }
+
+  // Draws each diagram that is showing when it is first measured, and again
+  // whenever its width, its row height, or the longest labels change. Where
+  // the diagram sits on the page doesn't matter: the browser paints an SVG
+  // from the nearest screen pixel, so its whole pixels stay whole.
+  let drawn = new WeakMap<Element, string>();
+  function draw() {
+    let fit: Fit | undefined;
+    for (const diagram of diagrams) {
+      const { width } = diagram.getBoundingClientRect();
+      if (width === 0) continue; // the other layout is showing
+      // A row is --wire-row, or one line of a label once text is enlarged
+      // past it. The styles below reserve the diagram's height by the same rule.
+      const row = rowPitch(wireRow, parseFloat(getComputedStyle(diagram).fontSize) * labelLeading);
+      const desktop = diagram.dataset.wiring === 'desktop';
+      // On a small phone the columns shift to fit the longest labels, the
+      // same for every group.
+      if (!desktop) fit ??= { skillLabel: longest('.skill text'), placeLabel: longest('.place text') };
+
+      const state = [width, row, fit?.skillLabel, fit?.placeLabel].join(' ');
+      if (drawn.get(diagram) === state) continue;
+      drawn.set(diagram, state);
+
+      const structure = structures.get(diagram)!;
+      if (desktop) {
+        const layout = desktopLayout(structure, width, { row, ...desktopSizes });
+        placeNodes(diagram, '.skill', layout.skills);
+        placeNodes(diagram, '.group', layout.groups);
+        placeNodes(diagram, '.place', layout.places);
+        placeWires(diagram, [...layout.skillWires, ...layout.placeWires]);
+        if (import.meta.env.DEV) warnOutside(diagram, width);
+      } else {
+        const layout = groupLayout(structure, 0, width, { row, ...groupSizes }, fit);
+        placeNodes(diagram, '.skill', layout.skills);
+        placeNodes(diagram, '.place', layout.places);
+        placeWires(diagram, layout.wires);
+      }
+      diagram.querySelector('svg')!.dataset.drawn = '';
+    }
+  }
+
+  const sizes = new ResizeObserver(draw);
+  diagrams.forEach((diagram) => sizes.observe(diagram));
+
+  // Label widths feed the small-phone fit, and they change when the fonts
+  // arrive. Draw everything once more then.
+  document.fonts.ready.then(() => {
+    drawn = new WeakMap();
+    draw();
+  });
+</script>
+
+<style>
+  .wiring {
+    /* Skill to skill: --wire-row, or one line of a label once a visitor has
+       enlarged text past it, so two rows' labels never overlap. The script
+       works out the same number (rowPitch in src/lib/wiring.ts). */
+    --row: max(var(--wire-row), calc(var(--step-text-7) * var(--leading-label)));
+
+    color: var(--ink);
+    font-size: var(--step-text-7);
+    line-height: var(--leading-label);
+  }
+
+  /* The heights are reserved here, from the counts in the style attribute,
+     so nothing moves when the script draws. The desktop diagram's rows start
+     --first-row down, with a gap between groups and --room-below the last. */
+  .wiring[data-wiring='desktop'] {
+    height: calc(
+      var(--first-row) + (var(--rows) - 1) * var(--row) + var(--gaps) * var(--wire-group-gap) + var(--room-below)
+    );
+  }
+
+  /* A group's own diagram is its rows tall, the first half a row down. */
+  .wiring[data-wiring='group'] {
+    height: calc(var(--rows) * var(--row));
+  }
+
+  /* As wide as the content and sized in px, so the script's positions are the
+     diagram's own and nothing is scaled. */
+  svg {
+    width: 100%;
+    height: 100%;
+    overflow: visible;
+  }
+
+  /* Everything sits at the top left corner until the script has placed it. */
+  svg:not([data-drawn]) {
+    visibility: hidden;
+  }
+
+  .wires {
+    fill: none;
+    stroke: currentColor;
+    stroke-width: var(--line);
+    opacity: var(--wire-op);
+  }
+
+  circle {
+    fill: currentColor;
+  }
+
+  .skill circle {
+    r: calc(var(--wire-skill-dot) / 2);
+  }
+
+  .group circle {
+    r: calc(var(--wire-group-dot) / 2);
+  }
+
+  .place circle {
+    r: calc(var(--wire-place-dot) / 2);
+  }
+
+  [data-wiring='group'] .skill circle {
+    r: calc(var(--wire-skill-dot-phone) / 2);
+  }
+
+  [data-wiring='group'] .place circle {
+    r: calc(var(--wire-place-dot-phone) / 2);
+  }
+
+  /* Labels keep their token sizes at every width. Skill labels end at their
+     column, place labels start at theirs. */
+  text {
+    fill: var(--color-text);
+  }
+
+  .skill text {
+    fill: var(--color-text-secondary);
+    text-anchor: end;
+  }
+
+  /* A group's label is centered over its dot, with an outline in the page's
+     color so it reads over the wires. */
+  .group text {
+    text-anchor: middle;
+    paint-order: stroke;
+    stroke: var(--color-bg);
+    stroke-width: var(--wire-label-halo);
+  }
+
+  [data-wiring='desktop'] .place text {
+    font-size: var(--step-text-5);
+  }
+</style>

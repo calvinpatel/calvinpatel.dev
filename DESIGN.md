@@ -158,6 +158,10 @@ Media queries can't read custom properties, so these widths are written as numbe
 - **Below 760px:** the hero stacks (text, then the brain at full width), Experience rows stack, and the case study results go from four across to a 2×2 grid.
 - **Below 900px:** Projects rows stack and their results go from four across to a 2×2 grid, the About photo moves under the opener, and the Contact figure turns to flow down onto the email.
 - **Below 1048px of content width:** the case study's comma figure leaves the margin and follows its paragraph. This one is a container query on the page's content width, not on the window, so it doesn't depend on the scrollbar's width. 1048px is the reading column, the gap at its widest, and the figure: `--reading-max` + 48px + `--figure-width`.
+- **Skills, by its own content width in rem:** two container queries on the section's content width, not on the window. They are in rem so they follow enlarged text: the labels and the thresholds grow together, so a label that fits at default text fits at any text size.
+  - **45rem or more** (720px, an 800px window, at default text): the desktop wiring diagram. This is where the longest skill label fits left of its column: "3D neuron reconstruction" is about 149px at 13px, and 149 / 0.21 = 710px, or 44.4rem. A longer skill name means raising it.
+  - **17.5rem to 45rem:** one diagram per group. This replaces "below 760px" for Skills.
+  - **Below 17.5rem** (a 320px window at default text): the plain list shows instead of the diagrams. 17.5rem is the narrowest the per-group layout fits once its columns have shifted (see Drawings).
 
 ## Components
 
@@ -202,6 +206,8 @@ Media queries can't read custom properties, so these widths are written as numbe
 - **Desktop.** Skills on the left flow into their nine groups in the middle, then out to the places they were used on the right. Every label is readable without hovering. Hovering a skill, group, or place traces its path. A plain list sits behind the diagram for screen readers.
 - **What keeps it from being a plexus.** Every dot is labeled, every connection is curved and carries real data, and the flow runs in one direction. Never use straight lines or unlabeled dots, and never use the diagram as background decoration.
 - **Phones.** One small diagram per group, with the group name as its heading. Each skill connects straight to its own places, with no group node, so the static figure never implies a connection that isn't true. There is no hover on phones.
+- **Which one shows.** The section's own content width decides, in rem (see Breakpoints): the desktop diagram at 45rem or more, one diagram per group from 17.5rem to 45rem, and the plain list below 17.5rem.
+- **The plain list.** Nine groups, each with its skills, each item written like the master sheet's Site copy line: "Anthropic API (tool use, structured outputs, streaming): NotePilot". Screen readers get it at every width. It is visible, in place of the diagrams, below 17.5rem and with JavaScript off, because the script draws the diagrams. When visible, group names are `--step-text-7` muted, as on phones, and the skills are body text in the secondary color.
 
 **Contact.**
 - **Desktop.** A myelinated axon with three sheaths curves up from the lower left. A short bare stretch leads into a terminal that flares open toward the contact side, with vesicles packed at its face. Across the gap, the receiving membrane and its bright receptor band sit right against the contact block. The email is large in Fraunces, with GitHub and LinkedIn beneath it.
@@ -278,7 +284,7 @@ Each divider is a `--axon-band` (28px) strip with the axon through its middle. C
   - place labels starting at 81.0%.
 
   Text keeps its token size at every width; it never scales with the drawing.
-- **Rows.** Skills sit `--wire-row` (22px) apart, with an extra `--wire-group-gap` between groups, starting 30px from the top. Each group dot is centered on its skills, with the group's label centered 12px above the dot and outlined in `--color-bg` at `--wire-label-halo` (use `paint-order: stroke`) so it reads over the wires. Places are spread evenly from the first skill row to the last.
+- **Rows.** Skills sit `--wire-row` (22px) apart, with an extra `--wire-group-gap` between groups, starting 30px from the top. Once a visitor's enlarged text makes one line of a label (`--step-text-7` × `--leading-label`) taller than `--wire-row`, a row grows to that line, in both layouts, so two rows' labels never overlap. Each group dot is centered on its skills, with the group's label centered 12px above the dot and outlined in `--color-bg` at `--wire-label-halo` (use `paint-order: stroke`) so it reads over the wires. Places are spread evenly from the first skill row to the last.
 - **Dots.** Full ink: skills `--wire-skill-dot`, groups `--wire-group-dot`, places `--wire-place-dot`.
 - **Wires.** Cubic curves that leave and arrive horizontally, with both control points at the horizontal midpoint. Skill wires run from 4px right of the skill dot to 8px left of the group dot. Place wires run from 8px right of the group dot to 10px left of the place dot. Never straight lines.
 - **Text.** Skill labels `--step-text-7` secondary, group labels `--step-text-7` main, place labels `--step-text-5` main.
@@ -287,8 +293,9 @@ Each divider is a `--axon-band` (28px) strip with the axon through its middle. C
   - While tracing, the traced wires are `--wire-traced-stroke` at `--wire-traced-op`, and the others drop to `--wire-dimmed-op`.
   - Labels and dots off the traced path dim to `--dim-text-min`.
   - Each label's whole row is the hover target.
-- **Phones (below 760px).** One diagram per group:
+- **Phones (the section's content narrower than 45rem).** One diagram per group:
   - Columns: skill labels end at 47.4% and skill dots sit at 49.7%; place dots sit at 70.3% and place labels start at 73.1%.
+  - Column shift: where the longest labels don't fit those fractions (windows narrower than about 363px at default text), the two columns move toward each other just far enough to keep them inside the content. Skill labels end at the larger of 47.4% and the longest skill label's width; place labels start at the smaller of 73.1% and the content width less the longest place label's width. Each dot keeps its distance from its label (2.3% and 2.8% of the width), and every group uses the same columns. The script measures the labels, so a longer name adjusts itself.
   - Dots are 5px for skills and 8px for places.
   - Rows are `--wire-row` apart, with the skills and the places each centered in the group's height.
   - Wires use the same curves at `--wire-op`.

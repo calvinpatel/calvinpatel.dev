@@ -22,12 +22,13 @@ Cal Patel's portfolio site. It reads as a nervous system: real neuron reconstruc
 ├── DESIGN.md
 ├── src/content/       one Markdown file per section and per project
 ├── src/components/    the shared layout, hero canvas, brain navigation, section layouts
-├── src/lib/           copy.ts, which renders every content field; raster.ts, the Experience raster's pattern
+├── src/lib/           copy.ts, which renders every content field; raster.ts, the Experience raster's pattern;
+│                      wiring.ts, the Skills wiring diagram's geometry; pixels.ts and tokens.ts, which drawings share
 ├── src/styles/        tokens.css and global styles
 ├── public/cells/      neuron files the hero loads (generated; don't edit by hand)
 ├── data/swc/          raw downloaded reconstructions + sources.csv
 ├── scripts/           swc_to_web.py
-├── tests/             test_swc_to_web.py, copy.test.ts, raster.test.ts
+├── tests/             test_swc_to_web.py, and one .test.ts per src/lib/ module: copy, raster, wiring, pixels
 └── docs/              cell-web-v1.md (the neuron file format), design/ (chosen artboards, 1x PNG)
 ```
 
@@ -41,8 +42,7 @@ Cal Patel's portfolio site. It reads as a nervous system: real neuron reconstruc
 | `uv run scripts/swc_to_web.py data/swc public/cells --sources data/swc/sources.csv` | Converts every SWC file into cell-web/1 JSON and updates `public/cells/index.json` |
 | add `--preview <folder>` | Also writes an SVG of each cell for a quick visual check |
 | `pytest tests/test_swc_to_web.py` | Runs the converter's tests (from the repo root) |
-| `node --test tests/copy.test.ts` | Runs the copy helper's tests (from the repo root) |
-| `node --test tests/raster.test.ts` | Runs the Experience raster pattern's tests (from the repo root) |
+| `node --test tests/*.test.ts` | Runs every `src/lib/` module's tests (from the repo root) |
 | `npx astro dev --background` | Runs the dev server in the background so Claude Code can keep working and take screenshots; `npx astro dev status`, `logs`, and `stop` manage it |
 
 Deploys happen through Workers Builds. Don't run `wrangler deploy` unless Cal asks.

@@ -20,11 +20,15 @@ const { id, label } = Astro.props;
 
 <style>
   section {
+    /* The heading to the content. Named so that content which sits closer to
+       the heading (Skills' hint) can say how much closer. */
+    --section-heading-gap: var(--space-l);
+
     padding-block: var(--space-section);
   }
 
   h2 {
-    margin-bottom: var(--space-l);
+    margin-bottom: var(--section-heading-gap);
     font-size: var(--step-display-3);
     line-height: var(--leading-display);
   }

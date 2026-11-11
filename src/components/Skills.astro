@@ -1,0 +1,175 @@
+---
+// The Skills section: skills.md as a wiring diagram, with the same
+// connections as a plain list for screen readers.
+//
+// Which form shows depends on the section's own width, in rem, so the labels
+// fit at any text size (DESIGN.md, Breakpoints):
+//
+//   - 45rem or more: the desktop diagram, with the hint above it where there
+//     is a pointer to hover with.
+//   - 17.5rem to 45rem: one diagram per group, under the group's name.
+//   - under 17.5rem, or with JavaScript off: the plain list, shown where the
+//     diagrams would be. The diagrams need the script to draw them.
+//
+// The diagrams, the group names above them, and the hint are hidden from
+// screen readers, and the list is there for them at every width. Nothing in
+// the section is focusable.
+import { getEntry } from 'astro:content';
+
+import Copy from './Copy.astro';
+import Wiring from './Wiring.astro';
+
+const skills = (await getEntry('skills', 'skills'))!.data;
+
+const placeLabel = new Map(skills.places.map((place) => [place.id, place.label]));
+
+// One list item, written like the master sheet's Site copy line:
+// "Anthropic API (tool use, structured outputs, streaming): NotePilot".
+const line = (skill: (typeof skills.groups)[number]['skills'][number]) =>
+  `${skill.name}${skill.detail ? ` (${skill.detail})` : ''}: ${skill.places.map((place) => placeLabel.get(place)).join(', ')}`;
+---
+
+<div class="skills">
+  <p class="hint" aria-hidden="true">
+    <Copy text={skills.hint} />
+  </p>
+  <div class="visual" aria-hidden="true">
+    <div class="wide">
+      <Wiring skills={skills} />
+    </div>
+    <div class="narrow">
+      {
+        skills.groups.map((group, g) => (
+          <div>
+            <p class="group-name">
+              <Copy text={group.name} />
+            </p>
+            <Wiring skills={skills} group={g} />
+          </div>
+        ))
+      }
+    </div>
+  </div>
+  <ul class="list" role="list">
+    {
+      skills.groups.map((group) => (
+        <li>
+          <h3 class="group-name">
+            <Copy text={group.name} />
+          </h3>
+          <ul role="list">
+            {group.skills.map((skill) => (
+              <li>
+                <Copy text={line(skill)} />
+              </li>
+            ))}
+          </ul>
+        </li>
+      ))
+    }
+  </ul>
+</div>
+
+<style>
+  /* The section's own width is what the layouts below ask about. */
+  .skills {
+    container-type: inline-size;
+  }
+
+  /* Shown only with the desktop diagram (see the end), and only where there
+     is a pointer to hover with. It sits close under the heading. */
+  .hint {
+    display: none;
+    margin-top: calc(var(--space-xs) - var(--section-heading-gap));
+    margin-bottom: var(--space-l);
+    color: var(--color-text-muted);
+    font-size: var(--step-text-5);
+    line-height: var(--leading-snug);
+  }
+
+  /* Until the conditions at the end say otherwise, the list shows and the
+     diagrams don't: that is the page with JavaScript off, and on a section
+     too narrow for a diagram's labels. */
+  .visual,
+  .wide {
+    display: none;
+  }
+
+  /* One diagram per group, each under its group's name. The first name sits a
+     little closer to the heading than the section's usual gap. */
+  .narrow,
+  .list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-m);
+    margin-top: calc(var(--space-m) - var(--section-heading-gap));
+  }
+
+  /* A group's name: above its diagram, and above its skills in the list,
+     where it is a heading set as a plain label. */
+  .group-name {
+    margin-bottom: var(--space-2xs);
+    color: var(--color-text-muted);
+    font-family: var(--font-text);
+    font-size: var(--step-text-7);
+    font-variation-settings: normal;
+    letter-spacing: normal;
+    line-height: var(--leading-label);
+  }
+
+  .list ul {
+    color: var(--color-text-secondary);
+  }
+
+  /* With JavaScript on and room for a diagram's labels, the diagrams show and
+     the list is only read out, not shown: global.css's .visually-hidden,
+     applied here because it depends on these conditions.
+
+     17.5rem is a 320px window at default text, the narrowest the per-group
+     layout fits once its columns have shifted (src/lib/wiring.ts). */
+  @media (scripting: enabled) {
+    @container (width >= 17.5rem) {
+      .visual {
+        display: block;
+      }
+
+      .list {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        margin: 0;
+        overflow: hidden;
+        clip-path: inset(50%);
+        white-space: nowrap;
+      }
+    }
+  }
+
+  /* The desktop diagram, from the width at which the longest skill label fits
+     left of its column, which is 21.0% of the way across.
+
+     45rem is measured from today's longest skill label: "3D neuron
+     reconstruction" is 149.2px wide at 13px, and 149.2 / 0.21 = 710.3px, or
+     44.4rem. A longer skill name in skills.md needs this raised. In dev,
+     Wiring.astro's script warns in the console when a label starts outside
+     the content box. */
+  @container (width >= 45rem) {
+    .wide {
+      display: block;
+    }
+
+    .narrow {
+      display: none;
+    }
+  }
+
+  /* The hint is about the diagram, so it needs the diagram: the script, and a
+     pointer that can hover. */
+  @media (scripting: enabled) and (hover: hover) {
+    @container (width >= 45rem) {
+      .hint {
+        display: block;
+      }
+    }
+  }
+</style>

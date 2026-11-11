@@ -19,6 +19,14 @@
             more: --reading-max + --space-l at its widest (48px) +
             --figure-width. Below it, the figure follows its paragraph.
 
+   Skills switches on its own content width, in rem, so its labels fit at any
+   text size:
+     45rem   the desktop wiring diagram shows at this width or more (720px,
+             an 800px window, at default text); below it, one diagram per
+             group
+     17.5rem below this (a 320px window at default text), the plain list
+             shows instead of the diagrams
+
    Fluid sizes run from the 390px phone mocks to the 1440px desktop mocks.
    Steps written as a plain vw value keep the chosen mock's own formula. */
 
@@ -204,9 +212,11 @@
   --wire-dimmed-op:       0.05;       /* lines only; labels follow --dim-text-min */
   --wire-row:             22px;       /* skill to skill */
   --wire-group-gap:       12px;       /* extra space between skill groups */
-  --wire-skill-dot:       6px;        /* diameters; phones use 5px and 8px for skills and places */
+  --wire-skill-dot:       6px;        /* diameters */
   --wire-group-dot:       10px;
   --wire-place-dot:       12px;
+  --wire-skill-dot-phone: 5px;        /* diameters in the per-group layout */
+  --wire-place-dot-phone: 8px;
   --wire-label-halo:      5px;        /* black outline behind group labels */
 
   /* ---------------------------------------------------------------------

@@ -1,20 +1,21 @@
-// Lines drawings up with the screen's pixels, so each one is equally sharp
-// wherever its drawing falls on the page. The Experience raster
-// (src/lib/raster.ts) and the Skills wiring (src/lib/wiring.ts) share these.
+// Lines a drawing's parts up with pixels, so each one is equally sharp. The
+// Experience raster (src/lib/raster.ts) and the Skills wiring
+// (src/lib/wiring.ts) share these.
 //
-// A position is in px along one axis of a drawing, and `origin` is where the
-// drawing starts on that axis, in px from the page's edge. A drawing rarely
-// starts on a whole pixel, so the pixels are the page's, not the drawing's.
+// A position is in px along one axis of a drawing. Left alone, it moves to
+// the drawing's own pixels, counted from the drawing's start. With `origin`,
+// which is where the drawing starts on that axis in px from the page's edge,
+// it moves to the page's pixels instead.
 //
 // Nothing moves more than half a pixel. No DOM and no Astro imports, so Node
 // can run tests/pixels.test.ts against it directly.
 
-/** The nearest pixel center, n + 0.5px across the page, as a position in the drawing. */
+/** The nearest pixel center, n + 0.5px, as a position in the drawing. */
 export function toPixelCenter(position: number, origin = 0): number {
   return Math.round(origin + position - 0.5) + 0.5 - origin;
 }
 
-/** The nearest pixel edge, a whole px across the page, as a position in the drawing. */
+/** The nearest pixel edge, a whole px, as a position in the drawing. */
 export function toPixelEdge(position: number, origin = 0): number {
   return Math.round(origin + position) - origin;
 }

@@ -8,13 +8,19 @@ import Hero from '../components/Hero.astro';
 import Layout from '../components/Layout.astro';
 import Projects from '../components/Projects.astro';
 import Section from '../components/Section.astro';
+import Skills from '../components/Skills.astro';
 import { copyText } from '../lib/copy.ts';
 
 const site = (await getEntry('site', 'site'))!.data;
 const hero = (await getEntry('hero', 'hero'))!.data;
 
 // Each section's content, by its id. A section not listed yet has only its heading.
-const content: Partial<Record<string, typeof About>> = { about: About, projects: Projects, experience: Experience };
+const content: Partial<Record<string, typeof About>> = {
+  about: About,
+  projects: Projects,
+  experience: Experience,
+  skills: Skills,
+};
 ---
 
 <Layout title={copyText(hero.name)} description={hero.lines.map(copyText).join(' ')} home>
