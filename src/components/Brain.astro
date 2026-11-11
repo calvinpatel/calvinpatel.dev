@@ -14,13 +14,27 @@
 //
 // Below 760px there are no callouts or labels, so the figure shows only the
 // part of its viewBox the brain takes, and the brain fills the content width.
+// On a short screen it shrinks to keep the hero inside the first screen, down
+// to the size at which its narrowest lobe is still a tap target.
 //
 // The cells and the nuclei are written as strings, not as tags in the
 // template: there are about 550 of them, and a string carries no scoping
 // attribute. Their styles reach them with :global.
 import { getEntry } from 'astro:content';
 
-import { DRIFT, LOOK, VIEW, buildBrain, closeView, foliaD, linesD, nucleiGroups, pathD, unit } from '../lib/brain.ts';
+import {
+  DRIFT,
+  LOOK,
+  VIEW,
+  buildBrain,
+  closeView,
+  foliaD,
+  linesD,
+  narrowestLobe,
+  nucleiGroups,
+  pathD,
+  unit,
+} from '../lib/brain.ts';
 import type { Cell, Nuclei } from '../lib/brain.ts';
 import { copyText } from '../lib/copy.ts';
 import Copy from './Copy.astro';
@@ -76,6 +90,12 @@ const zoom = VIEW.width / close.width;
 const phoneFit =
   `translate(${(VIEW.x - close.x * zoom).toFixed(2)}px, ${(VIEW.y - close.y * zoom).toFixed(2)}px) ` +
   `scale(${zoom.toFixed(4)})`;
+// The phone figure's height for each px of its width, and its least height
+// for each px of a tap target: the height at which the narrowest lobe is one
+// target wide. Half a unit is held back, so that rounding in the path data
+// and on screen never leaves the lobe a hair under.
+const phoneRise = close.height / close.width;
+const phoneFloor = (close.height / (narrowestLobe(brain) - 0.5)).toFixed(3);
 
 // The focus ring's mask has to hold the ring where it leaves the viewBox.
 const ROOM = 40;
@@ -92,6 +112,8 @@ const px = (pair: readonly [number, number]) => `${pair[0]}px ${pair[1]}px`;
 const look = Object.entries({
   'phone-ratio': `${close.width} / ${close.height}`,
   'phone-fit': phoneFit,
+  'phone-rise': phoneRise.toFixed(4),
+  'phone-floor': phoneFloor,
   'drift-a-from': px(DRIFT.a.from),
   'drift-a-to': px(DRIFT.a.to),
   'drift-b-from': px(DRIFT.b.from),
@@ -1114,8 +1136,34 @@ const look = Object.entries({
   }
 
   @media (width < 760px) {
-    /* The figure shows only the brain's own part of the viewBox, so the brain
-       fills the content width. Its backlight spills into the page's margins. */
+    /* The brain's box in the hero's column (Hero.astro): the figure and one
+       line of hint. It is as tall as the screen leaves room for, between two
+       limits. At most, the figure fills the content width; 100cqw is that
+       width, because the column is a container. At least, the figure's
+       narrowest lobe is a tap target wide; if that doesn't fit, the hero
+       grows. Any room left over goes above the text and below this box, half
+       each, which centers the group. */
+    .brain {
+      --line-box: calc(var(--step-text-6) * var(--leading-label));
+      --hint-room: calc(var(--space-2xs) + var(--line-box));
+      --least: calc(var(--tap-min) * var(--phone-floor) + var(--hint-room));
+      flex: 1 0 var(--least);
+      min-height: var(--least);
+      max-height: calc(100cqw * var(--phone-rise) + var(--hint-room));
+      margin-bottom: auto;
+      /* A container itself, so the figure can take its width from this box's
+         height. Its backlight still shows past it. */
+      container-type: size;
+    }
+
+    /* The figure shows only the brain's own part of the viewBox, as wide as
+       this box's height allows and no wider than the content. Its backlight
+       spills into the page's margins. */
+    .figure {
+      width: min(100%, calc((100cqh - var(--hint-room)) / var(--phone-rise)));
+      margin-inline: auto;
+    }
+
     svg {
       aspect-ratio: var(--phone-ratio);
     }
@@ -1134,7 +1182,6 @@ const look = Object.entries({
     }
 
     .hint {
-      --line-box: calc(var(--step-text-6) * var(--leading-label));
       min-height: calc(2 * var(--line-box));
       margin-bottom: calc(-1 * var(--line-box));
     }

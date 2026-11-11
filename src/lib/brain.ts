@@ -571,6 +571,19 @@ export function closeView(brain: Brain): { x: number; y: number; width: number; 
   return { x, y, width: tenth(x1 + CLOSE_ROOM - x), height: tenth(y1 + CLOSE_ROOM - y) };
 }
 
+/**
+ * The shortest side of any lobe's box, in viewBox units. The phone figure
+ * never shrinks below the size that draws this as wide as a tap target.
+ */
+export function narrowestLobe(brain: Brain): number {
+  return Math.min(
+    ...brain.lobes.map((lobe) => {
+      const { x0, x1, y0, y1 } = boundsOf(lobe.region);
+      return Math.min(x1 - x0, y1 - y0);
+    }),
+  );
+}
+
 /** A quadratic curve's samples, enough to box it. */
 const sampleFolium = ({ from, control, to }: Folium): Vec[] =>
   Array.from({ length: 21 }, (_, i): Vec => {

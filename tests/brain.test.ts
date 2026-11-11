@@ -13,6 +13,7 @@ import {
   foliaD,
   inside,
   lengthOf,
+  narrowestLobe,
   nearest,
   nucleiGroups,
   pathD,
@@ -207,6 +208,16 @@ test("the close view holds the brain's own bounds and none of the labels' room",
     const [left, top, right, bottom] = boundsOf(lobe.region);
     assert.ok((right - left) * scale >= 44 && (bottom - top) * scale >= 44, lobe.id);
   }
+});
+
+test("the narrowest lobe is the occipital, side to side, and sets the phone figure's least size", () => {
+  const narrowest = narrowestLobe(brain);
+  const [left, , right] = boundsOf(brain.lobes[1].region);
+  assert.ok(Math.abs(narrowest - (right - left)) < 0.1, `${narrowest}`);
+  assert.ok(Math.abs(narrowest - 90.2) < 0.05);
+  // The close view's width at which that lobe is a 44px tap target.
+  const least = (44 * closeView(brain).width) / narrowest;
+  assert.ok(least > 262 && least < 264, `${least}`);
 });
 
 test('pathD writes each point to a tenth of a unit, as steps', () => {

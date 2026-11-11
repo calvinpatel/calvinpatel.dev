@@ -69,9 +69,25 @@ const hero = (await getEntry('hero', 'hero'))!.data;
   }
 
   @media (width < 760px) {
-    /* The text, then the brain: one group, centered in the first screen. */
+    /* The text, then the brain: one group, centered in the first screen. The
+       column is as tall as the hero, and the brain takes what the text leaves
+       of it, up to its full size (Brain.astro). The room left over goes above
+       the text and below the brain. The column is a container so the brain
+       can measure the content width. */
+    .hero {
+      align-items: stretch;
+    }
+
     .grid {
-      grid-template-columns: minmax(0, 1fr);
+      display: flex;
+      flex-direction: column;
+      align-items: stretch;
+      container-type: inline-size;
+    }
+
+    .text {
+      flex: none;
+      margin-top: auto;
     }
   }
 </style>
