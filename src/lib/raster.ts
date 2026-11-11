@@ -17,6 +17,8 @@
 // directly. Every size comes in through `pattern`, which the script fills from
 // the --raster-* tokens.
 
+import { toPixelCenter } from './pixels.ts';
+
 export type Schedule = 'full-time' | 'part-time';
 
 /** One entry's raster fields, as written in src/content/experience.md. */
@@ -98,8 +100,6 @@ export function dateToX(date: number, axis: Axis, width: number): number {
 export function rasterRow(role: Role, axis: Axis, width: number, pattern: Pattern, left = 0): Row {
   const now = dayStart(axis.now);
   const x = (date: number) => dateToX(Math.min(date, now), axis, width);
-  // The nearest pixel center, n + 0.5px across the page, as a position in the row.
-  const toPixelCenter = (position: number) => Math.round(left + position - 0.5) + 0.5 - left;
 
   const ticks: number[] = [];
   for (let year = axis.startYear; newYear(year) <= now; year++) ticks.push(x(newYear(year)));
@@ -112,8 +112,8 @@ export function rasterRow(role: Role, axis: Axis, width: number, pattern: Patter
   // one. Spacing is in whole pixels, so once the first spike is on a pixel
   // center the rest are too.
   const ongoing = role.end === 'present';
-  const from = toPixelCenter(x(monthStart(role.start)));
-  const marker = ongoing ? toPixelCenter(width) : null;
+  const from = toPixelCenter(x(monthStart(role.start)), left);
+  const marker = ongoing ? toPixelCenter(width, left) : null;
   const end = ongoing ? width : x(monthStart(role.end, 1));
   const [smallestGap] = pattern.gap[role.schedule];
   const fits = (spike: number) => (marker === null ? spike < end : spike <= marker - smallestGap);

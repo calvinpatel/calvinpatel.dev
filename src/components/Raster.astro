@@ -56,10 +56,10 @@ const { start, end, schedule, axisStart, now } = Astro.props;
 <script>
   import { rasterRow } from '../lib/raster.ts';
   import type { Pattern, Schedule } from '../lib/raster.ts';
+  import { tokenReader } from '../lib/tokens.ts';
 
   // The pattern's numbers, from tokens.css.
-  const tokens = getComputedStyle(document.documentElement);
-  const token = (name: string) => parseFloat(tokens.getPropertyValue(name));
+  const token = tokenReader();
   const pattern: Pattern = {
     pitch: token('--raster-pitch'),
     burst: {
