@@ -92,6 +92,7 @@ const site = defineCollection({
             .strict(),
         )
         .length(5),
+      brainLabel: text, // the brain nav's name for screen readers
       brainHint: z.object({ pointer: text, touch: text }).strict(),
       footer: z.object({ credit: text, creditsLabel: text, copyright: text }).strict(),
     })

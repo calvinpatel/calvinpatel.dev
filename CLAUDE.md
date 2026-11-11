@@ -24,13 +24,17 @@ Cal Patel's portfolio site. It reads as a nervous system: real neuron reconstruc
 ├── src/components/    the shared layout, hero canvas, brain navigation, section layouts
 ├── src/lib/           copy.ts, which renders every content field; raster.ts, the Experience raster's pattern;
 │                      wiring.ts, the Skills wiring diagram's geometry; pixels.ts and tokens.ts, which drawings share;
-│                      cells.ts, which reads public/cells/index.json for the Credits page
+│                      cells.ts, which reads public/cells/index.json for the Credits page;
+│                      brain.ts, the hero brain's geometry; brain-nav.ts, the brain navigation's rules;
+│                      spontaneous.ts, the five-second window's clock, which the brain and the neuron layer share
 ├── src/styles/        tokens.css and global styles
 ├── public/cells/      neuron files the hero loads (generated; don't edit by hand)
 ├── data/swc/          raw downloaded reconstructions + sources.csv
 ├── scripts/           swc_to_web.py
-├── tests/             test_swc_to_web.py, and one .test.ts per src/lib/ module: copy, raster, wiring, pixels, cells
-└── docs/              cell-web-v1.md (the neuron file format), design/ (chosen artboards, 1x PNG)
+├── tests/             test_swc_to_web.py, and one .test.ts per src/lib/ module: copy, raster, wiring, pixels, cells,
+│                      brain, brain-nav, spontaneous
+└── docs/              cell-web-v1.md (the neuron file format), design/ (chosen artboards, 1x PNG),
+                       spikes/ (approved spikes; brain-navigation.html is the source for the hero's brain and neuron layer)
 ```
 
 ## Commands

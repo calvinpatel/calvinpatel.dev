@@ -24,6 +24,8 @@ All on the design canvas. Every other artboard is a rejected option kept for the
 | Contact | 1d: Option 1's flow, redrawn | 1d on a phone: turned to flow down |
 | Interface colors | B: Faintly cool | |
 
+The brain itself was settled after the artboards, in a spike: `docs/spikes/brain-navigation.html` (see Drawings: Brain). Where the hero artboards and the spike differ on the brain, the spike wins.
+
 ## Color
 
 ### Interface colors
@@ -54,7 +56,9 @@ Rules:
 | `--ink` | main text color | Every line drawing: dividers, the dendrite, the raster, the Skills wiring, the synapse. |
 | `--fluor-gfp` | `#44e07c` | Neurons in the hero. |
 | `--fluor-tdtomato` | `#ff5a4a` | Neurons in the hero. |
-| `--fluor-dapi` | `#4f6dff` | Nuclei in the hero and the brain. |
+| `--fluor-dapi` | `#4f6dff` | Nuclei in the hero and the brain, the wash over the brain's active lobe, and the backlight behind the brain. |
+| `--brain-tissue` | `#0b1220` | A brain lobe's fill at its center, fading to `--color-bg` at its edge. |
+| `--brain-rim` | `#9fb4ff` | The rim light along the brain's outline. |
 
 Rules:
 
@@ -167,7 +171,7 @@ Media queries can't read custom properties, so these widths are written as numbe
 
 **Links.** A link keeps the color of the text around it, with an underline in `--color-link-underline` set `--link-underline-offset` (4px) below the text. On hover, the underline brightens to `--color-text` instantly; nothing else changes. Visited links look the same as unvisited ones. The top bar's section links and the CP mark are the one exception: no underline at rest, and the standard underline appears on hover.
 
-**Focus.** Every link and every brain lobe shows a ring on keyboard focus: `--focus-width` (2px) solid in `--color-focus`, with `--focus-offset` (4px) of space. Use `:focus-visible`, and never remove the ring without replacing it with this one.
+**Focus.** Every link and every brain lobe shows a ring on keyboard focus: `--focus-width` (2px) solid in `--color-focus`, with `--focus-offset` (4px) of space. Use `:focus-visible`, and never remove the ring without replacing it with this one. A lobe's ring follows the lobe's own shape, `--focus-offset` outside its edge. The lobes tile, so along a shared border the ring runs over the neighboring lobe. It lifts with the lobe, and it works without the script.
 
 **Buttons.** The designs have none: every control is a link or a brain lobe, and the lobes are links too. If a real action ever needs a `<button>`, style it like a link. No filled or outlined pills.
 
@@ -175,7 +179,10 @@ Media queries can't read custom properties, so these widths are written as numbe
 
 **Figure box.** Used for the case study's comma diagram. A `--color-surface` box with a 1px `--color-border` edge, `--radius` (12px) corners, and `--figure-padding` (20px) of padding. In the margin it is `--figure-width` (320px) wide.
 
-**Brain label (shelf).** The callout dendrite ends in a short horizontal line, and the label sits on it with no box. The first line is the section name in Plex at `--step-text-4`, weight 500, in the main text color. The second line is the lobe and what it does, such as "Frontal lobe: personality and planning," at `--step-text-7` in the muted color. A soft dark shadow (`--label-shadow`) sits behind the letters. The text goes on the side away from the brain: right-aligned for labels on the left, left-aligned for labels on the right. The Skills label, the only one below the brain, hangs under its shelf and wraps to two lines. On phones, the labels appear under the brain.
+**Brain label (shelf).** The callout dendrite ends in a short horizontal line, and the label sits on it with no box. The first line is the section name in Plex at `--step-text-4`, weight 500, in the main text color. The second line is the lobe and what it does, such as "Frontal lobe: personality and planning," at `--step-text-7` in the muted color. A soft dark shadow (`--label-shadow`) sits behind the letters. The text goes on the side away from the brain: right-aligned for labels on the left, left-aligned for labels on the right. The Skills label, the only one below the brain, hangs under its shelf and wraps to two even lines, with the shelf as wide as those lines. The text sits `--space-2xs` from the shelf, and the shelf runs `--space-2xs` past the text on the side away from the tip. On phones, the labels appear under the brain.
+
+- **A label slides along its shelf to stay in bounds.** It keeps `--space-2xs` from the viewport's right edge and `--space-xs` from the hero text's letters. The callout's tip stays on the shelf, so a slid label's shelf runs both ways from the tip and grows outward from it. Where both limits can't be met, the viewport wins. The script measures the real label and the real text, so the rule also holds for enlarged text.
+- **Where it applies today.** The Projects and Skills labels slide left in windows from 760px to about 1120px wide (62px at 760px). The Experience label slides right below 800px (10px at 760px). From about 1150px up, every label sits as drawn.
 
 **Footer.** The neuron credit line (NeuroMorpho.Org, CC BY 4.0) with a Credits link, plus the copyright, in `--step-text-7` muted. It stacks on phones.
 
@@ -183,9 +190,14 @@ Media queries can't read custom properties, so these widths are written as numbe
 
 ## Sections
 
-**Hero.** The top bar, then the name on one line in Fraunces and the two hero sentences in Plex, each sentence starting its own line, in the secondary color. The brain sits on the right with the hint under it. On phones, everything is left-aligned, with the brain full width below the text and the tap hint centered under it. The neuron canvas fills the hero behind everything (see Motion).
+**Hero.** The top bar, then the name on one line in Fraunces and the two hero sentences in Plex, each sentence starting its own line, in the secondary color. The brain sits on the right with the hint under it. The hint is `brainHint.pointer` where the device can hover and `brainHint.touch` where it can't, at `--step-text-6`, muted and centered. It hides while a label shows, because a label can reach where it sits. On phones, everything is left-aligned, with the brain full width below the text and the tap hint centered under it. The neuron canvas fills the hero behind everything (see Motion).
 
 **Brain navigation.** Five lobes, each a real link to a section: frontal lobe → About, occipital → Projects, temporal → Experience, cerebellum → Skills, parietal → Contact. Hover or keyboard focus shows that lobe's label. On touch, the first tap shows the label and the second tap goes to the section.
+- **The lobes are links in the page before any script runs,** in a `<nav>` named by site.md's `brainLabel`. Each lobe's name for a screen reader is its section label, then its lobe line. Without the script they are plain links with focus rings: no highlight and no labels.
+- **One lobe is active at a time.** The active lobe lifts (`--brain-lift`), its edge shows (`--brain-edge-op`), a DAPI wash covers it (`--brain-wash-op`), and its cells go from `--brain-cell-rest` to full brightness. Escape, or moving away, clears it.
+- **Touch.** A tap away from the lobes clears the preview. Below 760px there are no callouts or shelf labels: the first tap swaps the hint for that section's `phoneLine`.
+- **What counts as a first tap.** Going to the section is the rule. A click previews only when it follows a real touch on that lobe: a finger or a pen, with a contact size. A mouse, a keyboard, and a screen reader's activation go straight to the section. Browsers give no certain sign of a screen reader, so the test is a heuristic (a press with no size, or a click that counts no press).
+- **The occipital lobe's tap target** reaches `--space-xs` past the brain's edge, unseen, because the lobe is narrower than `--tap-min` on a phone.
 
 **Projects.** Each project is one row: the status in the left column, the name in Fraunces, then the description, and the links in the right column. NotePilot's row adds its four results in Fraunces (`--step-display-6`), with labels at `--step-text-5` and a note on how they were measured at `--step-text-6`. A myelinated axon runs through the section: a soma and tapering hillock under the heading, a divider between projects with sheaths and faint wrapped layers, and branching terminals at the end. Desktop nodes sit every `--axon-node-spacing` (80px) so they land on the column gutters; place them from the real column positions at each width. Below 900px, each project stacks status, name, description, and links, and the results form a 2×2 grid. The dividers keep the same 80px spacing at every width, with the last sheath cut off at the edge.
 
@@ -215,7 +227,7 @@ Media queries can't read custom properties, so these widths are written as numbe
 
 ## Drawings
 
-Every drawing is ink line art measured from its chosen artboard. The numbers are tokens in tokens.css; shapes that are drawn by hand rather than generated are given here as SVG path data. Draw each one at its real pixel size, in an SVG sized in CSS px. Never stretch a drawing with a `viewBox` that scales its text or its line widths. The phone synapse is the one drawing drawn smaller than its coordinates: its shapes scale, but every 1px line stays 1px (see Synapse). A drawing snaps to its own pixels, counted from its SVG's corner, because that's where Chrome starts painting it: an SVG's contents are painted from the screen pixel nearest its corner, wherever the SVG falls on the page. Colors are always `--ink` (or `--color-bg` where a shape cuts a gap) with the opacity tokens below. Every drawing is decorative and hidden from screen readers, because the text beside it says what it shows.
+Every drawing below the hero is ink line art measured from its chosen artboard. The numbers are tokens in tokens.css; shapes that are drawn by hand rather than generated are given here as SVG path data. Draw each one at its real pixel size, in an SVG sized in CSS px. Never stretch a drawing with a `viewBox` that scales its text or its line widths. Two drawings are drawn smaller than their coordinates, the phone synapse and the hero's brain: their shapes scale, but their thin lines keep their width in px (see Synapse and Brain). A drawing snaps to its own pixels, counted from its SVG's corner, because that's where Chrome starts painting it: an SVG's contents are painted from the screen pixel nearest its corner, wherever the SVG falls on the page. Colors are always `--ink` (or `--color-bg` where a shape cuts a gap) with the opacity tokens below. Every drawing is decorative and hidden from screen readers, because the text beside it says what it shows. The brain is the exception to three of these rules: it is drawn in the hero's fluorescence colors, it comes from a spike rather than an artboard, and its lobes are links.
 
 ### Spike raster (Experience)
 
@@ -342,17 +354,47 @@ A fixed figure: copy it as written, with `color: var(--ink)` on the SVG. On desk
 
 - **Phones (below 900px).** The same figure turned to flow down onto the email: `viewBox="0 0 200 430"`, 130px wide, with its contents wrapped in `<g transform="translate(200 0) rotate(90)">`, sitting 4px above the email. That draws it at 0.65 of its coordinates, so its shapes scale: the sheaths, the nodes, the released vesicles, and the receptor band. Its 1px lines don't. The axon, the terminal's outline, the vesicles, and the membrane keep `--line` with `vector-effect: non-scaling-stroke`. The sheath's black core is thinned from 6 to about 4.92 units (8 − 2 ÷ 0.65), so the sheath's two edges stay 1px. The two sheath strokes never take the vector effect: it would measure their dashes in screen px and move the sheaths off the nodes.
 
+### Brain (hero)
+
+A left hemisphere in lateral view, frontal pole on the left, with the cerebellum and the brain stem. Its source is the approved spike, `docs/spikes/brain-navigation.html`; part 2 ports the hero version of the neuron layer from the same file. The geometry is generated, not drawn by hand: `src/lib/brain.ts` builds it at build time from the spike's control points with the seed 11, and the lobes are links in the page before any script runs.
+
+- **Size.** `viewBox="-20 -12 720 488"`, filling the `--hero-brain` column: 691px wide at full width, so it is always drawn smaller than its coordinates. Sizes below are in viewBox units unless they say px.
+- **Shapes.** Every curve is a Catmull-Rom spline through the spike's control points. The cerebrum's outline is notched where sulci reach the surface. Four lobes tile it: the Sylvian fissure and the central sulcus are two of their borders, and the other two (parietal to occipital, parietal to temporal) follow no sulcus. The cerebellum and the stem are separate shapes.
+- **Tissue.** Each lobe is filled with a radial gradient across its own box, `--brain-tissue` at (50%, 42%) fading to `--color-bg` at 75%. The stem has the same fill at 80%, with an ink outline and two fibres at 22%.
+- **Inner shading.** A `--color-bg` line 18 wide at 75%, blurred by 5, along the brain's outline and the cerebellum's, clipped to each lobe. It darkens the tissue just inside the surface.
+- **Grooves.** Fifteen sulci across the cerebrum and eight folia across the cerebellum: `--color-bg` lines 2.2 wide at 70%, blurred by 0.8. The central sulcus (3.4 wide) and the Sylvian fissure (5.5 wide) are drawn the same way at 90%.
+- **Borders with no sulcus.** The parietal lobe's borders with the occipital and temporal lobes are faint dashed ink lines: 1 wide at 20%, dashed 3 on and 5 off. They scale with the brain.
+- **Nuclei.** 1,947 DAPI dots, radius 0.55 to 1.2, in three bands by depth from the surface (under 9, under 26, deeper) at 18%, 32%, and 48%. They are denser in the cerebellum.
+- **Rim light.** The outline and the cerebellum's, 1.4 wide in `--brain-rim`, from 70% at the top through 32% to 14% at the bottom.
+- **Backlight.** The brain's whole silhouette in `--fluor-dapi` at `--brain-backlight-op`, blurred by 30, behind everything. It is the one glow on the site (see the banned list). The spike also draws a dark halo over it, which separates the brain from the neuron layer; that comes with the neuron layer, so until then the backlight shows more than it will.
+- **Small cells.** 46 neurons inside the lobes: pyramidal cells in the cerebrum, their apical dendrites pointing at the surface, and Purkinje cells in the cerebellum. Each is GFP or tdTomato with a DAPI nucleus. They rest at `--brain-cell-rest` and show fully in the active lobe.
+- **Callouts.** Each runs from a dot inside its lobe to its label's anchor, as a wavering line with two short twigs near the lobe. In viewBox units:
+
+  | Lobe | From | Label anchor | Label runs |
+  | --- | --- | --- | --- |
+  | Frontal (About) | (150, 150) | (64, 28) | left |
+  | Occipital (Projects) | (546, 196) | (604, 34) | right |
+  | Temporal (Experience) | (300, 300) | (236, 440) | left |
+  | Cerebellum (Skills) | (522, 346) | (596, 428) | right, under its shelf |
+  | Parietal (Contact) | (394, 112) | (338, −8) | left |
+
+  The temporal anchor is the one change from the spike, which had it at (168, 374). From there the label reached the second hero sentence in windows 780 to 860px wide, and sliding it clear put it over the temporal lobe.
+- **Ink over the brain keeps its px width at every size.** The callout's line, its twigs, and the active lobe's edge are `--line` wide; the pulse is 2.4px. The callout's dots are 2.8px (in the lobe) and 1.8px (on the shelf) in radius, and the tip's flash 6px. Opacities: line 85%, twigs 70%, dots 90%, shelf 55%.
+  - The twigs, the lobe edge, and the focus ring take `vector-effect: non-scaling-stroke`, as the phone synapse's lines do.
+  - The callout's line and pulse are dashed in units of their own length so they can draw on. The vector effect would measure those dashes in screen px, so their widths are divided by the figure's scale instead, which the script measures.
+- **Written once.** Each lobe's outline, the brain's outline, the sulci, and the two fissures are each in the page once and reused. A nucleus is a zero-length line with round ends, and nuclei of one size share a path. This keeps the brain to about 115 KB (30 KB compressed), against the spike's 286 KB.
+
 ## Motion
 
 ### The language
 
-One motion language runs through the whole site: a signal travels at a set speed, the thing it reaches brightens, and it fades back to rest. Travel uses `--ease-travel` (linear), because a signal moves at constant speed. Anything that appears, grows, or fades uses `--ease-out`.
+One motion language runs through the whole site: a signal travels at a set speed, the thing it reaches brightens, and it fades back to rest. Travel uses `--ease-travel` (linear), because a signal moves at constant speed. Anything that appears, grows, or fades uses `--ease-out`. Anything that moves back and forth uses `--ease-oscillate` (ease-in-out), because it slows at each turn; that is only the brain's nuclei, drifting and breathing.
 
 ### Rules for every piece
 
 1. **Each drawing plays once.** Each drawing, such as one raster row or one divider, plays the first time it is fully in view, then stays at rest. It doesn't wait for its section or fire with it, so drawings lower down don't play out of sight. The canvas mocks loop only so they could be reviewed.
 2. **Reduced motion.** With reduced motion on, nothing travels or drifts. Each section's drawing shows in its final, resting state. The table at the end says what each piece does instead.
-3. **Five-second window.** The neuron layer fires on its own only for the first `--spontaneous-window` (5 seconds) after the page loads. After that, it moves only when the visitor's pointer or finger moves it, and the brain's nuclei stop drifting at the same moment. WCAG 2.2.2 (Pause, Stop, Hide) requires a way to pause motion that starts by itself and runs longer than 5 seconds; motion the visitor starts doesn't count. This is why the hero has no pause button.
+3. **Five-second window.** The neuron layer fires on its own only for the first `--spontaneous-window` (5 seconds) after the page loads. After that, it moves only when the visitor's pointer or finger moves it. The brain's small cells stop firing on their own, and its nuclei stop drifting and breathing, at the same moment: all three ask one clock (`src/lib/spontaneous.ts`). The clock counts only while the tab is visible. WCAG 2.2.2 (Pause, Stop, Hide) requires a way to pause motion that starts by itself and runs longer than 5 seconds; motion the visitor starts doesn't count. This is why the hero has no pause button.
 4. **Nothing animates out of sight.** Animations stop while their part of the page is off screen and while the tab is hidden.
 5. **Motion never sits behind or through text,** except the neuron layer, which stays under the brightness cap in Color.
 6. **Values come from tokens.css.** Never write a duration or speed into a component.
@@ -368,12 +410,31 @@ One motion language runs through the whole site: a signal travels at a set speed
 ### Brain callouts and labels
 
 1. **The lobe responds.** Hovering or focusing a lobe highlights it over `--hover`.
-2. **The pulse travels.** A pulse runs out along the lobe's callout at `--signal-backprop`, drawing the line as it goes, and only the end dot flashes.
+2. **The pulse travels.** A pulse runs out along the lobe's callout at `--signal-backprop`, drawing the line as it goes, and only the end dot flashes (over `--flash-out`). The run takes at least `--brain-pulse-min` (180ms) and at most `--brain-pulse-max` (420ms) whatever the callout's length on screen, so a short one still reads as travel and a long one doesn't hold its label back.
 3. **The shelf grows.** When the pulse lands, the shelf grows from the dendrite's end, away from the brain, over `--shelf`.
 4. **The text appears.** The label text fades in from that corner `--shelf-text-delay` later, over `--fade`. Labels are readable by about half a second.
-5. **The label leaves.** Moving away fades the label out over `--fade-out`.
+5. **The label leaves.** Moving away fades the label and its callout out over `--fade-out`.
 
-**Reduced motion:** the label appears with no pulse and no transition.
+**The hint** fades out over `--fade-out` while a label shows and back over `--fade`.
+
+**Reduced motion:** the label appears with no pulse and no transition, and the lobe doesn't lift.
+
+### Brain cells and nuclei
+
+- **A cell fires** in three beats: a pulse runs in along its apical dendrite to the soma (`--brain-cell-in`), the soma flashes (fading over `--brain-cell-flash`), and a pulse runs out along the axon (`--brain-cell-out`). Meanwhile the whole cell brightens and settles over `--brain-cell-fire`, and it can't fire again until that ends. The pulses travel at constant speed.
+- **Three things fire a cell.**
+  - On its own: one cell at a time, every `--brain-cell-idle-min` to `--brain-cell-idle-max`.
+  - A cascade across the hovered or focused lobe: each of its cells fires once per wave, at a random moment in the first `--brain-cascade-spread`, with a wave every `--brain-cascade`.
+  - The cell nearest the cursor, when the cursor is close to its soma.
+- **The nuclei drift and breathe.** In each depth band, half the nuclei drift one way over `--brain-drift-a` and half another over `--brain-drift-b`, a few units, back and forth. The second half also fade to 70% and back over `--brain-breathe`.
+- **The five-second window.** Firing on their own, the drift, and the breathing all stop when the window closes. A cell fires on its own only if it can finish inside the window, and the nuclei hold where they are. The cascade and the cursor response work at any time, because the visitor starts them.
+- **Nothing runs** while the hero is off screen or the tab is hidden.
+
+**Reduced motion:** no firing, no drift, and no breathing.
+
+### Scrolling to a section
+
+Clicking a lobe, a top bar link, or any other link to a section on the same page scrolls there smoothly, at the browser's own pace (CSS can't set it, so it has no token). Arriving from another page, such as from the case study's "Back to projects," lands on the section at once: smooth scrolling starts only after the page has loaded. **Reduced motion:** it jumps.
 
 ### Axon dividers (Projects, case study)
 
@@ -409,7 +470,9 @@ Plays once when Contact scrolls in. Times are measured from the first hop:
 | Piece | With reduced motion on |
 | --- | --- |
 | Neuron layer | Signals appear in place, no travel or drift |
-| Brain labels | Appear with no pulse or transition |
+| Brain labels | Appear with no pulse or transition; the lobe doesn't lift |
+| Brain cells and nuclei | No firing, drift, or breathing |
+| Scrolling to a section | Jumps |
 | Axon dividers | Nodes at rest |
 | About dendrite | Fully grown |
 | Experience raster | No cursor, spikes at rest |
@@ -420,7 +483,7 @@ Plays once when Contact scrolls in. Times are measured from the first hop:
 
 | Banned | Why |
 | --- | --- |
-| Violet or purple glow | The stock look of AI-product sites. The site's colors come from real fluorescent labels instead. The only shadow is the brain labels' dark legibility shadow. |
+| Violet or purple glow | The stock look of AI-product sites. The site's colors come from real fluorescent labels instead. The one glow is the faint DAPI-blue backlight behind the brain (`--fluor-dapi` at `--brain-backlight-op`), whose color is a real stain's. The only shadow is the brain labels' dark legibility shadow. |
 | Letter-spaced monospace labels | The stock look of developer portfolios. Labels here are plain Plex. |
 | Plexus networks (dots joined by straight lines) | A stock "network" graphic that shows no real data. The Skills diagram stays clear of it by the rules in Sections. |
 | Generic hero copy | It could belong to anyone. The hero copy is final and lives in the content files. |
@@ -432,12 +495,13 @@ Plays once when Contact scrolls in. Times are measured from the first hop:
 
 - **Contrast.** WCAG 2.2 AA for every text pair, plus the dimmed-label floor, the line-art floor, and the canvas cap above.
 - **Keyboard.** Every link and lobe is reachable with Tab, in reading order, with a visible focus ring. On the brain, hover and keyboard focus do the same thing. Skills tracing is for pointers only, because the diagram reads fully at rest and is hidden from screen readers, so it holds nothing focusable.
-- **Touch.** Brain lobes need two taps: the first shows the label, the second goes to the section. Nothing depends on hover on phones. Tap targets are at least 44px.
+- **Touch.** Brain lobes need two taps: the first shows the label, the second goes to the section. A screen reader's activation goes straight to the section. Nothing depends on hover on phones. Tap targets are at least 44px.
 - **Screen readers.**
   - The neuron canvas is hidden from screen readers (`aria-hidden="true"`).
-  - Each brain lobe is a real link with a name a screen reader can say.
+  - Each brain lobe is a real link with a name a screen reader can say: its section label, then its lobe line. The five sit in a nav named "Brain map."
+  - The brain's labels and the hint are hidden from screen readers, because the lobes' names already say everything.
   - Decorative drawings (dividers, the dendrite, the rasters, the synapse) are hidden from screen readers, because the text beside them already says everything they show.
   - The Skills diagram has a plain list behind it for screen readers.
   - Every image has real alt text.
-- **Motion.** Reduced motion is honored everywhere. Automatic motion stops after 5 seconds. Nothing animates off screen or in a hidden tab.
+- **Motion.** Reduced motion is honored everywhere. Automatic motion stops after 5 seconds. Nothing animates off screen or in a hidden tab. Escape dismisses a brain label without moving focus.
 - **Resizing.** Text stays readable and layouts reflow at 200% zoom and with enlarged default fonts. Lines may wrap; nothing clips or overlaps.

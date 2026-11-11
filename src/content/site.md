@@ -38,6 +38,9 @@ sections:
     lobeLine: "Parietal lobe: guides reaching"
     phoneLine: "Contact: parietal lobe, guides reaching. Tap again to go there."
 
+# What a screen reader calls the brain's five lobe links.
+brainLabel: Brain map
+
 # Under the brain. Pointer devices see the first; touch screens the second.
 brainHint:
   pointer: Hover a region to preview it, click to go there

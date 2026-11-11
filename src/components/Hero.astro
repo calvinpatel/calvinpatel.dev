@@ -1,8 +1,9 @@
 ---
 // The hero: the name and the two hero sentences, middle left, beside the
-// column reserved for the brain. The brain and the neuron canvas come later.
+// brain navigation. The neuron canvas comes later.
 import { getEntry } from 'astro:content';
 
+import Brain from './Brain.astro';
 import Copy from './Copy.astro';
 
 const hero = (await getEntry('hero', 'hero'))!.data;
@@ -10,7 +11,8 @@ const hero = (await getEntry('hero', 'hero'))!.data;
 
 <section class="hero">
   <div class="container grid">
-    <div class="text">
+    {/* The brain's labels keep clear of this text (Brain.astro's script). */}
+    <div class="text" data-brain-clear>
       <h1><Copy text={hero.name} /></h1>
       <p>
         {
@@ -22,8 +24,7 @@ const hero = (await getEntry('hero', 'hero'))!.data;
         }
       </p>
     </div>
-    {/* The brain's column. Empty until the brain navigation is built. */}
-    <div class="brain"></div>
+    <Brain />
   </div>
 </section>
 

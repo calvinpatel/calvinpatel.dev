@@ -1,0 +1,1279 @@
+---
+// The brain navigation (DESIGN.md, Sections: Brain navigation; Drawings:
+// Brain): a brain in lateral view whose five lobes are links to the five
+// sections, with a label on a callout for the lobe in use and a hint
+// underneath. Hero.astro places it.
+//
+// The geometry is src/lib/brain.ts, drawn here at build time, so the lobes are
+// links before any script runs. The script at the end adds what a visitor
+// starts (the highlight, the labels, the two taps) and the cells' firing.
+//
+// Like the turned synapse, the figure is drawn smaller than its coordinates.
+// Its tissue scales with it. The ink drawn over it (callouts, twigs, lobe
+// edges, focus rings) keeps its width in CSS px at every size (see the styles).
+//
+// The cells and the nuclei are written as strings, not as tags in the
+// template: there are about 550 of them, and a string carries no scoping
+// attribute. Their styles reach them with :global.
+import { getEntry } from 'astro:content';
+
+import { DRIFT, LOOK, VIEW, buildBrain, foliaD, linesD, nucleiGroups, pathD, unit } from '../lib/brain.ts';
+import type { Cell, Nuclei } from '../lib/brain.ts';
+import { copyText } from '../lib/copy.ts';
+import Copy from './Copy.astro';
+
+const site = (await getEntry('site', 'site'))!.data;
+const brain = buildBrain();
+
+// site.md's order is the lobes' order in the page, and so their Tab order.
+const lobes = site.sections.map((section) => ({
+  ...brain.lobes.find((lobe) => lobe.id === section.lobe)!,
+  copy: section,
+}));
+
+// A depth band's two drift groups, each one path per dot size.
+const nucleiHtml = (nuclei: Nuclei) =>
+  nucleiGroups(nuclei)
+    .filter((group) => group.sizes.length > 0)
+    .map(
+      (group) =>
+        `<g class="nuclei drift-${group.group === 0 ? 'a' : 'b'}" stroke-opacity="${LOOK.nuclei[group.band]}" style="animation-delay:-${group.delay.toFixed(1)}s">` +
+        group.sizes.map((size) => `<path stroke-width="${size.diameter}" d="${size.d}"/>`).join('') +
+        '</g>',
+    )
+    .join('');
+
+// The script adds each cell's two pulse paths, copied from its apical
+// dendrite and its axon, since nothing fires without it.
+const cellHtml = (cell: Cell) => {
+  const at = `cx="${unit(cell.x)}" cy="${unit(cell.y)}"`;
+  return (
+    `<g class="cell ${cell.color}">` +
+    `<circle class="glow" ${at} r="${unit(cell.radius * 4)}"/>` +
+    `<path class="axon" d="${linesD(cell.axon)}"/>` +
+    `<path class="thin" d="${linesD(cell.thin)}"/>` +
+    `<path class="thick" d="${linesD(cell.thick)}"/>` +
+    `<circle class="soma" ${at} r="${unit(cell.radius * 1.4)}"/>` +
+    `<circle class="nucleus" ${at} r="${unit(cell.radius * 0.7)}"/>` +
+    '</g>'
+  );
+};
+
+// A point as fractions of the figure, for placing a label over it.
+const across = (x: number) => (x - VIEW.x) / VIEW.width;
+const down = (y: number) => (y - VIEW.y) / VIEW.height;
+
+const origin = ([x, y]: readonly [number, number]) => `transform-origin: ${unit(x)}px ${unit(y)}px`;
+
+// The focus ring's mask has to hold the ring where it leaves the viewBox.
+const ROOM = 40;
+const maskBox = {
+  x: VIEW.x - ROOM,
+  y: VIEW.y - ROOM,
+  width: VIEW.width + 2 * ROOM,
+  height: VIEW.height + 2 * ROOM,
+};
+
+// The drawing's fixed values (src/lib/brain.ts), for the styles below.
+const { cell, callout } = LOOK;
+const px = (pair: readonly [number, number]) => `${pair[0]}px ${pair[1]}px`;
+const look = Object.entries({
+  'drift-a-from': px(DRIFT.a.from),
+  'drift-a-to': px(DRIFT.a.to),
+  'drift-b-from': px(DRIFT.b.from),
+  'drift-b-to': px(DRIFT.b.to),
+  breathe: LOOK.breathe,
+  'cell-thick': cell.thick,
+  'cell-thin': cell.thin,
+  'cell-axon': cell.axon,
+  'cell-axon-dim': cell.axonDim,
+  'cell-nucleus-rest': cell.nucleus.rest,
+  'cell-nucleus-lit': cell.nucleus.lit,
+  'cell-pulse': cell.pulse,
+  'cell-pulse-dash': cell.pulseDash,
+  'cell-pulse-far': (cell.pulseDash - 1).toFixed(2), // the dash at the path's far end
+  'cell-glow': cell.glow,
+  'cell-peak': cell.peak,
+  'callout-op': callout.opacity,
+  'callout-twig-op': callout.twig,
+  'callout-dot-op': callout.dot,
+  'callout-bouton': `${callout.bouton}px`,
+  'callout-tip': `${callout.tip}px`,
+  'callout-flash': `${callout.flash}px`,
+  'callout-flash-op': callout.flashOpacity,
+  'callout-flash-from': callout.flashGrow[0],
+  'callout-flash-to': callout.flashGrow[1],
+  'callout-pulse': `${callout.pulse}px`,
+  'callout-pulse-dash': callout.pulseDash,
+  'callout-pulse-far': (callout.pulseDash - 1).toFixed(2),
+  'callout-twigs-at': callout.twigsAt,
+  'shelf-op': LOOK.shelf,
+  'label-grow': LOOK.label.grow,
+  'label-wrap': LOOK.label.wrap,
+})
+  .map(([name, value]) => `--${name}: ${value}`)
+  .join('; ');
+---
+
+<div class="brain" data-brain style={look}>
+  <div class="figure">
+    <nav aria-label={copyText(site.brainLabel)}>
+      {/* role="none": a screen reader hears the nav and its five links, not a picture holding them. */}
+      <svg viewBox={`${VIEW.x} ${VIEW.y} ${VIEW.width} ${VIEW.height}`} role="none">
+        <defs>
+          {/* Every shape that is drawn more than once is written once, here. */}
+          <path id="brain-outline" d={pathD(brain.outline, true)}></path>
+          <path id="brain-cerebellum" d={pathD(brain.cerebellum, true)}></path>
+          <path id="brain-stem" d={pathD(brain.stem, true)}></path>
+          <path id="brain-sulci" d={linesD(brain.sulci)}></path>
+          <path id="brain-sylvian" d={pathD(brain.fissures.sylvian)}></path>
+          <path id="brain-central" d={pathD(brain.fissures.central)}></path>
+          {
+            lobes.map((lobe) => (
+              <>
+                <path id={`lobe-${lobe.id}`} class="lobe-shape" d={pathD(lobe.region, true)} />
+                <clipPath id={`clip-${lobe.id}`}>
+                  <use href={`#lobe-${lobe.id}`} />
+                </clipPath>
+                {/* The focus ring's mask: everything but the lobe and the gap
+                    around it. White keeps and black hides; they are the mask's
+                    values, not colors on the page. */}
+                <mask id={`ring-${lobe.id}`} maskUnits="userSpaceOnUse" {...maskBox}>
+                  <rect {...maskBox} fill="white" />
+                  <use class="ring-gap" href={`#lobe-${lobe.id}`} fill="black" stroke="black" />
+                </mask>
+              </>
+            ))
+          }
+          <radialGradient id="brain-tissue" cx={LOOK.tissue.cx} cy={LOOK.tissue.cy} r={LOOK.tissue.r}>
+            <stop class="tissue-center" offset="0"></stop>
+            <stop class="tissue-edge" offset="1"></stop>
+          </radialGradient>
+          <linearGradient id="brain-rim" gradientUnits="userSpaceOnUse" x1="0" y1={LOOK.rim.y1} x2="0" y2={LOOK.rim.y2}>
+            {LOOK.rim.stops.map(([offset, opacity]) => <stop class="rim-light" offset={offset} stop-opacity={opacity} />)}
+          </linearGradient>
+          <filter id="brain-glow" x="-40%" y="-40%" width="180%" height="180%">
+            <feGaussianBlur stdDeviation={LOOK.backlight.blur}></feGaussianBlur>
+          </filter>
+          <filter id="brain-inner" x="-10%" y="-10%" width="120%" height="120%">
+            <feGaussianBlur stdDeviation={LOOK.inner.blur}></feGaussianBlur>
+          </filter>
+          <filter id="brain-groove" x="-5%" y="-5%" width="110%" height="110%">
+            <feGaussianBlur stdDeviation={LOOK.groove.blur}></feGaussianBlur>
+          </filter>
+        </defs>
+
+        <g aria-hidden="true">
+          {/* The one glow on the site: DAPI blue, as if the stain lit the slide from behind. */}
+          <g class="backlight" filter="url(#brain-glow)">
+            <use href="#brain-outline"></use>
+            <use href="#brain-cerebellum"></use>
+            <use href="#brain-stem"></use>
+          </g>
+          <g class="stem" stroke-width={LOOK.stem.stroke} stroke-opacity={LOOK.stem.opacity}>
+            <use href="#brain-stem" fill="url(#brain-tissue)" fill-opacity={LOOK.stem.fill}></use>
+            <g set:html={nucleiHtml(brain.stemNuclei)} />
+            <path d={LOOK.stem.fibres} fill="none"></path>
+          </g>
+        </g>
+
+        {
+          lobes.map((lobe) => {
+            const cerebellar = lobe.id === 'cerebellum';
+            const clip = `url(#clip-${lobe.id})`;
+            return (
+              <a
+                class="lobe"
+                href={`#${lobe.copy.id}`}
+                aria-label={`${copyText(lobe.copy.label)}, ${copyText(lobe.copy.lobeLine)}`}
+                data-lobe={lobe.id}
+              >
+                <g class="body" style={origin(lobe.origin)}>
+                  <use class="hit" href={`#lobe-${lobe.id}`} fill="url(#brain-tissue)" />
+                  <g clip-path={clip}>
+                    <use
+                      class="shade"
+                      href={cerebellar ? '#brain-cerebellum' : '#brain-outline'}
+                      filter="url(#brain-inner)"
+                      stroke-width={LOOK.inner.stroke}
+                      stroke-opacity={LOOK.inner.opacity}
+                    />
+                    <Fragment set:html={nucleiHtml(lobe.nuclei)} />
+                    <g class="shade" filter="url(#brain-groove)" stroke-linecap="round" stroke-opacity={LOOK.groove.opacity}>
+                      {cerebellar ? (
+                        <path d={foliaD(brain.folia)} stroke-width={LOOK.groove.stroke} />
+                      ) : (
+                        <use href="#brain-sulci" stroke-width={LOOK.groove.stroke} />
+                      )}
+                    </g>
+                    {!cerebellar && (
+                      <g class="shade" filter="url(#brain-groove)" stroke-linecap="round" stroke-opacity={LOOK.fissure.opacity}>
+                        <use href="#brain-sylvian" stroke-width={LOOK.fissure.sylvian} />
+                        <use href="#brain-central" stroke-width={LOOK.fissure.central} />
+                      </g>
+                    )}
+                    <Fragment set:html={lobe.cells.map(cellHtml).join('')} />
+                    <use class="wash" href={`#lobe-${lobe.id}`} />
+                  </g>
+                  <use class="edge" href={`#lobe-${lobe.id}`} />
+                </g>
+              </a>
+            );
+          })
+        }
+
+        <g aria-hidden="true">
+          {/* Where two lobes meet with no sulcus between them. */}
+          <path
+            class="border"
+            d={linesD(brain.borders)}
+            stroke-width={LOOK.border.stroke}
+            stroke-opacity={LOOK.border.opacity}
+            stroke-dasharray={LOOK.border.dash}></path>
+          <g class="rim" fill="none" stroke="url(#brain-rim)" stroke-width={LOOK.rim.stroke}>
+            <use href="#brain-outline"></use>
+            <use href="#brain-cerebellum"></use>
+          </g>
+          {
+            lobes.map((lobe) => (
+              <use
+                class="ring"
+                href={`#lobe-${lobe.id}`}
+                mask={`url(#ring-${lobe.id})`}
+                style={origin(lobe.origin)}
+                data-ring={lobe.id}
+              />
+            ))
+          }
+          <g class="callouts">
+            {
+              lobes.map(({ id, callout: line }) => (
+                <g class="callout" data-callout={id} data-length={unit(line.length)}>
+                  {/* The script adds the pulse, a copy of this line. */}
+                  <path class="lead" pathLength="1" d={pathD(line.main)} />
+                  <path class="twig" d={linesD(line.twigs)} />
+                  <circle class="bouton" cx={unit(line.from[0])} cy={unit(line.from[1])} />
+                  <circle class="flash" cx={unit(line.to[0])} cy={unit(line.to[1])} />
+                  <circle class="tip" cx={unit(line.to[0])} cy={unit(line.to[1])} />
+                </g>
+              ))
+            }
+          </g>
+        </g>
+      </svg>
+    </nav>
+
+    {/* The labels and the hint repeat the lobes' names, so a screen reader skips them. */}
+    <div class="labels" aria-hidden="true">
+      {
+        lobes.map(({ id, label, copy }) => (
+          <div
+            class:list={['label', label.side, { below: label.below }]}
+            style={`--x: ${across(label.anchor[0]).toFixed(4)}; --y: ${down(label.anchor[1]).toFixed(4)}`}
+            data-brain-label={copy.id}
+            data-for={id}
+            data-side={label.side}
+          >
+            <div class="text">
+              <span class="name">
+                <Copy text={copy.label} />
+              </span>
+              <span class="line">
+                <Copy text={copy.lobeLine} />
+              </span>
+            </div>
+          </div>
+        ))
+      }
+    </div>
+  </div>
+
+  <p class="hint" aria-hidden="true" data-brain-hint>
+    <span class="rest">
+      <span class="pointer"><Copy text={site.brainHint.pointer} /></span>
+      <span class="touch"><Copy text={site.brainHint.touch} /></span>
+    </span>
+    {
+      lobes.map(({ id, copy }) => (
+        <span class="phone" data-for={id}>
+          <Copy text={copy.phoneLine} />
+        </span>
+      ))
+    }
+  </p>
+</div>
+
+<script>
+  import { nearestCell, pulseMs, slideLabel, tapAction } from '../lib/brain-nav.ts';
+  import type { Box, Press } from '../lib/brain-nav.ts';
+  import { spontaneousWindow } from '../lib/spontaneous.ts';
+  import { tokenReader } from '../lib/tokens.ts';
+
+  const root = document.querySelector<HTMLElement>('[data-brain]');
+  if (root) start(root);
+
+  function start(root: HTMLElement) {
+    const svg = root.querySelector('svg')!;
+    const labels = root.querySelector<HTMLElement>('.labels')!;
+    const lobes = [...root.querySelectorAll<SVGAElement>('.lobe')];
+    const hero = root.closest('section') ?? root;
+    // The hero text the labels keep clear of (Hero.astro marks it).
+    const heroText = hero.querySelector('[data-brain-clear]');
+
+    const token = tokenReader();
+    const speed = token('--signal-backprop');
+    const pulseMin = token('--brain-pulse-min');
+    const pulseMax = token('--brain-pulse-max');
+    const hover = token('--hover');
+    const idleMin = token('--brain-cell-idle-min');
+    const idleMax = token('--brain-cell-idle-max');
+    const cascadeEvery = token('--brain-cascade');
+    const cascadeSpread = token('--brain-cascade-spread');
+    const fireMs = token('--brain-cell-fire');
+
+    const reduced = matchMedia('(prefers-reduced-motion: reduce)');
+    const wide = matchMedia('(width >= 760px)');
+
+    // --- Each lobe's parts ---------------------------------------------------
+
+    const copyOf = (path: Element, name: string) => {
+      const copy = path.cloneNode() as SVGPathElement;
+      copy.setAttribute('class', name);
+      copy.setAttribute('pathLength', '1');
+      return copy;
+    };
+
+    // The pulse that runs out along each callout: a copy of its line.
+    for (const lead of root.querySelectorAll('.callout .lead')) lead.after(copyOf(lead, 'pulse'));
+
+    // Each cell's two pulses: in along the apical dendrite, out along the axon.
+    const cells = [...svg.querySelectorAll<SVGGElement>('.cell')];
+    for (const cell of cells) {
+      const soma = cell.querySelector('.soma')!;
+      soma.before(copyOf(cell.querySelector('.thick')!, 'pulse-in'), copyOf(cell.querySelector('.axon')!, 'pulse-out'));
+      // The firing ends when the cell's own animation does.
+      cell.addEventListener('animationend', (event) => {
+        if (event.target === cell) cell.classList.remove('is-firing');
+      });
+    }
+    const somas = cells.map((cell) => {
+      const soma = cell.querySelector<SVGCircleElement>('.soma')!;
+      return { x: soma.cx.baseVal.value, y: soma.cy.baseVal.value };
+    });
+
+    const partsOf = new Map(
+      lobes.map((lobe) => {
+        const id = lobe.dataset.lobe!;
+        return [
+          lobe,
+          {
+            callout: root.querySelector<SVGGElement>(`[data-callout="${id}"]`)!,
+            label: root.querySelector<HTMLElement>(`.label[data-for="${id}"]`)!,
+            ring: root.querySelector<SVGUseElement>(`[data-ring="${id}"]`)!,
+            phone: root.querySelector<HTMLElement>(`.phone[data-for="${id}"]`)!,
+            cells: [...lobe.querySelectorAll<SVGGElement>('.cell')],
+          },
+        ];
+      }),
+    );
+
+    // --- Sizes and label positions -------------------------------------------
+
+    // The ink of some text, line by line: its letters' boxes, not its blocks'.
+    function inkOf(element: Element): Box[] {
+      const boxes: Box[] = [];
+      const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT);
+      const range = document.createRange();
+      while (walker.nextNode()) {
+        range.selectNodeContents(walker.currentNode);
+        for (const box of range.getClientRects()) if (box.width > 0) boxes.push(box);
+      }
+      return boxes;
+    }
+
+    function place() {
+      const frame = svg.getBoundingClientRect();
+      if (frame.width === 0) return;
+      // How many px one viewBox unit is drawn at. The callouts' lines and dots
+      // divide by it to keep their px sizes.
+      const scale = frame.width / svg.viewBox.baseVal.width;
+      root.style.setProperty('--brain-scale', String(scale));
+      for (const { callout, label } of partsOf.values()) {
+        const pulse = `${pulseMs(Number(callout.dataset.length), scale, speed, pulseMin, pulseMax)}ms`;
+        callout.style.setProperty('--pulse', pulse);
+        label.style.setProperty('--pulse', pulse);
+      }
+      if (!wide.matches) return;
+
+      // The two clearances are rem tokens, so they are read in px from the
+      // labels' box, which carries them as its gaps.
+      const gaps = getComputedStyle(labels);
+      const inset = parseFloat(gaps.columnGap);
+      const clearance = parseFloat(gaps.rowGap);
+      const text = heroText ? inkOf(heroText) : [];
+      const viewportRight = document.documentElement.clientWidth;
+      for (const { label } of partsOf.values()) {
+        label.style.setProperty('--slide', '0px');
+        const slide = slideLabel({
+          box: label.getBoundingClientRect(),
+          side: label.dataset.side as 'left' | 'right',
+          viewportRight,
+          inset,
+          text,
+          clearance,
+        });
+        label.style.setProperty('--slide', `${slide}px`);
+      }
+      // For the neuron layer, which dims itself under every label's box.
+      root.dispatchEvent(new CustomEvent('brain:placed', { bubbles: true }));
+    }
+
+    const resized = new ResizeObserver(place);
+    resized.observe(root);
+    if (heroText) resized.observe(heroText);
+    addEventListener('resize', place);
+    document.fonts.ready.then(place);
+    place();
+
+    // --- Firing ---------------------------------------------------------------
+
+    const clock = spontaneousWindow();
+    let onScreen = true;
+    const canMove = () => !reduced.matches && onScreen && !document.hidden;
+
+    function fire(cell: SVGGElement) {
+      if (canMove()) cell.classList.add('is-firing'); // no effect on a cell still firing
+    }
+
+    // On their own: one cell at a time, only while the window is open, and
+    // only if it can finish inside it.
+    let idleTimer: ReturnType<typeof setTimeout> | undefined;
+    function idle() {
+      clearTimeout(idleTimer);
+      if (!canMove() || !clock.isOpen() || cells.length === 0) return;
+      if (clock.remaining() >= fireMs) fire(cells[Math.floor(Math.random() * cells.length)]);
+      idleTimer = setTimeout(idle, idleMin + Math.random() * (idleMax - idleMin));
+    }
+
+    // Across the active lobe: every cell, at a random moment in each wave.
+    let waves: ReturnType<typeof setInterval> | undefined;
+    let waveTimers: ReturnType<typeof setTimeout>[] = [];
+    function stopCascade() {
+      clearInterval(waves);
+      waveTimers.forEach(clearTimeout);
+      waveTimers = [];
+    }
+    function startCascade(lobe: SVGAElement) {
+      stopCascade();
+      if (!canMove()) return;
+      const wave = () => {
+        waveTimers = partsOf.get(lobe)!.cells.map((cell) => setTimeout(() => fire(cell), Math.random() * cascadeSpread));
+      };
+      wave();
+      waves = setInterval(wave, cascadeEvery);
+    }
+
+    // The cell nearest the cursor, checked once a frame.
+    let pointer: PointerEvent | undefined;
+    svg.addEventListener(
+      'pointermove',
+      (event) => {
+        if (!canMove()) return;
+        if (pointer === undefined) {
+          requestAnimationFrame(() => {
+            const frame = svg.getBoundingClientRect();
+            const view = svg.viewBox.baseVal;
+            const scale = frame.width / view.width;
+            const x = (pointer!.clientX - frame.left) / scale + view.x;
+            const y = (pointer!.clientY - frame.top) / scale + view.y;
+            pointer = undefined;
+            const near = nearestCell(somas, x, y);
+            if (near >= 0) fire(cells[near]);
+          });
+        }
+        pointer = event;
+      },
+      { passive: true },
+    );
+
+    // Nothing moves off screen, in a hidden tab, or with reduced motion; the
+    // nuclei and the cells firing on their own also stop with the window.
+    function sync() {
+      const moving = canMove();
+      root.classList.toggle('is-live', moving && clock.isOpen());
+      if (moving) {
+        idle();
+        if (active) startCascade(active);
+      } else {
+        clearTimeout(idleTimer);
+        stopCascade();
+        for (const cell of cells) cell.classList.remove('is-firing');
+      }
+    }
+    new IntersectionObserver(([entry]) => {
+      onScreen = entry.isIntersecting;
+      sync();
+    }).observe(hero);
+    document.addEventListener('visibilitychange', sync);
+    reduced.addEventListener('change', sync);
+    clock.whenClosed(sync);
+
+    // --- The active lobe --------------------------------------------------------
+
+    let active: SVGAElement | null = null;
+
+    function setActive(lobe: SVGAElement, on: boolean) {
+      const { callout, label, ring, phone } = partsOf.get(lobe)!;
+      for (const part of [lobe, callout, label, ring, phone]) part.classList.toggle('is-active', on);
+      root.classList.toggle('has-active', on);
+    }
+
+    let leaving: ReturnType<typeof setTimeout> | undefined;
+    function deactivate() {
+      clearTimeout(leaving);
+      if (!active) return;
+      setActive(active, false);
+      active = null;
+      stopCascade();
+    }
+    function activate(lobe: SVGAElement) {
+      if (active === lobe) return;
+      deactivate();
+      active = lobe;
+      setActive(lobe, true);
+      startCascade(lobe);
+    }
+
+    // The press before a click says what made it: a mouse, a finger, or a
+    // screen reader. A finger's tap away from the lobes clears the preview.
+    let press: (Press & { lobe: Element | null }) | null = null;
+    document.addEventListener(
+      'pointerdown',
+      (event) => {
+        const lobe = (event.target as Element).closest?.('.lobe') ?? null;
+        press = { pointerType: event.pointerType, width: event.width, height: event.height, lobe };
+        if (event.pointerType !== 'mouse' && !(lobe && root.contains(lobe))) deactivate();
+      },
+      { capture: true },
+    );
+    document.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape') deactivate();
+    });
+
+    for (const lobe of lobes) {
+      lobe.addEventListener('pointerenter', (event) => {
+        if (event.pointerType === 'mouse') activate(lobe);
+      });
+      lobe.addEventListener('pointerleave', (event) => {
+        if (event.pointerType === 'mouse' && active === lobe && !lobe.matches(':focus-visible')) deactivate();
+      });
+      // Keyboard focus does what hover does. A tap or a click also focuses a
+      // link, but not visibly, and has its own rules below.
+      lobe.addEventListener('focus', () => {
+        if (lobe.matches(':focus-visible')) activate(lobe);
+      });
+      lobe.addEventListener('blur', () => {
+        if (active === lobe) deactivate();
+      });
+      lobe.addEventListener('click', (event) => {
+        const own = press?.lobe === lobe ? press : null;
+        press = null;
+        if (tapAction(own, event.detail, active === lobe) === 'preview') {
+          event.preventDefault(); // the first tap previews; the second goes
+          activate(lobe);
+          return;
+        }
+        // On its way to the section: the highlight lets go once it has shown.
+        clearTimeout(leaving);
+        leaving = setTimeout(deactivate, hover);
+      });
+    }
+  }
+</script>
+
+<style>
+  /* The lobe's brightness for its cells, and a firing cell's own. Registered
+     so they can be transitioned and animated as numbers. */
+  @property --cell-on {
+    syntax: '<number>';
+    inherits: true;
+    initial-value: 0;
+  }
+
+  @property --cell-fire {
+    syntax: '<number>';
+    inherits: true;
+    initial-value: 0;
+  }
+
+  .brain {
+    min-width: 0;
+    /* px per viewBox unit. The script sets the real one before any ink that
+       uses it can show. */
+    --brain-scale: 1;
+  }
+
+  .figure {
+    position: relative;
+  }
+
+  svg {
+    width: 100%;
+    height: auto;
+    overflow: visible; /* the backlight spreads past the viewBox */
+  }
+
+  /* --- Tissue --------------------------------------------------------------- */
+
+  .tissue-center {
+    stop-color: var(--brain-tissue);
+  }
+
+  .tissue-edge {
+    stop-color: var(--color-bg);
+  }
+
+  .rim-light {
+    stop-color: var(--brain-rim);
+  }
+
+  .backlight {
+    fill: var(--fluor-dapi);
+    opacity: var(--brain-backlight-op);
+  }
+
+  .stem {
+    stroke: var(--ink);
+  }
+
+  /* Inner shading, sulci, folia, and fissures: the page's black, blurred. */
+  .shade {
+    fill: none;
+    stroke: var(--color-bg);
+    pointer-events: none;
+  }
+
+  /* Every nucleus is a zero-length line with round ends: a dot as wide as its
+     stroke. */
+  .brain :global(.nuclei) {
+    fill: none;
+    stroke: var(--fluor-dapi);
+    stroke-linecap: round;
+    pointer-events: none;
+  }
+
+  .border {
+    fill: none;
+    stroke: var(--ink);
+    pointer-events: none;
+  }
+
+  .rim {
+    pointer-events: none;
+  }
+
+  /* --- Lobes ---------------------------------------------------------------- */
+
+  .lobe {
+    --cell-on: var(--brain-cell-rest);
+    outline: none; /* the ring below replaces it */
+    transition: --cell-on var(--hover) var(--ease-out);
+  }
+
+  .lobe.is-active {
+    --cell-on: 1;
+  }
+
+  /* A lobe's own outline, wherever it is drawn: its strokes are the lobe edge,
+     the focus ring, and the ring's gap, which all keep their px widths. */
+  .lobe-shape {
+    vector-effect: non-scaling-stroke;
+  }
+
+  .body {
+    transition: scale var(--hover) var(--ease-out);
+  }
+
+  .lobe.is-active .body {
+    scale: var(--brain-lift);
+  }
+
+  .hit {
+    pointer-events: all;
+  }
+
+  /* The occipital lobe is narrower than a tap target on a phone. Its target
+     reaches past the brain's edge, unseen. It is drawn under its neighbors,
+     so it takes nothing from them. */
+  .lobe[data-lobe='occipital'] .hit {
+    stroke: transparent;
+    stroke-width: calc(2 * var(--space-xs));
+  }
+
+  .wash {
+    fill: var(--fluor-dapi);
+    fill-opacity: 0;
+    pointer-events: none;
+    transition: fill-opacity var(--hover) var(--ease-out);
+  }
+
+  .lobe.is-active .wash {
+    fill-opacity: var(--brain-wash-op);
+  }
+
+  .edge {
+    fill: none;
+    stroke: var(--ink);
+    stroke-width: var(--line);
+    stroke-opacity: 0;
+    pointer-events: none;
+    transition: stroke-opacity var(--hover) var(--ease-out);
+  }
+
+  .lobe.is-active .edge {
+    stroke-opacity: var(--brain-edge-op);
+  }
+
+  /* --- Focus ring ----------------------------------------------------------- */
+
+  /* The standard ring, following the lobe: --focus-width wide, --focus-offset
+     outside the lobe's edge. It is the lobe's outline stroked wide enough to
+     reach the ring's outer edge, and masked so only the ring is left. */
+  .ring {
+    fill: none;
+    stroke: var(--color-focus);
+    stroke-width: calc(2 * (var(--focus-offset) + var(--focus-width)));
+    stroke-linejoin: round;
+    visibility: hidden;
+    pointer-events: none;
+    transition: scale var(--hover) var(--ease-out);
+  }
+
+  .ring-gap {
+    stroke-width: calc(2 * var(--focus-offset));
+    stroke-linejoin: round;
+  }
+
+  .ring.is-active {
+    scale: var(--brain-lift);
+  }
+
+  .lobe[data-lobe='frontal']:focus-visible ~ g [data-ring='frontal'],
+  .lobe[data-lobe='occipital']:focus-visible ~ g [data-ring='occipital'],
+  .lobe[data-lobe='temporal']:focus-visible ~ g [data-ring='temporal'],
+  .lobe[data-lobe='cerebellum']:focus-visible ~ g [data-ring='cerebellum'],
+  .lobe[data-lobe='parietal']:focus-visible ~ g [data-ring='parietal'] {
+    visibility: visible;
+  }
+
+  /* --- The small cells ---------------------------------------------------------- */
+
+  /* A cell is as bright as its lobe makes it, and a firing cell brighter. */
+  .lobe :global(.cell) {
+    --lit: calc(var(--cell-on) + var(--cell-fire) * (1 - var(--cell-on)));
+    pointer-events: none;
+  }
+
+  .lobe :global(.cell.gfp) {
+    --cell-color: var(--fluor-gfp);
+  }
+
+  .lobe :global(.cell.tdtomato) {
+    --cell-color: var(--fluor-tdtomato);
+  }
+
+  .lobe :global(.cell path) {
+    fill: none;
+    stroke: var(--cell-color);
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    stroke-opacity: var(--lit);
+  }
+
+  .lobe :global(.cell .thick) {
+    stroke-width: var(--cell-thick);
+  }
+
+  .lobe :global(.cell .thin) {
+    stroke-width: var(--cell-thin);
+  }
+
+  .lobe :global(.cell .axon) {
+    stroke-width: var(--cell-axon);
+    stroke-opacity: calc(var(--lit) * var(--cell-axon-dim));
+  }
+
+  .lobe :global(.cell .soma) {
+    fill: var(--cell-color);
+    fill-opacity: var(--lit);
+  }
+
+  .lobe :global(.cell .nucleus) {
+    fill: var(--fluor-dapi);
+    fill-opacity: calc(var(--cell-nucleus-rest) + var(--lit) * var(--cell-nucleus-lit));
+  }
+
+  .lobe :global(.cell .glow) {
+    fill: var(--cell-color);
+    opacity: 0;
+  }
+
+  /* A short dash that travels the path; hidden until the cell fires. */
+  .lobe :global(.cell .pulse-in),
+  .lobe :global(.cell .pulse-out) {
+    stroke-width: var(--cell-pulse);
+    stroke-dasharray: var(--cell-pulse-dash) 2;
+    opacity: 0;
+  }
+
+  /* --- Callouts ------------------------------------------------------------- */
+
+  .callout {
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity var(--fade-out) var(--ease-out);
+  }
+
+  .callout.is-active {
+    opacity: 1;
+    transition: none;
+  }
+
+  /* Each part goes back to its start only once the callout has faded out. */
+  .lead,
+  .twig,
+  .bouton,
+  .tip {
+    transition-duration: 0s;
+    transition-delay: var(--fade-out);
+  }
+
+  /* The line and its pulse are dashed in units of their own length, to draw on.
+     non-scaling-stroke would measure those dashes in screen px, so their
+     widths are divided by the figure's scale instead. */
+  .lead,
+  .callout :global(.pulse) {
+    fill: none;
+    stroke: var(--ink);
+    stroke-linecap: round;
+  }
+
+  .lead {
+    stroke-width: calc(var(--line) / var(--brain-scale));
+    stroke-opacity: var(--callout-op);
+    stroke-dasharray: 1;
+    stroke-dashoffset: 1;
+    transition-property: stroke-dashoffset;
+  }
+
+  .callout.is-active .lead {
+    stroke-dashoffset: 0;
+    transition: stroke-dashoffset var(--pulse) var(--ease-travel);
+  }
+
+  .callout :global(.pulse) {
+    stroke-width: calc(var(--callout-pulse) / var(--brain-scale));
+    stroke-dasharray: var(--callout-pulse-dash) 2;
+    stroke-dashoffset: var(--callout-pulse-dash);
+    opacity: 0;
+  }
+
+  .twig {
+    fill: none;
+    stroke: var(--ink);
+    stroke-width: var(--line);
+    stroke-linecap: round;
+    stroke-opacity: 0;
+    vector-effect: non-scaling-stroke;
+    transition-property: stroke-opacity;
+  }
+
+  .callout.is-active .twig {
+    stroke-opacity: var(--callout-twig-op);
+    transition: stroke-opacity var(--fade) var(--ease-out) calc(var(--pulse) * var(--callout-twigs-at));
+  }
+
+  .bouton,
+  .tip,
+  .flash {
+    fill: var(--ink);
+    opacity: 0;
+  }
+
+  .bouton,
+  .tip {
+    transition-property: opacity;
+  }
+
+  .bouton {
+    r: calc(var(--callout-bouton) / var(--brain-scale));
+  }
+
+  .tip {
+    r: calc(var(--callout-tip) / var(--brain-scale));
+  }
+
+  .flash {
+    r: calc(var(--callout-flash) / var(--brain-scale));
+    transform-box: fill-box;
+    transform-origin: center;
+  }
+
+  .callout.is-active .bouton {
+    opacity: var(--callout-dot-op);
+    transition: opacity var(--fade) var(--ease-out);
+  }
+
+  /* The end dot appears as the pulse lands. */
+  .callout.is-active .tip {
+    opacity: var(--callout-dot-op);
+    transition: opacity var(--fade) var(--ease-out) var(--pulse);
+  }
+
+  /* --- Labels --------------------------------------------------------------- */
+
+  .labels {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    /* Not a layout: the script reads the labels' two clearances from here in
+       px. A label keeps the first from the hero text and the second from the
+       viewport's edge. */
+    row-gap: var(--space-xs);
+    column-gap: var(--space-2xs);
+  }
+
+  /* A label sits on its shelf, which starts at the callout's tip (--x, --y)
+     and runs away from the brain. --slide moves it along the shelf to stay in
+     bounds; --tip is then where the callout meets the shelf. */
+  .label {
+    --slide: 0px;
+    position: absolute;
+    top: calc(var(--y) * 100%);
+    left: calc(var(--x) * 100%);
+    padding-bottom: var(--space-2xs);
+    opacity: 0;
+    white-space: nowrap;
+    text-shadow: var(--label-shadow);
+    transition: opacity var(--fade-out) var(--ease-out);
+  }
+
+  .label.left {
+    --tip: calc(100% - var(--slide));
+    padding-left: var(--space-2xs);
+    text-align: right;
+    translate: calc(var(--slide) - 100%) -100%;
+  }
+
+  .label.right {
+    --tip: calc(0px - var(--slide));
+    padding-right: var(--space-2xs);
+    translate: var(--slide) -100%;
+  }
+
+  /* The one label under the brain hangs below its shelf. */
+  .label.below {
+    padding-block: var(--space-2xs) 0;
+    translate: var(--slide) 0;
+  }
+
+  .label.is-active {
+    opacity: 1;
+    transition: none;
+  }
+
+  /* The shelf: it grows from the callout's tip once the pulse lands. */
+  .label::after {
+    content: '';
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    height: var(--line);
+    background: var(--ink);
+    opacity: var(--shelf-op);
+    scale: 0 1;
+    transform-origin: var(--tip) 50%;
+    transition: scale 0s var(--fade-out);
+  }
+
+  .label.below::after {
+    top: 0;
+    bottom: auto;
+  }
+
+  .label.is-active::after {
+    scale: 1 1;
+    transition: scale var(--shelf) var(--ease-out) var(--pulse);
+  }
+
+  /* The text fades in from the corner at the tip. */
+  .text {
+    opacity: 0;
+    scale: var(--label-grow);
+    transform-origin: var(--tip) 100%;
+    transition:
+      opacity 0s var(--fade-out),
+      scale 0s var(--fade-out);
+  }
+
+  .below .text {
+    width: max-content; /* as wide as its lines, not as the room to its right */
+    transform-origin: var(--tip) 0;
+  }
+
+  .label.is-active .text {
+    --wait: calc(var(--pulse) + var(--shelf-text-delay));
+    opacity: 1;
+    scale: 1;
+    transition:
+      opacity var(--fade) var(--ease-out) var(--wait),
+      scale var(--fade) var(--ease-out) var(--wait);
+  }
+
+  .name,
+  .line {
+    display: block;
+  }
+
+  .name {
+    font-size: var(--step-text-4);
+    font-weight: var(--weight-medium);
+    line-height: var(--leading-lede);
+  }
+
+  .line {
+    color: var(--color-text-muted);
+    font-size: var(--step-text-7);
+    line-height: var(--leading-label);
+  }
+
+  /* The label under the brain wraps to two even lines. */
+  .below .line {
+    max-width: var(--label-wrap);
+    white-space: normal;
+    text-wrap: balance;
+  }
+
+  /* --- Hint ----------------------------------------------------------------- */
+
+  .hint {
+    margin-top: var(--space-2xs);
+    color: var(--color-text-muted);
+    font-size: var(--step-text-6);
+    line-height: var(--leading-label);
+    text-align: center;
+    text-wrap: balance;
+    transition: opacity var(--fade) var(--ease-out);
+  }
+
+  .pointer,
+  .phone {
+    display: none;
+  }
+
+  @media (hover: hover) {
+    .pointer {
+      display: inline;
+    }
+
+    .touch {
+      display: none;
+    }
+  }
+
+  @media (width >= 760px) {
+    /* The hint gives way to the label, which can reach where it sits. */
+    .has-active .hint {
+      opacity: 0;
+      transition: opacity var(--fade-out) var(--ease-out);
+    }
+  }
+
+  @media (width < 760px) {
+    /* No callouts or labels on phones: the first tap swaps the hint for the
+       lobe's phone line, which can take two lines. */
+    .callouts,
+    .labels {
+      display: none;
+    }
+
+    .hint {
+      min-height: calc(2 * var(--step-text-6) * var(--leading-label));
+    }
+
+    .has-active .rest {
+      display: none;
+    }
+
+    .phone.is-active {
+      display: inline;
+    }
+  }
+
+  /* --- Motion --------------------------------------------------------------- */
+
+  @media (prefers-reduced-motion: no-preference) {
+    /* The nuclei drift, and every second group also breathes. Both run only
+       while the script says so: on screen, and inside the five-second window. */
+    .brain :global(.nuclei.drift-a) {
+      animation: brain-drift-a var(--brain-drift-a) var(--ease-oscillate) infinite alternate paused;
+    }
+
+    .brain :global(.nuclei.drift-b) {
+      animation:
+        brain-drift-b var(--brain-drift-b) var(--ease-oscillate) infinite alternate paused,
+        brain-breathe var(--brain-breathe) var(--ease-oscillate) infinite alternate paused;
+    }
+
+    .brain.is-live :global(.nuclei) {
+      animation-play-state: running;
+    }
+
+    /* Firing: a pulse runs in along the dendrite, the soma flashes, and a
+       pulse runs out along the axon, while the whole cell brightens and
+       settles. */
+    .lobe :global(.cell.is-firing) {
+      animation: brain-fire var(--brain-cell-fire) var(--ease-out);
+    }
+
+    .lobe :global(.cell.is-firing .pulse-in) {
+      animation: brain-pulse-in var(--brain-cell-in) var(--ease-travel);
+    }
+
+    .lobe :global(.cell.is-firing .pulse-out) {
+      animation: brain-pulse-out var(--brain-cell-out) var(--ease-travel) var(--brain-cell-in);
+    }
+
+    .lobe :global(.cell.is-firing .glow) {
+      animation: brain-flash var(--brain-cell-flash) var(--ease-out) var(--brain-cell-in);
+    }
+
+    /* The pulse runs out along the callout as the line draws, and the end dot
+       flashes when it lands. */
+    .callout.is-active :global(.pulse) {
+      animation: brain-travel var(--pulse) var(--ease-travel) forwards;
+    }
+
+    .callout.is-active .flash {
+      animation: brain-tip var(--flash-out) var(--ease-out) var(--pulse);
+    }
+  }
+
+  @keyframes brain-drift-a {
+    from {
+      translate: var(--drift-a-from);
+    }
+
+    to {
+      translate: var(--drift-a-to);
+    }
+  }
+
+  @keyframes brain-drift-b {
+    from {
+      translate: var(--drift-b-from);
+    }
+
+    to {
+      translate: var(--drift-b-to);
+    }
+  }
+
+  @keyframes brain-breathe {
+    to {
+      opacity: var(--breathe);
+    }
+  }
+
+  /* The cell is brightest about a third of the way in, as the pulse reaches
+     the soma. */
+  @keyframes brain-fire {
+    35% {
+      --cell-fire: var(--cell-peak);
+    }
+  }
+
+  /* The dash starts at the dendrite's far end and stops at the soma. Its
+     offsets are plain numbers worked out at build time: a browser can't
+     travel smoothly between a number and a calc() here. */
+  @keyframes brain-pulse-in {
+    from {
+      opacity: 1;
+      stroke-dashoffset: var(--cell-pulse-far);
+    }
+
+    to {
+      opacity: 1;
+      stroke-dashoffset: var(--cell-pulse-dash);
+    }
+  }
+
+  @keyframes brain-pulse-out {
+    from {
+      opacity: 1;
+      stroke-dashoffset: var(--cell-pulse-dash);
+    }
+
+    to {
+      opacity: 1;
+      stroke-dashoffset: -1;
+    }
+  }
+
+  @keyframes brain-flash {
+    from {
+      opacity: var(--cell-glow);
+    }
+
+    to {
+      opacity: 0;
+    }
+  }
+
+  @keyframes brain-travel {
+    from {
+      opacity: 1;
+      stroke-dashoffset: var(--callout-pulse-dash);
+    }
+
+    90% {
+      opacity: 1;
+    }
+
+    to {
+      opacity: 0;
+      stroke-dashoffset: var(--callout-pulse-far);
+    }
+  }
+
+  @keyframes brain-tip {
+    from {
+      opacity: var(--callout-flash-op);
+      scale: var(--callout-flash-from);
+    }
+
+    to {
+      opacity: 0;
+      scale: var(--callout-flash-to);
+    }
+  }
+
+  /* Reduced motion: the highlight, the callout, and the label appear as they
+     are, with no pulse, no transition, and no lift. */
+  @media (prefers-reduced-motion: reduce) {
+    .brain :global(*),
+    .brain :global(*::after) {
+      transition: none !important;
+    }
+
+    .lobe.is-active .body,
+    .ring.is-active {
+      scale: none;
+    }
+
+    .text {
+      scale: 1;
+    }
+  }
+</style>

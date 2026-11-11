@@ -62,6 +62,8 @@
   --fluor-gfp:       #44e07c;
   --fluor-tdtomato:  #ff5a4a;
   --fluor-dapi:      #4f6dff;
+  --brain-tissue:    #0b1220;  /* a lobe's fill at its center, fading to --color-bg at its edge */
+  --brain-rim:       #9fb4ff;  /* the rim light along the brain's outline */
 
   /* Opacity floors for things drawn near or as information */
   --ink-meaningful-min: 0.41;  /* --ink opacity for line art that carries information (3:1) */
@@ -219,6 +221,14 @@
   --wire-place-dot-phone: 8px;
   --wire-label-halo:      5px;        /* black outline behind group labels */
 
+  /* Brain (hero). Its geometry and its fixed opacities are in src/lib/brain.ts;
+     these are the values a state changes, plus the backlight. */
+  --brain-backlight-op:   0.16;       /* the DAPI-blue backlight: the site's one glow */
+  --brain-cell-rest:      0.16;       /* the small cells until their lobe is active */
+  --brain-wash-op:        0.07;       /* the DAPI wash over the active lobe */
+  --brain-lift:           1.045;      /* the active lobe's scale */
+  --brain-edge-op:        0.9;        /* the active lobe's edge */
+
   /* ---------------------------------------------------------------------
      Motion. DESIGN.md's Motion section says where each value is used.
      Speeds are unitless px per ms; scripts parseFloat them.
@@ -257,6 +267,22 @@
   --shelf:            140ms;  /* brain label shelf growing */
   --shelf-text-delay: 70ms;
 
-  --ease-travel: linear;                       /* anything moving along a path at a set speed */
-  --ease-out:    cubic-bezier(0.2, 0.8, 0.2, 1); /* anything that appears, grows, or fades */
+  /* Brain: the callout pulse, the small cells, and the nuclei */
+  --brain-pulse-min:      180ms;    /* the pulse along a callout never takes less */
+  --brain-pulse-max:      420ms;    /* or more, so a label reads by about half a second */
+  --brain-cell-in:        400ms;    /* a pulse in along a cell's dendrite */
+  --brain-cell-out:       480ms;    /* then out along its axon */
+  --brain-cell-flash:     900ms;    /* the soma's flash fading */
+  --brain-cell-fire:      1150ms;   /* one whole firing; the cell can't fire again until it ends */
+  --brain-cell-idle-min:  450ms;    /* between cells firing on their own */
+  --brain-cell-idle-max:  1350ms;
+  --brain-cascade:        1500ms;   /* one wave across the active lobe's cells */
+  --brain-cascade-spread: 1100ms;   /* how far apart a wave's cells start */
+  --brain-drift-a:        7000ms;   /* the nuclei's drift, one way: each depth band's two groups */
+  --brain-drift-b:        10000ms;
+  --brain-breathe:        6000ms;   /* the second group's slow fade, one way */
+
+  --ease-travel:    linear;                         /* anything moving along a path at a set speed */
+  --ease-out:       cubic-bezier(0.2, 0.8, 0.2, 1); /* anything that appears, grows, or fades */
+  --ease-oscillate: ease-in-out;                    /* back-and-forth motion only: the nuclei's drift and breathing */
 }
