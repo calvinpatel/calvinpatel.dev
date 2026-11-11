@@ -72,6 +72,10 @@ body {
   line-height: var(--leading-body);
   /* Only 400, 400 italic, and 500 are loaded; never fake another weight. */
   font-synthesis: none;
+  /* With text enlarged on a narrow phone, a word wider than its column (a
+     heading, say) breaks rather than running off the screen. A word that
+     fits is never broken. */
+  overflow-wrap: break-word;
 }
 
 /* Fraunces: headings, plus anything else set in it (the CP mark, ledes, the
