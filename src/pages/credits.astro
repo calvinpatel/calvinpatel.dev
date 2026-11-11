@@ -1,24 +1,84 @@
 ---
-// The Credits page, linked from the footer on every page.
+// The Credits page, linked from the footer on every page: the intro from
+// credits.md, then one credit line per neuron from public/cells/index.json,
+// in index order, each linking to that neuron's page (CLAUDE.md rule 13).
 import { getEntry } from 'astro:content';
 
 import Copy from '../components/Copy.astro';
 import Layout from '../components/Layout.astro';
+import { readCellIndex } from '../lib/cells.ts';
 import { copyText } from '../lib/copy.ts';
 
 const credits = (await getEntry('credits', 'credits'))!.data;
 const hero = (await getEntry('hero', 'hero'))!.data;
+// A missing, empty, or broken index stops the build here.
+const cells = readCellIndex();
 ---
 
 <Layout title={`${copyText(credits.heading)} – ${copyText(hero.name)}`}>
   <div class="container page">
-    <h1><Copy text={credits.heading} /></h1>
+    <div class="column">
+      <h1><Copy text={credits.heading} /></h1>
+      <p class="intro"><Copy text={credits.intro} /></p>
+      <ul class="cells" role="list">
+        {
+          cells.map((cell) => (
+            <li>
+              {/* A credit line is data, not copy: it prints exactly as the converter wrote it. */}
+              <a href={cell.url}>{cell.credit}</a>
+            </li>
+          ))
+        }
+      </ul>
+    </div>
   </div>
 </Layout>
 
 <style>
+  .column {
+    max-width: var(--reading-max);
+  }
+
   h1 {
+    margin-bottom: var(--space-l);
     font-size: var(--step-display-3);
     line-height: var(--leading-display);
+  }
+
+  .intro {
+    color: var(--color-text-secondary);
+  }
+
+  .cells {
+    /* A credit's box: its lines of text, or at least a tap-height box on
+       touch screens. */
+    --link-box: 1lh;
+
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-2xs);
+    margin-top: var(--space-m);
+    color: var(--color-text-secondary);
+    /* A neuron's name is one long word. If it has no hyphen to break at, it
+       breaks wherever it must, so the page never scrolls sideways. */
+    overflow-wrap: anywhere;
+  }
+
+  .cells a {
+    display: inline-flex;
+    align-items: center;
+    min-height: var(--link-box);
+  }
+
+  /* Touch screens: every credit is a standalone link, so a tap-height box. */
+  @media (pointer: coarse) {
+    .cells {
+      --link-box: max(var(--tap-min), 1lh);
+    }
+
+    .cells a {
+      min-width: var(--tap-min);
+    }
   }
 </style>
