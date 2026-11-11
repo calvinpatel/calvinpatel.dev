@@ -105,7 +105,7 @@ Sizes grow from the phone mocks (390px wide) to the desktop mocks (1440px). Step
 | `--size-mark` | 22 | 22 | The CP mark | `--leading-none` |
 | `--step-text-1` | 19 | 22 | Case study lede | `--leading-snug` |
 | `--step-text-2` | 18 | 21 | Hero sentences | `--leading-snug` |
-| `--step-text-3` | 17 | 18 | Long reading text (About story, case study body), NotePilot's description, Contact's GitHub and LinkedIn | `--leading-prose`; `--leading-snug` for the description |
+| `--step-text-3` | 17 | 18 | Long reading text (About story, case study body), NotePilot's description, Contact's GitHub and LinkedIn | `--leading-prose`; `--leading-snug` for the description and Contact's links |
 | `--step-text-4` | 16 | 16 | Body text, project and Experience descriptions, links, Experience organizations, brain-label names (weight 500) | `--leading-body`; `--leading-lede` for label names |
 | `--step-text-5` | 14 | 15 | Nav links, result labels, Skills place labels and hint | `--leading-snug` |
 | `--step-text-6` | 14 | 14 | Status, dates and location, the tap hint, photo captions, the measurement note | `--leading-label` |
