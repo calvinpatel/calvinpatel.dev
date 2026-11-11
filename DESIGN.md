@@ -215,7 +215,7 @@ Media queries can't read custom properties, so these widths are written as numbe
 
 ## Drawings
 
-Every drawing is ink line art measured from its chosen artboard. The numbers are tokens in tokens.css; shapes that are drawn by hand rather than generated are given here as SVG path data. Draw each one at its real pixel size, in an SVG sized in CSS px. Never stretch a drawing with a `viewBox` that scales its text or its line widths. A drawing snaps to its own pixels, counted from its SVG's corner, because that's where Chrome starts painting it: an SVG's contents are painted from the screen pixel nearest its corner, wherever the SVG falls on the page. Colors are always `--ink` (or `--color-bg` where a shape cuts a gap) with the opacity tokens below. Every drawing is decorative and hidden from screen readers, because the text beside it says what it shows.
+Every drawing is ink line art measured from its chosen artboard. The numbers are tokens in tokens.css; shapes that are drawn by hand rather than generated are given here as SVG path data. Draw each one at its real pixel size, in an SVG sized in CSS px. Never stretch a drawing with a `viewBox` that scales its text or its line widths. The phone synapse is the one drawing drawn smaller than its coordinates: its shapes scale, but every 1px line stays 1px (see Synapse). A drawing snaps to its own pixels, counted from its SVG's corner, because that's where Chrome starts painting it: an SVG's contents are painted from the screen pixel nearest its corner, wherever the SVG falls on the page. Colors are always `--ink` (or `--color-bg` where a shape cuts a gap) with the opacity tokens below. Every drawing is decorative and hidden from screen readers, because the text beside it says what it shows.
 
 ### Spike raster (Experience)
 
@@ -340,7 +340,7 @@ A fixed figure: copy it as written, with `color: var(--ink)` on the SVG. On desk
 </svg>
 ```
 
-- **Phones (below 900px).** The same figure turned to flow down onto the email: `viewBox="0 0 200 430"`, 130px wide, with its contents wrapped in `<g transform="translate(200 0) rotate(90)">`, sitting 4px above the email.
+- **Phones (below 900px).** The same figure turned to flow down onto the email: `viewBox="0 0 200 430"`, 130px wide, with its contents wrapped in `<g transform="translate(200 0) rotate(90)">`, sitting 4px above the email. That draws it at 0.65 of its coordinates, so its shapes scale: the sheaths, the nodes, the released vesicles, and the receptor band. Its 1px lines don't. The axon, the terminal's outline, the vesicles, and the membrane keep `--line` with `vector-effect: non-scaling-stroke`. The sheath's black core is thinned from 6 to about 4.92 units (8 − 2 ÷ 0.65), so the sheath's two edges stay 1px. The two sheath strokes never take the vector effect: it would measure their dashes in screen px and move the sheaths off the nodes.
 
 ## Motion
 

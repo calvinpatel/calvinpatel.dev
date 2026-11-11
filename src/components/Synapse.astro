@@ -1,0 +1,163 @@
+---
+// The Contact synapse (DESIGN.md, Drawings: Synapse): a myelinated axon with
+// three sheaths, its terminal packed with vesicles, and across the gap the
+// receiving membrane with its receptor band. Contact.astro places it.
+//
+// A fixed figure: the path data, the opacities, and the node, release, and
+// receptor classes are DESIGN.md's, unchanged. The other class names are added
+// here for the styles below.
+//
+// Drawn at rest: the resting state and the reduced-motion state. The Contact
+// sequence comes with the motion step, which uses the three classes above.
+//
+// Drawn twice, like the dendrite's turning points: level for desktop, where it
+// fills the --contact-figure column, and turned to flow down for below 900px.
+// The turned one is the one drawing on the site drawn smaller than its
+// coordinates. Its shapes scale, but every 1px line stays 1px (see the styles).
+
+// The turned figure's width in px, across the 200 units of its viewBox.
+// DESIGN.md names the 130px. It stays here, not in tokens.css, because the
+// sheath's core below is worked out from it.
+const TURNED_WIDTH = 130;
+const TURNED_UNITS = 200;
+const turnedScale = TURNED_WIDTH / TURNED_UNITS;
+---
+
+{
+  [false, true].map((turned) => (
+    <svg
+      class:list={['synapse', turned ? 'turned' : 'level']}
+      viewBox={turned ? `0 0 ${TURNED_UNITS} 430` : '0 0 430 200'}
+      width={turned ? TURNED_WIDTH : undefined}
+      style={turned ? `--turned-scale: ${turnedScale}` : undefined}
+      aria-hidden="true"
+    >
+      <g transform={turned ? `translate(${TURNED_UNITS} 0) rotate(90)` : undefined}>
+        {/* axon with three sheaths: a wide stroke, a background-colored core, then the axon */}
+        <path
+          d="M0 148 C 100 158, 150 99, 262 100"
+          fill="none"
+          stroke="currentColor"
+          stroke-opacity="0.34"
+          stroke-width="8"
+          stroke-linecap="round"
+          stroke-dasharray="62 18 62 18 62 2018"
+        />
+        <path
+          class="core"
+          d="M0 148 C 100 158, 150 99, 262 100"
+          fill="none"
+          style="stroke: var(--color-bg)"
+          stroke-width="6"
+          stroke-linecap="round"
+          stroke-dasharray="62 18 62 18 62 2018"
+        />
+        <path
+          class="axon"
+          d="M0 148 C 100 158, 150 99, 262 100"
+          fill="none"
+          stroke="currentColor"
+          stroke-opacity="0.5"
+        />
+        {/* nodes, in hop order; rest at --ink-rest */}
+        <circle class="node" cx="70.7" cy="143.9" r="1.9" fill="currentColor" />
+        <circle class="node" cx="147.1" cy="120.4" r="1.9" fill="currentColor" />
+        <circle class="node" cx="224.8" cy="101.9" r="1.9" fill="currentColor" />
+        <g transform="translate(-90 0)">
+          {/* terminal, flaring open toward the contact block */}
+          <path
+            class="terminal"
+            d="M351 98 C 384 97, 404 74, 434 66 C 452 61, 470 62, 476 70 L 476 130 C 470 137, 454 138, 440 133 C 414 125, 390 104, 351 102"
+            fill="currentColor"
+            fill-opacity="0.04"
+            stroke="currentColor"
+            stroke-opacity="0.5"
+          />
+          {/* vesicles packed at its face */}
+          <g class="vesicles" fill="none" stroke="currentColor" stroke-opacity="0.45">
+            <circle cx="465" cy="80" r="3.6" />
+            <circle cx="467" cy="93" r="3.6" />
+            <circle cx="467" cy="107" r="3.6" />
+            <circle cx="465" cy="120" r="3.6" />
+            <circle cx="455" cy="87" r="3.6" />
+            <circle cx="455" cy="100" r="3.6" />
+            <circle cx="455" cy="113" r="3.6" />
+            <circle cx="444" cy="100" r="3.6" />
+          </g>
+          {/* released vesicles: hidden at rest, shown only during the sequence */}
+          <circle class="release" cx="478" cy="88" r="2.2" fill="currentColor" opacity="0" />
+          <circle class="release" cx="478" cy="100" r="2.2" fill="currentColor" opacity="0" />
+          <circle class="release" cx="478" cy="112" r="2.2" fill="currentColor" opacity="0" />
+          {/* receiving membrane and its receptor band (band rests at 0.55) */}
+          <path
+            class="membrane"
+            d="M504 24 C 498 70, 498 130, 504 176"
+            fill="none"
+            stroke="currentColor"
+            stroke-opacity="0.5"
+          />
+          <path
+            class="receptor"
+            d="M503 70 C 500.5 88, 500.5 112, 503 130"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="3.2"
+            stroke-linecap="round"
+            opacity="0.55"
+          />
+        </g>
+      </g>
+    </svg>
+  ))
+}
+
+<style>
+  /* Each figure's height follows from its width and its viewBox. */
+  .synapse {
+    height: auto;
+    overflow: visible; /* the first sheath's round end runs past the corner */
+    color: var(--ink);
+    pointer-events: none;
+  }
+
+  .level {
+    width: var(--contact-figure);
+  }
+
+  .turned {
+    display: none;
+  }
+
+  /* The 1px lines keep their width whatever the viewBox does. On the level
+     figure, drawn 1:1, this changes nothing. */
+  .axon,
+  .terminal,
+  .vesicles circle,
+  .membrane {
+    stroke-width: var(--line);
+    vector-effect: non-scaling-stroke;
+  }
+
+  /* A sheath is the 8-unit stroke with the black core over it, which leaves an
+     edge down each side. On the turned figure the core is thinned until each
+     edge is one --line wide on screen. Neither sheath path takes the vector
+     effect: it would measure their dashes in screen px, and the sheaths would
+     no longer end at the nodes. */
+  .turned .core {
+    stroke-width: calc(8px - 2 * var(--line) / var(--turned-scale));
+  }
+
+  .node {
+    opacity: var(--ink-rest);
+  }
+
+  @media (width < 900px) {
+    .level {
+      display: none;
+    }
+
+    .turned {
+      display: block;
+    }
+  }
+</style>

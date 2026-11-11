@@ -1,0 +1,128 @@
+---
+// The Contact section: the synapse, then the email large in Fraunces with
+// GitHub and LinkedIn under it. On desktop the figure sits on the left with
+// its receptor band against the contact block. Below 900px it turns to flow
+// down onto the email (Synapse.astro).
+import { getEntry } from 'astro:content';
+
+import Copy from './Copy.astro';
+import Synapse from './Synapse.astro';
+
+const contact = (await getEntry('contact', 'contact'))!.data;
+
+// The email may wrap in one place, after its "@", so it never splits
+// mid-name. It is an address, not prose, so it prints as written.
+const at = contact.email.indexOf('@') + 1;
+const name = contact.email.slice(0, at);
+const domain = contact.email.slice(at);
+---
+
+<div class="contact">
+  <div class="figure">
+    <Synapse />
+  </div>
+  <div class="block">
+    <p class="email display">
+      <a href={`mailto:${contact.email}`}>{name}<wbr />{domain}</a>
+    </p>
+    <ul class="links" role="list">
+      {
+        contact.links.map((link) => (
+          <li>
+            <a href={link.href}>
+              <Copy text={link.label} />
+            </a>
+          </li>
+        ))
+      }
+    </ul>
+  </div>
+</div>
+
+<style>
+  /* The figure | the contact block, which is centered on the figure's height
+     and so on its receptor band. */
+  .contact {
+    /* GitHub's or LinkedIn's box: its line of text, or a tap-height box below
+       900px and on touch screens. */
+    --link-box: 1lh;
+    /* How far the email's box reaches above and below its text: no distance,
+       except on touch screens. */
+    --email-reach: 0px;
+
+    display: grid;
+    grid-template-columns: var(--contact-figure) minmax(0, 1fr);
+    column-gap: var(--space-s);
+    align-items: center;
+  }
+
+  .email {
+    font-size: var(--step-display-4);
+    line-height: var(--leading-heading);
+  }
+
+  /* The email's box grows by its padding, and an equal negative margin takes
+     the room back, so the text stays where it is on one line or two. A
+     min-height box, like the links', would not: a wrapped email is already
+     taller than a tap target, and the box's margins would pull it up into the
+     figure. The box is never wider than its column, so when even the
+     domain is too wide the site's break-word rule applies inside it. */
+  .email a {
+    display: inline-block;
+    max-width: 100%;
+    padding-block: var(--email-reach);
+    margin-block: calc(-1 * var(--email-reach));
+  }
+
+  /* A tap-height box keeps its text where a plain line of text would sit, so
+     the block stays centered on the receptor band. */
+  .links {
+    --link-reach: calc((var(--link-box) - 1lh) / 2);
+
+    display: flex;
+    flex-wrap: wrap;
+    column-gap: var(--space-m);
+    margin-top: calc(var(--space-s) - var(--link-reach));
+    margin-bottom: calc(-1 * var(--link-reach));
+    font-size: var(--step-text-3);
+    line-height: var(--leading-snug);
+  }
+
+  .links a {
+    display: inline-flex;
+    align-items: center;
+    min-height: var(--link-box);
+  }
+
+  /* Touch screens: all three links are tap-height boxes. */
+  @media (pointer: coarse) {
+    .contact {
+      --link-box: max(var(--tap-min), 1lh);
+      --email-reach: max(0px, (var(--tap-min) - 1lh) / 2);
+    }
+
+    .links a {
+      min-width: var(--tap-min);
+    }
+  }
+
+  @media (width < 900px) {
+    /* One column: the turned figure, the email, then the links. GitHub and
+       LinkedIn are tap-height boxes for every pointer, and the boxes
+       themselves sit under the email, as on the phone artboard. */
+    .contact {
+      --link-box: max(var(--tap-min), 1lh);
+
+      grid-template-columns: minmax(0, 1fr);
+    }
+
+    .figure {
+      margin-bottom: var(--space-3xs);
+    }
+
+    .links {
+      margin-top: var(--space-2xs);
+      margin-bottom: 0;
+    }
+  }
+</style>
