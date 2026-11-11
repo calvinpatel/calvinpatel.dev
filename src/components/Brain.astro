@@ -143,6 +143,7 @@ const look = Object.entries({
   'callout-pulse-dash': callout.pulseDash,
   'callout-pulse-far': (callout.pulseDash - 1).toFixed(2),
   'callout-twigs-at': callout.twigsAt,
+  'halo-op': LOOK.halo.opacity,
   'shelf-op': LOOK.shelf,
   'label-grow': LOOK.label.grow,
   'label-wrap': LOOK.label.wrap,
@@ -191,6 +192,9 @@ const look = Object.entries({
           <filter id="brain-glow" x="-40%" y="-40%" width="180%" height="180%">
             <feGaussianBlur stdDeviation={LOOK.backlight.blur}></feGaussianBlur>
           </filter>
+          <filter id="brain-halo" x="-30%" y="-30%" width="160%" height="160%">
+            <feGaussianBlur stdDeviation={LOOK.halo.blur}></feGaussianBlur>
+          </filter>
           <filter id="brain-inner" x="-10%" y="-10%" width="120%" height="120%">
             <feGaussianBlur stdDeviation={LOOK.inner.blur}></feGaussianBlur>
           </filter>
@@ -203,6 +207,13 @@ const look = Object.entries({
           <g aria-hidden="true">
             {/* The one glow on the site: DAPI blue, as if the stain lit the slide from behind. */}
             <g class="backlight" filter="url(#brain-glow)">
+              <use href="#brain-outline"></use>
+              <use href="#brain-cerebellum"></use>
+              <use href="#brain-stem"></use>
+            </g>
+            {/* A dark halo over the backlight's inner part. It hides the neuron
+                layer just around the brain, so the brain reads as in front. */}
+            <g class="halo" filter="url(#brain-halo)">
               <use href="#brain-outline"></use>
               <use href="#brain-cerebellum"></use>
               <use href="#brain-stem"></use>
@@ -343,7 +354,8 @@ const look = Object.entries({
 
 <script>
   import { nearestCell, pulseMs, slideLabel, tapAction } from '../lib/brain-nav.ts';
-  import type { Box, Press } from '../lib/brain-nav.ts';
+  import type { Press } from '../lib/brain-nav.ts';
+  import { inkOf } from '../lib/ink.ts';
   import { spontaneousWindow } from '../lib/spontaneous.ts';
   import { tokenReader } from '../lib/tokens.ts';
 
@@ -416,18 +428,6 @@ const look = Object.entries({
     );
 
     // --- Sizes and label positions -------------------------------------------
-
-    // The ink of some text, line by line: its letters' boxes, not its blocks'.
-    function inkOf(element: Element): Box[] {
-      const boxes: Box[] = [];
-      const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT);
-      const range = document.createRange();
-      while (walker.nextNode()) {
-        range.selectNodeContents(walker.currentNode);
-        for (const box of range.getClientRects()) if (box.width > 0) boxes.push(box);
-      }
-      return boxes;
-    }
 
     // Where the figure is and how many px one viewBox unit is drawn at, read
     // from the brain's outline: its box in px against its box in units. The
@@ -684,6 +684,11 @@ const look = Object.entries({
   .backlight {
     fill: var(--fluor-dapi);
     opacity: var(--brain-backlight-op);
+  }
+
+  .halo {
+    fill: var(--color-bg);
+    opacity: var(--halo-op);
   }
 
   .stem {

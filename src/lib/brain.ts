@@ -72,6 +72,7 @@ export const LOOK = {
   breathe: 0.7, // how far the second group of nuclei fades
   rim: { stroke: 1.4, y1: 40, y2: 470, stops: [[0, 0.7], [0.6, 0.32], [1, 0.14]] }, // brightest on top
   backlight: { blur: 30 },
+  halo: { blur: 12, opacity: 0.92 }, // the page's black over the backlight's inner part
   stem: { fill: 0.8, stroke: 1, opacity: 0.22, fibres: 'M402 344Q410 396 408 456M418 342Q426 396 418 454' },
   cell: {
     thick: 0.8,
