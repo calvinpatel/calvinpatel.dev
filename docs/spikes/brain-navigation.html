@@ -1,0 +1,1084 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Brain navigation spike</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500&display=swap" rel="stylesheet">
+<style>
+@property --cell-a { syntax: '<number>'; inherits: true; initial-value: 0.16; }
+@property --fire { syntax: '<number>'; inherits: true; initial-value: 0; }
+:root{
+  --bg:#efe6c8; --ink:#1d150e; --ink-2:#3b3026; --muted:#54473a; --surface:rgba(250,245,228,.92); --line:rgba(29,21,14,.2);
+  --chip:rgba(250,245,228,.94);
+  --gfp:#0f7a43; --tdt:#c23a2c; --dapi:#2c47c9; --mode:light; color-scheme:light;
+  --tissue-hi:#fbf6e6; --tissue-lo:#ddcfa4; --shade:#6b5432; --rim:#1d150e; --backlight:#fffaf0;
+  --brain-pct:58%;
+  box-sizing:border-box; padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#000000; --ink:#e7ecf0; --ink-2:#c9d1d8; --muted:#a6b0b9; --surface:rgba(6,9,13,.85); --line:rgba(231,236,240,.16);
+    --chip:rgba(4,6,9,.88);
+    --gfp:#44e07c; --tdt:#ff5a4a; --dapi:#4f6dff; --mode:dark; color-scheme:dark;
+    --tissue-hi:#0b1220; --tissue-lo:#020306; --shade:#000000; --rim:#9fb4ff; --backlight:#4f6dff;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#000000; --ink:#e7ecf0; --ink-2:#c9d1d8; --muted:#a6b0b9; --surface:rgba(6,9,13,.85); --line:rgba(231,236,240,.16);
+  --chip:rgba(4,6,9,.88);
+  --gfp:#44e07c; --tdt:#ff5a4a; --dapi:#4f6dff; --mode:dark; color-scheme:dark;
+  --tissue-hi:#0b1220; --tissue-lo:#020306; --shade:#000000; --rim:#9fb4ff; --backlight:#4f6dff;
+}
+*,*::before,*::after{box-sizing:inherit}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+@media (prefers-reduced-motion: no-preference){ html{scroll-behavior:smooth} }
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.55 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+a{color:inherit}
+[hidden]{display:none!important}
+
+/* Hero */
+.hero{position:relative;min-height:calc(100svh - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px));display:flex;align-items:center;overflow:hidden}
+.field{position:absolute;inset:0;width:100%;height:100%;display:block}
+.topbar{position:absolute;top:0;left:0;right:0;z-index:2;display:flex;align-items:center;justify-content:space-between;gap:16px;padding:18px clamp(20px,5vw,64px)}
+.mark{font-weight:700;text-decoration:none;border:1px solid var(--line);border-radius:8px;padding:4px 8px}
+.topbar nav{display:flex;flex-wrap:wrap;gap:4px 22px}
+.topbar nav a{text-decoration:none;color:var(--ink-2)}
+.topbar nav a:hover{color:var(--ink)}
+.hero-inner{position:relative;z-index:1;width:min(1320px,100%);margin:0 auto;padding:96px clamp(20px,5vw,64px) 56px;display:grid;grid-template-columns:minmax(min(360px,100%),1fr) minmax(0,min(var(--brain-pct),940px));gap:clamp(16px,3vw,48px);align-items:center;pointer-events:none}
+.hero-text,.brain-wrap{pointer-events:auto}
+.hero-text h1{font-size:clamp(46px,7vw,104px);line-height:.95;margin:0 0 22px;font-weight:700;letter-spacing:-.02em}
+.hero-text p{font-size:clamp(18px,1.7vw,22px);line-height:1.45;max-width:30ch;margin:0;color:var(--ink-2)}
+.brain-wrap{position:relative;width:100%}
+.brain-svg{display:block;width:100%;height:auto;overflow:visible}
+.brain-hint{margin:6px 0 0;text-align:center;font-size:14px;color:var(--muted)}
+.hero.bottom{align-items:stretch}
+.hero.bottom .hero-inner{grid-template-columns:1fr;grid-template-rows:minmax(0,1fr) auto;padding-top:76px;padding-bottom:40px;gap:8px}
+.hero.bottom .brain-wrap{grid-row:1;justify-self:center;align-self:center;width:min(var(--brain-pct),calc((100svh - 354px) / .678));transform:translateX(6%)}
+.hero.bottom .hero-text{grid-row:2;align-self:end}
+.hero.bottom .hero-text h1 br{display:none}
+.hero.bottom .hero-text h1{margin-bottom:14px}
+.hero.bottom .hero-text p{max-width:44ch}
+@media (max-width:760px){
+  .hero-inner,.hero.bottom .hero-inner{grid-template-columns:1fr;grid-template-rows:none;padding-top:88px}
+  .brain-wrap,.hero.bottom .brain-wrap{width:100%;transform:none}
+  .hero.bottom .hero-text{grid-row:auto}
+}
+.seg{display:flex;flex-wrap:wrap;gap:6px 14px;margin:0 0 10px}
+.seg label{margin:0;gap:6px}
+
+/* Brain */
+.stem path{fill:none;stroke:var(--ink);stroke-opacity:.22;stroke-width:1}
+.stem .stem-body{fill:url(#tissue);fill-opacity:.8}
+.stem path.dapi{fill:var(--dapi);stroke:none}
+.backlight{fill:var(--backlight);opacity:.16}
+.rim{fill:none;stroke:url(#rim);stroke-width:1.4;pointer-events:none}
+.inner{fill:none;stroke:var(--shade);stroke-width:18;stroke-opacity:.75}
+.groove{fill:none;stroke:var(--shade);stroke-opacity:.7;stroke-width:2.2;stroke-linecap:round}
+.fissure{fill:none;stroke:var(--shade);stroke-opacity:.9;stroke-width:3.4;stroke-linecap:round}
+.fissure.sylvian{stroke-width:5.5}
+.imaginary{fill:none;stroke:var(--ink);stroke-opacity:.2;stroke-width:1;stroke-dasharray:3 5;pointer-events:none}
+.groove-lit{fill:none;stroke:var(--ink);stroke-opacity:.13;stroke-width:.7;stroke-linecap:round}
+.lift{fill:var(--dapi);fill-opacity:0;pointer-events:none;transition:fill-opacity .3s ease}
+.lobe.is-active .lift{fill-opacity:.07}
+.dapi{fill:var(--dapi);pointer-events:none}
+.dapi.d1{fill-opacity:.18}.dapi.d2{fill-opacity:.32}.dapi.d3{fill-opacity:.48}
+@media (prefers-reduced-motion: no-preference){
+  .dapi.m0{animation:drift-a 7s ease-in-out infinite alternate}
+  .dapi.m1{animation:drift-b 10s ease-in-out infinite alternate,breathe 6s ease-in-out infinite alternate}
+}
+@keyframes drift-a{from{transform:translate(-2.6px,1.2px)}to{transform:translate(2.2px,-1.6px)}}
+@keyframes drift-b{from{transform:translate(1.8px,2px)}to{transform:translate(-2.2px,-2.4px)}}
+@keyframes breathe{from{opacity:1}to{opacity:.7}}
+.halo{fill:var(--bg);opacity:.92}
+.lobe{--cell-a:.16;outline:none;transition:--cell-a .3s ease}
+.lobe-hit{fill:url(#tissue)}
+.lobe-edge{fill:none;stroke:var(--ink);stroke-opacity:0;stroke-width:1.1;vector-effect:non-scaling-stroke;transition:stroke-opacity .3s ease}
+.lobe-body{transform-box:fill-box;transform-origin:center;transition:transform .28s cubic-bezier(.2,.8,.2,1)}
+.cell{--lit:calc(var(--cell-a) + var(--fire) * (1 - var(--cell-a)))}
+.cell path{fill:none;stroke:var(--c);stroke-linecap:round;stroke-linejoin:round;stroke-opacity:var(--lit)}
+.cell.g{--c:var(--gfp)} .cell.t{--c:var(--tdt)}
+.cell .thick{stroke-width:.8}
+.cell .thin{stroke-width:.45}
+.cell .axon{stroke-width:.35;stroke-opacity:calc(var(--lit) * .55)}
+.cell .soma{fill:var(--c);fill-opacity:var(--lit)}
+.cell .nuc{fill:var(--dapi);fill-opacity:calc(.35 + var(--lit) * .5)}
+.cell .glow{fill:var(--c);opacity:0}
+.lobe.is-active{--cell-a:1}
+.lobe.is-active .lobe-edge{stroke-opacity:.9}
+.lobe.is-active .lobe-body{transform:scale(1.045)}
+.lobe:focus-visible .lobe-edge{stroke:var(--dapi);stroke-opacity:1;stroke-width:2.4}
+/* Firing: a pulse runs in along the dendrite, the soma flashes, a pulse runs out the axon */
+.cell .pd,.cell .pa{fill:none;stroke:var(--c);stroke-width:1.6;stroke-linecap:round;stroke-dasharray:.16 1.6;opacity:0}
+.cell.firing{animation:cellfire 1.15s ease-out}
+.cell.firing .pd{animation:inward .4s ease-in}
+.cell.firing .pa{animation:outward .48s ease-out .38s}
+.cell.firing .glow{animation:flash .9s ease-out .36s}
+@keyframes cellfire{0%{--fire:0}35%{--fire:.9}100%{--fire:0}}
+@keyframes inward{0%{opacity:1;stroke-dashoffset:-.9}100%{opacity:1;stroke-dashoffset:.16}}
+@keyframes outward{0%{opacity:1;stroke-dashoffset:.16}100%{opacity:1;stroke-dashoffset:-1}}
+@keyframes flash{0%{opacity:.6}100%{opacity:0}}
+@media (prefers-reduced-motion: reduce){ .cell.firing,.cell.firing *{animation:none!important} }
+/* Dendritic callouts */
+.leader{pointer-events:none}
+.lead{fill:none;stroke:var(--ink);stroke-opacity:.85;stroke-width:1.3;stroke-linecap:round;stroke-dasharray:1;stroke-dashoffset:1;transition:stroke-dashoffset .38s cubic-bezier(.3,.7,.2,1)}
+.twig{fill:none;stroke:var(--ink);stroke-opacity:0;stroke-width:.9;stroke-linecap:round;transition:stroke-opacity .2s ease .22s}
+.bouton,.tip{fill:var(--ink);opacity:0;transition:opacity .2s ease}
+.leader.is-active .lead,.show-all .lead{stroke-dashoffset:0}
+.leader.is-active .twig,.show-all .twig{stroke-opacity:.7}
+.leader.is-active .bouton,.leader.is-active .tip,.show-all .bouton,.show-all .tip{opacity:.9}
+/* Callout pulse: a backpropagating spike runs out along the callout, drawing it as it goes. --pd is set per callout from its length at 0.55 px/ms. */
+.pulse{fill:none;stroke:var(--ink);stroke-width:2.4;stroke-linecap:round;stroke-dasharray:.07 2;stroke-dashoffset:.07;opacity:0}
+.tip-glow{fill:var(--ink);opacity:0;transform-box:fill-box;transform-origin:center}
+.pulse-on .leader.is-active .lead{transition:stroke-dashoffset var(--pd,.38s) linear}
+.pulse-on .leader.is-active .pulse{animation:travel var(--pd,.38s) linear forwards}
+.pulse-on .leader.is-active .twig{transition-delay:calc(var(--pd,.38s) * .3)}
+.pulse-on .leader.is-active .tip{transition-delay:var(--pd,.38s)}
+.pulse-on .leader.is-active .tip-glow{animation:tipflash .7s ease-out var(--pd,.38s) forwards}
+.pulse-on .brain-label{scale:.94;transition:opacity .2s ease,scale .2s ease}
+.pulse-on .brain-label.is-active{scale:1;transition:opacity .24s ease-out calc(var(--pd,.38s) - 60ms),scale .32s cubic-bezier(.2,.8,.2,1) calc(var(--pd,.38s) - 60ms)}
+.show-all .pulse,.show-all .tip-glow{display:none}
+.pulse-on.show-all .brain-label{scale:1}
+@keyframes travel{0%{stroke-dashoffset:.07;opacity:1}90%{opacity:1}100%{stroke-dashoffset:-.93;opacity:0}}
+@keyframes tipflash{0%{opacity:.55;transform:scale(.5)}100%{opacity:0;transform:scale(1.7)}}
+@media (prefers-reduced-motion: reduce){
+  .pulse,.tip-glow{display:none}
+  .pulse-on .leader.is-active .lead,.pulse-on .leader.is-active .twig,.pulse-on .leader.is-active .tip,.pulse-on .brain-label,.pulse-on .brain-label.is-active{transition:none;scale:1}
+}
+@media (prefers-reduced-motion: reduce){
+  .lobe,.lobe-edge,.lobe-body,.lead,.twig,.brain-label{transition:none}
+  .lobe.is-active .lobe-body{transform:none}
+}
+
+/* Labels */
+.brain-label{position:absolute;left:0;top:0;display:flex;flex-direction:column;align-items:center;gap:1px;padding:6px 11px;border-radius:10px;background:var(--chip);border:1px solid var(--line);pointer-events:none;white-space:nowrap;opacity:0;transition:opacity .2s ease}
+.brain-label strong{font-size:16px;font-weight:650;line-height:1.2}
+.brain-label span{font-size:12.5px;color:var(--muted);line-height:1.3}
+.brain-label.up{transform:translate(-50%,calc(-100% - 6px))}
+.brain-label.up-left{transform:translate(-80%,calc(-100% - 6px))}
+.brain-label.down{transform:translate(-50%,6px)}
+.brain-label.left{transform:translate(calc(-100% - 6px),-50%)}
+.brain-label.is-active{opacity:1;transition-delay:.3s}
+.show-all .brain-label{opacity:1}
+@media (max-width:760px){ .leaders,.brain-label{display:none} }
+.brain-label .lt{display:flex;flex-direction:column;align-items:inherit;gap:inherit}
+/* Round 8, shelf labels: the dendrite ends in a short horizontal shelf and the label sits on it, on the side away from the lobe.
+   The shelf grows from the dendrite's end once the line arrives (--sd), then the text fades in from that corner. */
+.shelf-on .brain-label{--sd:.38s;opacity:1;transform:none;scale:1;background:none;border:0;border-radius:0;padding:0 0 7px;gap:2px;font-family:'IBM Plex Sans',system-ui,sans-serif;text-shadow:0 0 2px var(--bg),0 0 8px var(--bg);transition:none}
+.pulse-on.shelf-on .brain-label{--sd:var(--pd,.38s)}
+.shelf-on .brain-label strong{font-weight:500}
+.shelf-on .brain-label span{font-size:13px}
+.shelf-on .brain-label::after{content:"";position:absolute;left:0;right:0;bottom:0;height:1px;background:var(--ink);opacity:.55;transform:scaleX(0);transition:transform .12s ease-in}
+.shelf-on .brain-label.sh-left{translate:-100% -100%;align-items:flex-end;text-align:right;padding-left:10px}
+.shelf-on .brain-label.sh-right{translate:0 -100%;align-items:flex-start;text-align:left;padding-right:10px}
+.shelf-on .brain-label.sh-below{padding-top:7px;padding-bottom:0;white-space:normal}
+.shelf-on .brain-label.sh-left.sh-below{translate:-100% 0}
+.shelf-on .brain-label.sh-right.sh-below{translate:0 0}
+.shelf-on .brain-label.sh-below::after{top:0;bottom:auto}
+.shelf-on .brain-label.sh-below .lt{width:max-content;max-width:160px;text-wrap:balance}
+.shelf-on .brain-label.sh-left::after{transform-origin:100% 50%}
+.shelf-on .brain-label.sh-right::after{transform-origin:0 50%}
+.shelf-on .brain-label .lt{opacity:0;scale:.94;transition:opacity .12s ease,scale .12s ease}
+.shelf-on .brain-label.sh-left .lt{transform-origin:100% 100%}
+.shelf-on .brain-label.sh-right .lt{transform-origin:0 100%}
+.shelf-on .brain-label.sh-left.sh-below .lt{transform-origin:100% 0}
+.shelf-on .brain-label.sh-right.sh-below .lt{transform-origin:0 0}
+.shelf-on .brain-label.is-active::after{transform:scaleX(1);transition:transform .14s cubic-bezier(.2,.8,.2,1) var(--sd)}
+.shelf-on .brain-label.is-active .lt{opacity:1;scale:1;transition:opacity .18s ease-out calc(var(--sd) + 70ms),scale .26s cubic-bezier(.2,.8,.2,1) calc(var(--sd) + 70ms)}
+.shelf-on.show-all .brain-label::after{transform:scaleX(1)}
+.shelf-on.show-all .brain-label .lt{opacity:1;scale:1}
+@media (prefers-reduced-motion: reduce){
+  .shelf-on .brain-label::after,.shelf-on .brain-label.is-active::after,.shelf-on .brain-label .lt,.shelf-on .brain-label.is-active .lt{transition:none;scale:1}
+}
+
+/* Placeholder sections */
+.stub{min-height:70vh;padding:72px clamp(20px,5vw,64px);border-top:1px solid var(--line);scroll-margin-top:12px}
+.stub h2{font-size:clamp(30px,4vw,48px);margin:0 0 10px}
+.stub p{margin:0;color:var(--muted);max-width:60ch}
+
+/* Spike panel */
+.dock{position:fixed;left:0;bottom:0;z-index:5;max-width:100%;padding:0 16px calc(16px + env(safe-area-inset-bottom,0px));pointer-events:none}
+.panel,.reopen{pointer-events:auto}
+.panel{width:min(340px,calc(100vw - 32px));background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px 16px 12px;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
+.panel h2{font-size:15px;font-weight:650;margin:0 0 4px}
+.panel p{margin:0 0 10px;font-size:13.5px;color:var(--muted)}
+.panel label{display:flex;align-items:center;gap:10px;font-size:14px;margin:0 0 8px}
+.panel input[type=range]{flex:1;accent-color:var(--dapi)}
+.panel input[type=checkbox]{accent-color:var(--dapi);width:16px;height:16px}
+.btn,.reopen{font:inherit;font-size:13px;color:var(--ink);background:transparent;border:1px solid var(--line);border-radius:999px;padding:6px 12px;cursor:pointer}
+.reopen{background:var(--surface)}
+.btn:focus-visible,.reopen:focus-visible,.panel input:focus-visible{outline:2px solid var(--dapi);outline-offset:2px}
+</style>
+</head>
+<body>
+<section class="hero" id="top">
+  <canvas class="field" aria-hidden="true"></canvas>
+  <header class="topbar">
+    <a class="mark" href="#top" aria-label="Calvin Patel, back to top">CP</a>
+    <nav aria-label="Sections">
+      <a href="#about">About</a><a href="#projects">Projects</a><a href="#experience">Experience</a><a href="#skills">Skills</a><a href="#contact">Contact</a>
+    </nav>
+  </header>
+  <div class="hero-inner">
+    <div class="hero-text">
+      <h1>Calvin <br>Patel</h1>
+      <p>AI engineer with clinical training. Building healthcare AI that shows its work.</p>
+    </div>
+    <div class="brain-wrap" id="brain-wrap">
+      <div id="brain"></div>
+      <p class="brain-hint" id="hint">Hover a region to preview it, click to go there</p>
+    </div>
+  </div>
+</section>
+
+<section class="stub" id="about"><h2>About</h2><p>Placeholder. The frontal lobe links here.</p></section>
+<section class="stub" id="projects"><h2>Projects</h2><p>Placeholder. The occipital lobe links here.</p></section>
+<section class="stub" id="experience"><h2>Experience</h2><p>Placeholder. The temporal lobe links here.</p></section>
+<section class="stub" id="skills"><h2>Skills</h2><p>Placeholder. The cerebellum links here.</p></section>
+<section class="stub" id="contact"><h2>Contact</h2><p>Placeholder. The parietal lobe links here.</p></section>
+
+<div class="dock">
+  <section class="panel" id="panel" aria-label="Spike controls">
+    <h2>Brain spike</h2>
+    <p>Round 8: labels sit on a shelf at the end of the dendrite, in IBM Plex Sans. When the pulse lands, the shelf grows out from the dendrite's end, away from the brain, and the text fades in from that corner. Turn shelf labels off below to see round 7's boxes. The rest of the page still uses a placeholder font.</p>
+    <label>Brain size <input type="range" id="size" min="40" max="70" value="58" aria-describedby="size-out"> <output id="size-out">58%</output></label>
+    <div class="seg" role="radiogroup" aria-label="Name position">
+      <label><input type="radio" name="pos" value="middle" checked> Name middle left</label>
+      <label><input type="radio" name="pos" value="bottom"> Name bottom left</label>
+    </div>
+    <label><input type="checkbox" id="bg" checked> Background neurons</label>
+    <label><input type="checkbox" id="all"> Show every label</label>
+    <label><input type="checkbox" id="pulse" checked> Pulse along the callout</label>
+    <label><input type="checkbox" id="shelf" checked> Shelf labels</label>
+    <button class="btn" id="hide" type="button">Hide panel</button>
+  </section>
+  <button class="reopen" id="reopen" type="button" hidden>Show panel</button>
+</div>
+
+<script>
+/* Neuron generator and SWC parser (from the neuron layer spike). */
+const NL = (() => {
+  function mulberry32(a) {
+    return function () {
+      a |= 0; a = (a + 0x6D2B79F5) | 0;
+      let t = Math.imul(a ^ (a >>> 15), 1 | a);
+      t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+  }
+  function generateSWC(kind, seed) {
+    const rng = mulberry32(seed);
+    const rows = [];
+    let id = 0;
+    const add = (type, x, y, r, parent) => { id++; rows.push(`${id} ${type} ${x.toFixed(2)} ${y.toFixed(2)} 0 ${r.toFixed(2)} ${parent}`); return id; };
+    function grow(type, pid, x, y, ang, r, len, o, depth) {
+      const steps = Math.max(2, Math.round(len / o.step));
+      let a = ang, cx = x, cy = y, cr = r, p = pid;
+      for (let i = 0; i < steps; i++) {
+        a += (rng() - 0.5) * o.wiggle; a += (ang - a) * 0.08;
+        cx += Math.cos(a) * o.step; cy += Math.sin(a) * o.step;
+        cr = Math.max(o.minR, cr * o.taper);
+        p = add(type, cx, cy, cr, p);
+        if (o.side && depth < o.maxDepth && i > 2 && i < steps - 2 && rng() < o.side) {
+          const s = rng() < 0.5 ? -1 : 1;
+          grow(type, p, cx, cy, a + s * (0.6 + rng() * 0.6), cr * 0.6, len * o.sideLen * (0.5 + rng() * 0.5), o, depth + 1);
+        }
+      }
+      if (depth < o.maxDepth && rng() < o.bif) {
+        const sp = o.spread * (0.7 + rng() * 0.6);
+        for (const s of [-1, 1]) grow(type, p, cx, cy, a + (s * sp) / 2, cr * 0.75, len * o.child * (0.7 + rng() * 0.5), o, depth + 1);
+      }
+    }
+    const U = Math.PI / 2;
+    const soma = add(1, 0, 0, kind === 'pyr' ? 7 : 6, -1);
+    if (kind === 'pyr') {
+      grow(4, soma, 0, 6, U + (rng() - 0.5) * 0.15, 3.2, 150 + rng() * 60, { step: 6, wiggle: 0.25, taper: 0.992, minR: 0.4, side: 0.1, sideLen: 0.35, bif: 1, spread: 0.9, child: 0.45, maxDepth: 3 }, 0);
+      const k = 4 + Math.floor(rng() * 3);
+      for (let i = 0; i < k; i++) {
+        const a = -U + (i / (k - 1) - 0.5) * 2.6 + (rng() - 0.5) * 0.3;
+        grow(3, soma, Math.cos(a) * 5, Math.sin(a) * 5, a, 1.8, 50 + rng() * 40, { step: 5, wiggle: 0.35, taper: 0.985, minR: 0.35, side: 0, bif: 0.85, spread: 0.8, child: 0.65, maxDepth: 2 }, 0);
+      }
+      grow(2, soma, 0, -6, -U + (rng() - 0.5) * 0.3, 1, 180 + rng() * 120, { step: 7, wiggle: 0.12, taper: 0.999, minR: 0.5, side: 0.05, sideLen: 0.4, bif: 0.3, spread: 0.7, child: 0.4, maxDepth: 2 }, 0);
+    } else {
+      const k = 5 + Math.floor(rng() * 3), off = rng() * Math.PI * 2;
+      for (let i = 0; i < k; i++) {
+        const a = off + (i / k) * Math.PI * 2 + (rng() - 0.5) * 0.5;
+        grow(3, soma, Math.cos(a) * 5, Math.sin(a) * 5, a, 1.6, 45 + rng() * 25, { step: 5, wiggle: 0.3, taper: 0.985, minR: 0.35, side: 0, bif: 0.95, spread: 0.75, child: 0.85, maxDepth: 3 }, 0);
+      }
+      const a = rng() * Math.PI * 2;
+      grow(2, soma, Math.cos(a) * 5, Math.sin(a) * 5, a, 0.9, 140 + rng() * 80, { step: 7, wiggle: 0.15, taper: 0.999, minR: 0.5, side: 0.06, sideLen: 0.4, bif: 0.4, spread: 0.7, child: 0.4, maxDepth: 2 }, 0);
+    }
+    return rows.join('\n');
+  }
+  function parseSWC(text) {
+    const ids = [], type = [], xs = [], ys = [], rs = [], par = [];
+    for (const raw of String(text).split(/\r?\n/)) {
+      const line = raw.trim();
+      if (!line || line[0] === '#') continue;
+      const p = line.split(/\s+/);
+      if (p.length < 7) continue;
+      const v = p.slice(0, 7).map(Number);
+      if (v.some(Number.isNaN)) continue;
+      ids.push(v[0]); type.push(v[1]); xs.push(v[2]); ys.push(-v[3]); rs.push(v[5]); par.push(v[6]);
+    }
+    const n = ids.length, index = new Map();
+    ids.forEach((id, i) => index.set(id, i));
+    const parent = new Int32Array(n);
+    for (let i = 0; i < n; i++) { const j = index.get(par[i]); parent[i] = j === undefined || j === i ? -1 : j; }
+    return { n, type: Int8Array.from(type), x: Float32Array.from(xs), y: Float32Array.from(ys), r: Float32Array.from(rs), parent };
+  }
+  return { mulberry32, generateSWC, parseSWC };
+})();
+</script>
+
+<script>
+/* The brain: geometry, lobes, callouts, and the small neurons inside. Pure functions, no DOM. */
+const BRAIN = (() => {
+  const { mulberry32 } = NL;
+  const N = 10; // curve samples between control points
+
+  function catmull(pts, closed) {
+    const P = closed ? [pts[pts.length - 1], ...pts, pts[0], pts[1]]
+      : [[2 * pts[0][0] - pts[1][0], 2 * pts[0][1] - pts[1][1]], ...pts,
+         [2 * pts[pts.length - 1][0] - pts[pts.length - 2][0], 2 * pts[pts.length - 1][1] - pts[pts.length - 2][1]]];
+    const out = [];
+    for (let i = 1; i < P.length - 2; i++) {
+      const [p0, p1, p2, p3] = [P[i - 1], P[i], P[i + 1], P[i + 2]];
+      for (let s = 0; s < N; s++) {
+        const t = s / N, t2 = t * t, t3 = t2 * t;
+        out.push([0, 1].map(k => 0.5 * (2 * p1[k] + (-p0[k] + p2[k]) * t + (2 * p0[k] - 5 * p1[k] + 4 * p2[k] - p3[k]) * t2 + (-p0[k] + 3 * p1[k] - 3 * p2[k] + p3[k]) * t3)));
+      }
+    }
+    if (!closed) out.push(P[P.length - 2].slice());
+    return out;
+  }
+
+  // Lateral view of a left hemisphere, frontal pole on the left (viewBox units).
+  const S0 = [214, 258], C0 = [318, 47], PO = [492, 88], P0 = [530, 286];
+  const J1 = [280, 236], SE = [424, 190], J3 = [494, 206];
+  const OUTLINE = [S0, [180, 268], [140, 270], [104, 262], [80, 246], [68, 218], [70, 186], [84, 150], [112, 114], [154, 84],
+    [206, 64], [262, 52], C0, [380, 48], [438, 62], PO, [528, 116], [556, 154], [574, 200], [580, 232], [572, 258], [548, 276], P0,
+    [476, 302], [412, 318], [348, 326], [290, 326], [246, 316], [214, 298], [204, 282]];
+  const SYLVIAN = [S0, [248, 246], J1, [330, 224], [382, 210], SE];
+  const CENTRAL = [C0, [308, 86], [302, 126], [294, 166], [288, 204], J1];
+  const PARIETO_TEMPORAL = [SE, [458, 200], J3];
+  const PARIETO_OCCIPITAL = [PO, [494, 148], J3, [500, 250], P0];
+  const CEREBELLUM = [[440, 320], [486, 310], [534, 296], [566, 284], [588, 300], [594, 334], [572, 370], [530, 390], [482, 394], [446, 382], [428, 358], [428, 336]];
+  const STEM = [[392, 322], [426, 326], [438, 350], [432, 388], [424, 430], [420, 460], [402, 462], [398, 428], [390, 390], [380, 354]];
+  const SULCI = [
+    [[104, 150], [150, 120], [204, 100], [262, 88]], [[96, 214], [146, 196], [204, 184], [264, 176]],
+    [[292, 58], [286, 104], [280, 150], [274, 200]], [[340, 54], [332, 98], [326, 140], [318, 184], [308, 216]],
+    [[336, 138], [384, 128], [432, 132], [476, 150]], [[240, 284], [300, 272], [360, 258], [420, 240], [472, 232]],
+    [[256, 312], [322, 304], [392, 292], [452, 280]], [[514, 168], [540, 200], [560, 236]],
+    [[130, 240], [172, 226]], [[178, 148], [196, 176]], [[230, 118], [240, 150]], [[360, 80], [382, 102]],
+    [[440, 90], [452, 114]], [[332, 300], [346, 318]], [[400, 160], [414, 186]]
+  ];
+
+  const f = v => v.toFixed(1);
+  const pathD = (poly, close) => 'M' + poly.map(p => f(p[0]) + ' ' + f(p[1])).join('L') + (close ? 'Z' : '');
+  const arcLength = pts => { const s = [0]; for (let i = 1; i < pts.length; i++) s.push(s[i - 1] + Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1])); return s; };
+
+  // The outline is smooth gyral curves broken by notches where sulci reach the surface, at uneven spacing and depth.
+  // `fixed` notches sit where the lobe borders meet the surface; the borders are rebuilt from the moved points.
+  function sculpt(samples, rng, o) {
+    const n = samples.length, s = arcLength(samples);
+    const total = s[n - 1] + Math.hypot(samples[0][0] - samples[n - 1][0], samples[0][1] - samples[n - 1][1]);
+    const top = samples.reduce((best, p, i) => (p[1] < samples[best][1] ? i : best), 0);
+    const normalAt = i => {
+      const a = samples[(i - 1 + n) % n], b = samples[(i + 1) % n], L = Math.hypot(b[0] - a[0], b[1] - a[1]) || 1;
+      return [(b[1] - a[1]) / L, -(b[0] - a[0]) / L];
+    };
+    const flip = normalAt(top)[1] > 0 ? -1 : 1;
+    const notches = (o.fixed || []).map(f => ({ s: s[f.index], depth: f.depth, width: f.width }));
+    const near = (a, b) => { const d = Math.abs(a - b); return Math.min(d, total - d); };
+    for (let pos = rng() * o.gap[0]; pos < total; pos += o.gap[0] + rng() * (o.gap[1] - o.gap[0])) {
+      if (notches.some(nt => near(nt.s, pos) < o.gap[0] * 0.8)) continue;
+      if ((o.skip || []).some(([a, b]) => pos >= s[a] && pos <= s[b])) continue;
+      notches.push({ s: pos, depth: o.depth[0] + rng() * (o.depth[1] - o.depth[0]), width: o.width[0] + rng() * (o.width[1] - o.width[0]) });
+    }
+    const p1 = rng() * 6.283, p2 = rng() * 6.283;
+    return samples.map((p, i) => {
+      let off = o.drift * (Math.sin((s[i] / 97) * 6.283 + p1) + 0.6 * Math.sin((s[i] / 61) * 6.283 + p2));
+      for (const nt of notches) {
+        const x = near(s[i], nt.s) / nt.width;
+        if (x < 1) off -= nt.depth * Math.pow(1 - x, 1.7);
+      }
+      const [nx, ny] = normalAt(i);
+      return [p[0] + flip * nx * off, p[1] + flip * ny * off];
+    });
+  }
+  // Sulci waver irregularly: a few sines with random wavelengths plus jitter.
+  function wobble(pts, rng) {
+    const s = arcLength(pts), n = pts.length;
+    const waves = [0, 1, 2].map(() => ({ l: 12 + rng() * 20, p: rng() * 6.283, a: 0.3 + rng() * 0.8 }));
+    return pts.map((p, i) => {
+      if (i === 0 || i === n - 1) return p;
+      const a = pts[i - 1], b = pts[i + 1], L = Math.hypot(b[0] - a[0], b[1] - a[1]) || 1;
+      const off = waves.reduce((t, w) => t + w.a * Math.sin((s[i] / w.l) * 6.283 + w.p), 0) + (rng() - 0.5) * 0.2;
+      return [p[0] + (-(b[1] - a[1]) / L) * off, p[1] + ((b[0] - a[0]) / L) * off];
+    });
+  }
+
+  function span(arr, from, to, closed) {
+    const out = [], len = arr.length;
+    let i = from * N, end = to * N;
+    if (closed) { if (end < i) end += len; for (let k = i; k <= end; k++) out.push(arr[k % len]); }
+    else if (end >= i) for (let k = i; k <= end; k++) out.push(arr[k]);
+    else for (let k = i; k >= end; k--) out.push(arr[k]);
+    return out;
+  }
+  function join(...parts) {
+    const out = [];
+    for (const p of parts) out.push(...(out.length ? p.slice(1) : p));
+    const a = out[0], b = out[out.length - 1];
+    if (Math.hypot(a[0] - b[0], a[1] - b[1]) < 0.01) out.pop();
+    return out;
+  }
+
+  // In nav order, which is also keyboard order. `from` sits inside the lobe; `to` is where the label goes.
+  const LOBES = [
+    { id: 'frontal', section: 'about', title: 'About', anatomy: 'Frontal lobe', role: 'personality and planning', from: [150, 150], to: [64, 28], side: 'up-left' },
+    { id: 'occipital', section: 'projects', title: 'Projects', anatomy: 'Occipital lobe', role: 'vision', from: [546, 196], to: [604, 34], side: 'up' },
+    { id: 'temporal', section: 'experience', title: 'Experience', anatomy: 'Temporal lobe', role: 'memory', from: [300, 300], to: [168, 374], side: 'left' },
+    { id: 'cerebellum', section: 'skills', title: 'Skills', anatomy: 'Cerebellum', role: 'learned skill and movement', from: [522, 346], to: [596, 428], side: 'down' },
+    { id: 'parietal', section: 'contact', title: 'Contact', anatomy: 'Parietal lobe', role: 'guides reaching', from: [394, 112], to: [338, -8], side: 'up' }
+  ];
+
+  function inside(pt, poly) {
+    let hit = false;
+    for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+      const [xi, yi] = poly[i], [xj, yj] = poly[j];
+      if ((yi > pt[1]) !== (yj > pt[1]) && pt[0] < ((xj - xi) * (pt[1] - yi)) / (yj - yi) + xi) hit = !hit;
+    }
+    return hit;
+  }
+  function nearest(pt, poly) {
+    let best = null, bd = Infinity;
+    for (let i = 0; i < poly.length; i++) {
+      const a = poly[i], b = poly[(i + 1) % poly.length];
+      const ex = b[0] - a[0], ey = b[1] - a[1], L2 = ex * ex + ey * ey || 1;
+      let t = ((pt[0] - a[0]) * ex + (pt[1] - a[1]) * ey) / L2;
+      t = t < 0 ? 0 : t > 1 ? 1 : t;
+      const q = [a[0] + ex * t, a[1] + ey * t], d = Math.hypot(q[0] - pt[0], q[1] - pt[1]);
+      if (d < bd) { bd = d; best = q; }
+    }
+    return { point: best, dist: bd };
+  }
+  function area(poly) {
+    let s = 0;
+    for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) s += (poly[j][0] + poly[i][0]) * (poly[j][1] - poly[i][1]);
+    return Math.abs(s / 2);
+  }
+
+  function grow(rng, out, key, x, y, ang, len, step, o, depth) {
+    const pts = [[x, y]];
+    let a = ang, cx = x, cy = y;
+    const steps = Math.max(2, Math.round(len / step));
+    for (let i = 0; i < steps; i++) {
+      a += (rng() - 0.5) * o.wiggle; a += (ang - a) * 0.1;
+      cx += Math.cos(a) * step; cy += Math.sin(a) * step;
+      pts.push([cx, cy]);
+    }
+    out[key].push(pts);
+    if (depth < o.maxDepth && rng() < o.bif) {
+      const sp = o.spread * (0.75 + rng() * 0.5);
+      for (const s of [-1, 1]) grow(rng, out, 'thin', cx, cy, a + (s * sp) / 2, len * o.child * (0.75 + rng() * 0.4), step, o, depth + 1);
+    }
+  }
+  function pyramidal(rng, cx, cy, dir, size) {
+    const out = { thick: [], thin: [], axon: [], r: size * 0.075 }, step = size * 0.07;
+    grow(rng, out, 'thick', cx, cy, dir, size * 0.95, step, { wiggle: 0.25, maxDepth: 2, bif: 1, spread: 0.9, child: 0.42 }, 0);
+    const k = 3 + Math.floor(rng() * 2);
+    for (let i = 0; i < k; i++) {
+      const a = dir + Math.PI + (i / (k - 1) - 0.5) * 2.4 + (rng() - 0.5) * 0.3;
+      grow(rng, out, 'thin', cx, cy, a, size * 0.36, step, { wiggle: 0.35, maxDepth: 1, bif: 0.8, spread: 0.8, child: 0.6 }, 0);
+    }
+    grow(rng, out, 'axon', cx, cy, dir + Math.PI + (rng() - 0.5) * 0.4, size * 0.65, step, { wiggle: 0.1, maxDepth: 0, bif: 0 }, 0);
+    return out;
+  }
+  function purkinje(rng, cx, cy, dir, size) {
+    const out = { thick: [], thin: [], axon: [], r: size * 0.08 }, step = size * 0.06;
+    grow(rng, out, 'thick', cx, cy, dir, size * 0.2, step, { wiggle: 0.2, maxDepth: 4, bif: 1, spread: 1.15, child: 0.8 }, 0);
+    grow(rng, out, 'axon', cx, cy, dir + Math.PI + (rng() - 0.5) * 0.3, size * 0.5, step, { wiggle: 0.1, maxDepth: 0, bif: 0 }, 0);
+    return out;
+  }
+  function cellsFor(lobe, poly, surface, rng) {
+    const purk = lobe.id === 'cerebellum';
+    const count = Math.max(3, Math.round(area(poly) / (purk ? 1500 : 3000)));
+    const xs = poly.map(p => p[0]), ys = poly.map(p => p[1]);
+    const [x0, x1, y0, y1] = [Math.min(...xs), Math.max(...xs), Math.min(...ys), Math.max(...ys)];
+    const centers = [];
+    for (let tries = 0; tries < 4000 && centers.length < count; tries++) {
+      const c = [x0 + rng() * (x1 - x0), y0 + rng() * (y1 - y0)];
+      if (!inside(c, poly) || nearest(c, poly).dist < 7) continue;
+      if (centers.some(o => Math.hypot(o[0] - c[0], o[1] - c[1]) < (purk ? 17 : 26))) continue;
+      centers.push(c);
+    }
+    return centers.map(c => {
+      let dir;
+      if (purk) dir = Math.atan2(c[1] - 345, c[0] - 512); // Purkinje dendrites fan toward the cerebellar surface
+      else { const s = nearest(c, surface).point; dir = Math.atan2(s[1] - c[1], s[0] - c[0]); } // apical toward the cortical surface
+      const size = purk ? 32 + rng() * 6 : 32 + rng() * 10;
+      const cell = purk ? purkinje(rng, c[0], c[1], dir, size) : pyramidal(rng, c[0], c[1], dir, size);
+      const color = rng() < 0.6 ? 'g' : 't';
+      const lines = list => list.map(pl => pathD(pl, false)).join('');
+      return `<g class="cell ${color}" data-x="${f(c[0])}" data-y="${f(c[1])}">` +
+        `<circle class="glow" cx="${f(c[0])}" cy="${f(c[1])}" r="${f(cell.r * 4)}"/>` +
+        `<path class="axon" d="${lines(cell.axon)}"/><path class="thin" d="${lines(cell.thin)}"/><path class="thick" d="${lines(cell.thick)}"/>` +
+        `<path class="pd" pathLength="1" d="${pathD(cell.thick[0], false)}"/><path class="pa" pathLength="1" d="${pathD(cell.axon[0], false)}"/>` +
+        `<circle class="soma" cx="${f(c[0])}" cy="${f(c[1])}" r="${f(cell.r * 1.4)}"/>` +
+        `<circle class="nuc" cx="${f(c[0])}" cy="${f(c[1])}" r="${f(cell.r * 0.7)}"/></g>`;
+    }).join('');
+  }
+
+  // DAPI counterstain: every nucleus in the tissue as a faint blue dot, denser glow toward the middle.
+  function dapiFor(poly, surface, rng, density) {
+    const count = Math.round(area(poly) * density);
+    const xs = poly.map(p => p[0]), ys = poly.map(p => p[1]);
+    const [x0, x1, y0, y1] = [Math.min(...xs), Math.max(...xs), Math.min(...ys), Math.max(...ys)];
+    const bands = [['', ''], ['', ''], ['', '']];
+    for (let k = 0, tries = 0; k < count && tries < count * 6; tries++) {
+      const c = [x0 + rng() * (x1 - x0), y0 + rng() * (y1 - y0)];
+      if (!inside(c, poly)) continue;
+      k++;
+      const depth = nearest(c, surface).dist;
+      const band = depth < 9 ? 0 : depth < 26 ? 1 : 2;
+      const r = 0.55 + rng() * 0.65;
+      bands[band][k % 2] += `M${f(c[0] - r)} ${f(c[1])}a${f(r)} ${f(r)} 0 1 0 ${f(2 * r)} 0a${f(r)} ${f(r)} 0 1 0 ${f(-2 * r)} 0`;
+    }
+    return bands.map((pair, i) => pair.map((d, m) => `<path class="dapi d${i + 1} m${m}" style="animation-delay:-${(rng() * 12).toFixed(1)}s" d="${d}"/>`).join('')).join('');
+  }
+
+  // A callout line drawn like a dendrite: a wavering branch with two short twigs near the region.
+  function leader(l, rng) {
+    const [x0, y0] = l.from, [x1, y1] = l.to, dx = x1 - x0, dy = y1 - y0, len = Math.hypot(dx, dy);
+    const nx = -dy / len, ny = dx / len, pts = [[x0, y0]];
+    for (const t of [0.3, 0.62]) { const j = (rng() - 0.5) * len * 0.14; pts.push([x0 + dx * t + nx * j, y0 + dy * t + ny * j]); }
+    pts.push([x1, y1]);
+    const main = catmull(pts);
+    const twigs = [[0.16, 1], [0.3, -1]].map(([t, side]) => {
+      const i = Math.round(t * (main.length - 1)), p = main[i], q = main[i + 1];
+      const a = Math.atan2(q[1] - p[1], q[0] - p[0]) + side * (0.75 + rng() * 0.3), L = 11 + rng() * 6;
+      return [p, [p[0] + Math.cos(a) * L * 0.55, p[1] + Math.sin(a) * L * 0.55], [p[0] + Math.cos(a + side * 0.3) * L, p[1] + Math.sin(a + side * 0.3) * L]];
+    });
+    const d = pathD(main, false);
+    return `<g class="leader" data-for="${l.id}"><path class="lead" pathLength="1" d="${d}"/>` +
+      `<path class="twig" d="${twigs.map(t => pathD(t, false)).join('')}"/><path class="pulse" pathLength="1" d="${d}"/>` +
+      `<circle class="bouton" cx="${f(x0)}" cy="${f(y0)}" r="2.8"/><circle class="tip-glow" cx="${f(x1)}" cy="${f(y1)}" r="6"/>` +
+      `<circle class="tip" cx="${f(x1)}" cy="${f(y1)}" r="1.8"/></g>`;
+  }
+
+  function buildSVG(seed = 11) {
+    const rng = mulberry32(seed);
+    const O = sculpt(catmull(OUTLINE, true), rng, {
+      fixed: [{ index: 12 * N, depth: 5.5, width: 7 }, { index: 15 * N, depth: 4.5, width: 7 }, { index: 22 * N, depth: 5, width: 8 }],
+      gap: [20, 52], depth: [1.2, 3.6], width: [4, 8], drift: 0.9, skip: [[25 * N, 29 * N + 9]]
+    });
+    const at = i => O[i * N];
+    const L = {
+      syl: catmull([at(0), ...SYLVIAN.slice(1)]),
+      cs: catmull([at(12), ...CENTRAL.slice(1)]),
+      pt: catmull(PARIETO_TEMPORAL),
+      po: catmull([at(15), ...PARIETO_OCCIPITAL.slice(1, -1), at(22)])
+    };
+    const regions = {
+      frontal: join(span(O, 0, 12, true), span(L.cs, 0, 5), span(L.syl, 2, 0)),
+      parietal: join(span(O, 12, 15, true), span(L.po, 0, 2), span(L.pt, 2, 0), span(L.syl, 5, 2), span(L.cs, 5, 0)),
+      occipital: join(span(O, 15, 22, true), span(L.po, 4, 0)),
+      temporal: join(span(O, 22, 0, true), span(L.syl, 0, 5), span(L.pt, 0, 2), span(L.po, 2, 4)),
+      cerebellum: sculpt(catmull(CEREBELLUM, true), rng, { gap: [9, 14], depth: [1, 2], width: [3, 4.5], drift: 0.5 })
+    };
+    const cer = regions.cerebellum, stem = catmull(STEM, true);
+    const sulci = SULCI.map(s => pathD(wobble(catmull(s), rng), false)).join('');
+    const folia = Array.from({ length: 8 }, (_, k) => { const y = 300 + k * 12; return `M418 ${y}Q505 ${y + 12 + (rng() - 0.5) * 4} 600 ${y - 8}`; }).join('');
+    const clips = LOBES.map(l => `<clipPath id="clip-${l.id}"><path d="${pathD(regions[l.id], true)}"/></clipPath>`).join('');
+    const lobes = LOBES.map(l => {
+      const d = pathD(regions[l.id], true);
+      const cere = l.id === 'cerebellum';
+      const grooves = cere ? folia : sulci, surface = cere ? pathD(cer, true) : pathD(O, true);
+      const deep = cere ? '' : `<path class="fissure sylvian" d="${pathD(L.syl, false)}" filter="url(#groove-blur)"/>` +
+        `<path class="fissure" d="${pathD(L.cs, false)}" filter="url(#groove-blur)"/>`;
+      const dapi = dapiFor(regions[l.id], cere ? cer : O, rng, cere ? 0.034 : 0.013);
+      return `<a class="lobe" href="#${l.section}" data-lobe="${l.id}" aria-label="${l.title}, ${l.anatomy.toLowerCase()}">` +
+        `<g class="lobe-body"><path class="lobe-hit" d="${d}" pointer-events="all"/>` +
+        `<g clip-path="url(#clip-${l.id})"><path class="inner" d="${surface}" filter="url(#inner-blur)"/>` +
+        `${dapi}<path class="groove" d="${grooves}" filter="url(#groove-blur)"/>${deep}` +
+        `${cellsFor(l, regions[l.id], O, rng)}<path class="lift" d="${d}"/></g>` +
+        `<path class="lobe-edge" d="${d}"/></g></a>`;
+    }).join('');
+    const halo = pathD(O, true) + pathD(cer, true) + pathD(stem, true);
+    const stop = (offset, color, opacity = 1) => `<stop offset="${offset}" style="stop-color:var(${color});stop-opacity:${opacity}"/>`;
+    return `<svg class="brain-svg" viewBox="-20 -12 720 488" xmlns="http://www.w3.org/2000/svg" role="group" aria-label="Brain navigation">` +
+      `<defs>${clips}` +
+      `<radialGradient id="tissue" cx="0.5" cy="0.42" r="0.75">${stop(0, '--tissue-hi')}${stop(1, '--tissue-lo')}</radialGradient>` +
+      `<linearGradient id="rim" gradientUnits="userSpaceOnUse" x1="320" y1="40" x2="320" y2="470">${stop(0, '--rim', 0.7)}${stop(0.6, '--rim', 0.32)}${stop(1, '--rim', 0.14)}</linearGradient>` +
+      `<filter id="halo-blur" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="12"/></filter>` +
+      `<filter id="glow-blur" x="-40%" y="-40%" width="180%" height="180%"><feGaussianBlur stdDeviation="30"/></filter>` +
+      `<filter id="inner-blur" x="-10%" y="-10%" width="120%" height="120%"><feGaussianBlur stdDeviation="5"/></filter>` +
+      `<filter id="groove-blur" x="-5%" y="-5%" width="110%" height="110%"><feGaussianBlur stdDeviation="0.8"/></filter></defs>` +
+      `<path class="backlight" d="${halo}" filter="url(#glow-blur)" aria-hidden="true"/>` +
+      `<path class="halo" d="${halo}" filter="url(#halo-blur)" aria-hidden="true"/>` +
+      `<g class="stem" aria-hidden="true"><path class="stem-body" d="${pathD(stem, true)}"/>${dapiFor(stem, stem, rng, 0.016)}<path d="M402 344Q410 396 408 456M418 342Q426 396 418 454"/></g>` +
+      `${lobes}<path class="imaginary" d="${pathD(L.po, false)}${pathD(L.pt, false)}" aria-hidden="true"/><path class="rim" d="${pathD(O, true)}${pathD(cer, true)}" aria-hidden="true"/>` +
+      `<g class="leaders" aria-hidden="true">${LOBES.map(l => leader(l, rng)).join('')}</g></svg>`;
+  }
+
+  return { buildSVG, LOBES };
+})();
+</script>
+
+<script>
+(() => {
+  const { mulberry32, generateSWC, parseSWC } = NL;
+  const reduced = matchMedia('(prefers-reduced-motion: reduce)');
+  const darkMQ = matchMedia('(prefers-color-scheme: dark)');
+  const canHover = matchMedia('(hover: hover)');
+
+  /* ---------- Brain ---------- */
+  const wrap = document.getElementById('brain-wrap');
+  const hint = document.getElementById('hint');
+  document.getElementById('brain').innerHTML = BRAIN.buildSVG();
+  const svg = wrap.querySelector('svg');
+  const lobes = [...svg.querySelectorAll('.lobe')];
+  const labels = new Map();
+  for (const l of BRAIN.LOBES) {
+    const el = document.createElement('div');
+    const shelfSide = l.to[0] < l.from[0] ? 'sh-left' : 'sh-right';
+    el.className = `brain-label ${l.side} ${shelfSide}${l.side === 'down' ? ' sh-below' : ''}`;
+    el.setAttribute('aria-hidden', 'true');
+    const title = document.createElement('strong');
+    title.textContent = l.title;
+    const sub = document.createElement('span');
+    sub.textContent = `${l.anatomy}: ${l.role}`;
+    const text = document.createElement('div');
+    text.className = 'lt';
+    text.append(title, sub);
+    el.append(text);
+    wrap.appendChild(el);
+    labels.set(l.id, { el, anchor: l.to, lobe: l, leader: svg.querySelector(`.leader[data-for="${l.id}"]`) });
+  }
+  function placeLabels() {
+    const ctm = svg.getScreenCTM();
+    const box = wrap.getBoundingClientRect();
+    if (!ctm) return;
+    const pt = svg.createSVGPoint();
+    for (const { el, anchor } of labels.values()) {
+      pt.x = anchor[0]; pt.y = anchor[1];
+      const s = pt.matrixTransform(ctm);
+      el.style.left = `${s.x - box.left}px`;
+      el.style.top = `${s.y - box.top}px`;
+    }
+    // Pulse travel time per callout: its on-screen length at the backpropagating spike speed (V.bap below).
+    const scale = Math.hypot(ctm.a, ctm.b), BAP_PX_PER_MS = 0.55;
+    for (const { el, leader } of labels.values()) {
+      let px = 0;
+      try { px = leader.querySelector('.lead').getTotalLength() * scale; } catch (e) { continue; }
+      const pd = `${Math.round(Math.min(420, Math.max(180, px / BAP_PX_PER_MS)))}ms`;
+      leader.style.setProperty('--pd', pd);
+      el.style.setProperty('--pd', pd);
+    }
+  }
+  const narrow = matchMedia('(max-width: 760px)');
+  function activate(lobe) {
+    for (const other of lobes) if (other !== lobe) deactivate(other);
+    if (!lobe) { setHint(); return; }
+    const info = labels.get(lobe.dataset.lobe);
+    lobe.classList.add('is-active');
+    info.el.classList.add('is-active');
+    info.leader.classList.add('is-active');
+    startCascade(lobe);
+    if (narrow.matches) hint.textContent = `${info.lobe.title}: ${info.lobe.anatomy.toLowerCase()}, ${info.lobe.role}. Tap again to go there.`;
+  }
+  function deactivate(lobe) {
+    const info = labels.get(lobe.dataset.lobe);
+    if (lobe.classList.contains('is-active')) clearInterval(cascade);
+    lobe.classList.remove('is-active');
+    info.el.classList.remove('is-active');
+    info.leader.classList.remove('is-active');
+  }
+
+  let lastPointer = 'mouse', lastPointerAt = 0;
+  addEventListener('pointerdown', e => {
+    lastPointer = e.pointerType; lastPointerAt = performance.now();
+    if (e.pointerType !== 'mouse' && !e.target.closest('.lobe')) activate(null);
+  }, { capture: true });
+
+  for (const lobe of lobes) {
+    lobe.addEventListener('pointerenter', e => { if (e.pointerType === 'mouse') activate(lobe); });
+    lobe.addEventListener('pointerleave', e => { if (e.pointerType === 'mouse' && document.activeElement !== lobe) deactivate(lobe); });
+    lobe.addEventListener('focus', () => {
+      if (performance.now() - lastPointerAt < 600 && lastPointer !== 'mouse') return; // a tap, not keyboard focus
+      activate(lobe);
+    });
+    lobe.addEventListener('blur', () => deactivate(lobe));
+    lobe.addEventListener('click', e => {
+      if (lastPointer !== 'mouse' && !lobe.classList.contains('is-active')) {
+        e.preventDefault(); // first tap previews, second tap navigates
+        activate(lobe);
+        return;
+      }
+      setTimeout(() => deactivate(lobe), 300);
+    });
+  }
+
+  /* Firing: sparse spontaneous activity, a cascade across a hovered lobe, and cells near the cursor. */
+  const cells = [...svg.querySelectorAll('.cell')];
+  const lastFired = new WeakMap();
+  function fireCell(cell) {
+    if (reduced.matches) return;
+    const now = performance.now();
+    if (now - (lastFired.get(cell) || 0) < 900) return;
+    lastFired.set(cell, now);
+    cell.classList.remove('firing');
+    cell.getBoundingClientRect(); // restart the animation
+    cell.classList.add('firing');
+    setTimeout(() => cell.classList.remove('firing'), 1250);
+  }
+  (function spontaneous() {
+    if (!document.hidden && cells.length) fireCell(cells[Math.floor(Math.random() * cells.length)]);
+    setTimeout(spontaneous, 450 + Math.random() * 900);
+  })();
+  let cascade = 0;
+  function startCascade(lobe) {
+    clearInterval(cascade);
+    const own = [...lobe.querySelectorAll('.cell')];
+    const wave = () => own.forEach(c => setTimeout(() => lobe.classList.contains('is-active') && fireCell(c), Math.random() * 1100));
+    wave();
+    cascade = setInterval(wave, 1500);
+  }
+  let lastNear = 0;
+  svg.addEventListener('pointermove', e => {
+    const now = performance.now();
+    if (now - lastNear < 90) return;
+    lastNear = now;
+    const ctm = svg.getScreenCTM();
+    if (!ctm) return;
+    const pt = new DOMPoint(e.clientX, e.clientY).matrixTransform(ctm.inverse());
+    let best = null, bd = 30;
+    for (const c of cells) {
+      const d = Math.hypot(+c.dataset.x - pt.x, +c.dataset.y - pt.y);
+      if (d < bd) { bd = d; best = c; }
+    }
+    if (best) fireCell(best);
+  }, { passive: true });
+
+  function setHint() {
+    hint.textContent = canHover.matches
+      ? 'Hover a region to preview it, click to go there'
+      : 'Tap a region to preview it, tap again to go there';
+  }
+  setHint();
+  canHover.addEventListener('change', setHint);
+
+  /* ---------- Spike controls ---------- */
+  const size = document.getElementById('size'), sizeOut = document.getElementById('size-out');
+  size.addEventListener('input', () => {
+    document.documentElement.style.setProperty('--brain-pct', `${size.value}%`);
+    sizeOut.textContent = `${size.value}%`;
+  });
+  document.getElementById('all').addEventListener('change', e => wrap.classList.toggle('show-all', e.target.checked));
+  const pulseToggle = document.getElementById('pulse');
+  const setPulse = () => wrap.classList.toggle('pulse-on', pulseToggle.checked);
+  pulseToggle.addEventListener('change', setPulse);
+  setPulse();
+  const shelfToggle = document.getElementById('shelf');
+  const setShelf = () => wrap.classList.toggle('shelf-on', shelfToggle.checked);
+  shelfToggle.addEventListener('change', setShelf);
+  setShelf();
+  const bgToggle = document.getElementById('bg');
+  for (const radio of document.querySelectorAll('input[name=pos]')) {
+    radio.addEventListener('change', () => document.querySelector('.hero').classList.toggle('bottom', radio.value === 'bottom' && radio.checked));
+  }
+  const panel = document.getElementById('panel'), reopen = document.getElementById('reopen');
+  document.getElementById('hide').addEventListener('click', () => { panel.hidden = true; reopen.hidden = false; reopen.focus(); });
+  reopen.addEventListener('click', () => { panel.hidden = false; reopen.hidden = true; document.getElementById('hide').focus(); });
+
+  /* ---------- Background neuron layer (adapted from the neuron spike) ---------- */
+  const hero = document.querySelector('.hero');
+  const canvas = hero.querySelector('.field');
+  const ctx = canvas.getContext('2d');
+  const V = { dend: 0.32, axon: 1.15, bap: 0.55 };
+  const TAU_M = 260, THRESH = 1.0, REFRACT = 420, HIT = 14, CELL = 24, BUCKETS = 10;
+  let W = 0, H = 0, DPR = 1, P = null, frameNo = 0, nextSpont = 0;
+  let neurons = [], waves = [], nuclei = null, lastPtr = null;
+  const samples = [];
+  const library = [];
+  for (let i = 0; i < 12; i++) {
+    const kind = i % 2 ? 'msn' : 'pyr';
+    library.push({ kind, model: parseSWC(generateSWC(kind, 101 + i * 17)) });
+  }
+  const vel = k => (reduced.matches ? Infinity : V[k]);
+  const rgbOf = hex => { let h = hex.trim().replace('#', ''); if (h.length === 3) h = h.split('').map(c => c + c).join(''); const n = parseInt(h, 16); return [(n >> 16) & 255, (n >> 8) & 255, n & 255]; };
+  function readPalette() {
+    const cs = getComputedStyle(document.documentElement), v = k => cs.getPropertyValue(k).trim();
+    const dark = v('--mode') === 'dark';
+    return { dark, bg: v('--bg'), ink: rgbOf(v('--ink')), gfp: rgbOf(v('--gfp')), tdt: rgbOf(v('--tdt')), dapi: rgbOf(v('--dapi')), composite: dark ? 'lighter' : 'source-over' };
+  }
+  function prepare(m, o) {
+    const n = m.n;
+    let soma = -1;
+    for (let i = 0; i < n; i++) if (m.type[i] === 1) { soma = i; break; }
+    if (soma < 0) soma = 0;
+    const ox = m.x[soma], oy = m.y[soma];
+    let R = 1;
+    for (let i = 0; i < n; i++) R = Math.max(R, Math.hypot(m.x[i] - ox, m.y[i] - oy));
+    const s = o.targetR / R, c = Math.cos(o.rot), sn = Math.sin(o.rot);
+    const x = new Float32Array(n), y = new Float32Array(n), w = new Float32Array(n);
+    let minX = 0, minY = 0, maxX = 0, maxY = 0;
+    for (let i = 0; i < n; i++) {
+      const dx = (m.x[i] - ox) * s, dy = (m.y[i] - oy) * s;
+      x[i] = dx * c - dy * sn; y[i] = dx * sn + dy * c;
+      w[i] = Math.min(2.6, Math.max(0.45, 0.35 + m.r[i] * s * 0.9));
+      minX = Math.min(minX, x[i]); maxX = Math.max(maxX, x[i]); minY = Math.min(minY, y[i]); maxY = Math.max(maxY, y[i]);
+    }
+    const head = new Int32Array(n).fill(-1), nxt = new Int32Array(2 * n), to = new Int32Array(2 * n);
+    let e = 0;
+    for (let i = 0; i < n; i++) { const p = m.parent[i]; if (p >= 0) { to[e] = p; nxt[e] = head[i]; head[i] = e++; to[e] = i; nxt[e] = head[p]; head[p] = e++; } }
+    const dist = new Float32Array(n).fill(-1), toward = new Int32Array(n).fill(-1), q = new Int32Array(n);
+    let qh = 0, qt = 0; q[qt++] = soma; dist[soma] = 0;
+    while (qh < qt) { const a = q[qh++]; for (let k = head[a]; k !== -1; k = nxt[k]) { const b = to[k]; if (dist[b] < 0) { dist[b] = dist[a] + Math.hypot(x[b] - x[a], y[b] - y[a]); toward[b] = a; q[qt++] = b; } } }
+    const axon = [], dend = [];
+    let maxDend = 1, maxAxon = 1;
+    for (let i = 0; i < n; i++) {
+      if (dist[i] < 0) continue;
+      if (m.type[i] === 2) { axon.push(i); maxAxon = Math.max(maxAxon, dist[i]); }
+      else if (m.type[i] !== 1) { dend.push(i); maxDend = Math.max(maxDend, dist[i]); }
+    }
+    return { n, type: m.type, parent: m.parent, x, y, w, dist, toward, soma, axon: Int32Array.from(axon), dend: Int32Array.from(dend), maxDend, maxAxon,
+      lambda: maxDend * 0.55, somaR: Math.min(7, Math.max(2.2, (m.r[soma] || 5) * s)), minX, minY, maxX, maxY,
+      bright: new Float32Array(n), stamp: -1, v: 0, vT: 0, lastSpike: -1e9, spikeGain: 1, lastInput: -1e9 };
+  }
+  function buildSprite(nr, seed) {
+    const pad = 10, sw = Math.ceil(nr.maxX - nr.minX + pad * 2), sh = Math.ceil(nr.maxY - nr.minY + pad * 2);
+    const cv = document.createElement('canvas');
+    cv.width = Math.max(1, Math.ceil(sw * DPR)); cv.height = Math.max(1, Math.ceil(sh * DPR));
+    const g = cv.getContext('2d');
+    g.scale(DPR, DPR); g.translate(pad - nr.minX, pad - nr.minY);
+    const blur = (1 - nr.depth) * 2.4 + 0.4; // out of focus, so the brain reads as in front
+    if ('filter' in g) g.filter = `blur(${blur.toFixed(2)}px)`;
+    const [r, gg, b] = P.dark ? nr.rgb : P.ink, col = `rgb(${r},${gg},${b})`;
+    g.strokeStyle = col; g.fillStyle = col; g.lineCap = 'round'; g.lineJoin = 'round';
+    let wSum = 0, wCount = 0;
+    for (let i = 0; i < nr.n; i++) {
+      const p = nr.parent[i];
+      if (p < 0 || (nr.type[i] === 1 && nr.type[p] === 1)) continue;
+      g.lineWidth = nr.w[i]; g.beginPath(); g.moveTo(nr.x[p], nr.y[p]); g.lineTo(nr.x[i], nr.y[i]); g.stroke();
+      if (nr.type[i] !== 2) { wSum += nr.w[i]; wCount++; }
+    }
+    const rng = mulberry32(seed * 977 + 13), sl = Math.min(3, Math.max(1.1, nr.targetR / 110));
+    g.lineWidth = 0.6; g.beginPath();
+    for (let i = 0; i < nr.n; i++) {
+      const p = nr.parent[i];
+      if (p < 0 || nr.type[i] === 1 || nr.type[i] === 2 || nr.dist[i] < nr.maxDend * 0.12 || rng() > 0.45) continue;
+      const ex = nr.x[i] - nr.x[p], ey = nr.y[i] - nr.y[p], L = Math.hypot(ex, ey) || 1, side = rng() < 0.5 ? -1 : 1;
+      const len = sl * (0.6 + rng() * 0.8) + nr.w[i] * 0.5;
+      g.moveTo(nr.x[i], nr.y[i]); g.lineTo(nr.x[i] + (-ey / L) * side * len, nr.y[i] + (ex / L) * side * len);
+    }
+    g.stroke();
+    g.beginPath(); g.arc(0, 0, nr.somaR, 0, Math.PI * 2); g.fill();
+    Object.assign(nr, { sprite: cv, sx: nr.minX - pad, sy: nr.minY - pad, sw, sh, wMean: wCount ? wSum / wCount : 1 });
+  }
+  function buildGrid(nr) {
+    const grid = new Map(), key = (gx, gy) => (gx + 4096) * 8192 + (gy + 4096);
+    for (let i = 0; i < nr.n; i++) {
+      const p = nr.parent[i];
+      if (p < 0 || nr.dist[i] < 0 || nr.type[i] === 2 || nr.type[i] === 1) continue;
+      const x0 = nr.x[p], y0 = nr.y[p], x1 = nr.x[i], y1 = nr.y[i];
+      const steps = Math.max(1, Math.ceil(Math.hypot(x1 - x0, y1 - y0) / (CELL / 2)));
+      let last = -1;
+      for (let k = 0; k <= steps; k++) {
+        const t = k / steps, kk = key(Math.floor((x0 + (x1 - x0) * t) / CELL), Math.floor((y0 + (y1 - y0) * t) / CELL));
+        if (kk === last) continue;
+        last = kk;
+        let arr = grid.get(kk); if (!arr) grid.set(kk, (arr = []));
+        if (arr[arr.length - 1] !== i) arr.push(i);
+      }
+    }
+    nr.grid = grid; nr.key = key;
+  }
+  function layout() {
+    W = hero.clientWidth; H = hero.clientHeight; DPR = Math.min(2, devicePixelRatio || 1);
+    canvas.width = Math.round(W * DPR); canvas.height = Math.round(H * DPR);
+    P = readPalette();
+    const rng = mulberry32(2026), m = Math.min(W, H), placed = [];
+    neurons = []; waves = [];
+    const count = Math.max(6, Math.min(16, Math.round((W * H) / 100000)));
+    for (let i = 0; i < count; i++) {
+      const lib = library[i % library.length], tr = m * (0.2 + rng() * 0.18);
+      let cx = 0, cy = 0, tries = 0;
+      do { cx = (rng() * 1.1 - 0.05) * W; cy = (rng() * 1.1 - 0.05) * H; }
+      while (++tries < 40 && placed.some(([px, py, pr]) => Math.hypot(px - cx, py - cy) < (pr + tr) * 0.42));
+      placed.push([cx, cy, tr]);
+      const depth = 0.25 + rng() * 0.75, color = rng() < 0.6 ? 'gfp' : 'tdt';
+      const nr = prepare(lib.model, { targetR: tr, rot: lib.kind === 'pyr' ? (rng() - 0.5) * 0.5 : rng() * 6.283 });
+      Object.assign(nr, { cx, cy, depth, rgb: P[color], targetR: tr, per: 3000 + rng() * 2200, ph: rng() * 6.283, amp: 4 + 10 * depth, dx: 0, dy: 0,
+        staticA: P.dark ? 0.08 + 0.16 * depth : 0.1 + 0.2 * depth });
+      buildSprite(nr, i + 1); buildGrid(nr);
+      neurons.push(nr);
+    }
+    neurons.sort((a, b) => a.depth - b.depth);
+    const cv = document.createElement('canvas');
+    cv.width = Math.ceil(W * DPR); cv.height = Math.ceil(H * DPR);
+    const g = cv.getContext('2d'); g.scale(DPR, DPR);
+    const [r, gg, b] = P.dapi;
+    for (let i = 0, c = Math.round((W * H) / 7000); i < c; i++) {
+      const x = rng() * W, y = rng() * H, soft = rng() < 0.3, rad = soft ? 2 + rng() * 2.5 : 0.7 + rng() * 1.4;
+      g.fillStyle = `rgba(${r},${gg},${b},${(P.dark ? 1 : 0.6) * (soft ? 0.05 + rng() * 0.06 : 0.1 + rng() * 0.22)})`;
+      g.beginPath(); g.ellipse(x, y, rad, rad * (0.75 + rng() * 0.25), rng() * 3.14, 0, Math.PI * 2); g.fill();
+    }
+    nuclei = cv;
+    placeLabels();
+  }
+  function hit(nr, px, py) {
+    const lx = px - nr.cx - nr.dx, ly = py - nr.cy - nr.dy;
+    if (lx < nr.minX - HIT || lx > nr.maxX + HIT || ly < nr.minY - HIT || ly > nr.maxY + HIT) return -1;
+    if (Math.hypot(lx, ly) < nr.somaR + 8) return nr.soma;
+    const gx = Math.floor(lx / CELL), gy = Math.floor(ly / CELL);
+    let best = -1, bd = HIT * HIT;
+    for (let a = -1; a <= 1; a++) for (let b = -1; b <= 1; b++) {
+      const arr = nr.grid.get(nr.key(gx + a, gy + b)); if (!arr) continue;
+      for (const i of arr) {
+        const p = nr.parent[i], x0 = nr.x[p], y0 = nr.y[p], ex = nr.x[i] - x0, ey = nr.y[i] - y0, L = ex * ex + ey * ey || 1;
+        let t = ((lx - x0) * ex + (ly - y0) * ey) / L; t = t < 0 ? 0 : t > 1 ? 1 : t;
+        const qx = x0 + ex * t - lx, qy = y0 + ey * t - ly, d2 = qx * qx + qy * qy;
+        if (d2 < bd) { bd = d2; best = i; }
+      }
+    }
+    return best;
+  }
+  function inject(nr, i, now) {
+    if (now - nr.lastInput < 70) return;
+    nr.lastInput = now;
+    if (i === nr.soma) { deliver(nr, 1.2, now); return; }
+    const path = [];
+    let j = i, guard = 0;
+    while (j >= 0 && guard++ < nr.n) { path.push(j); if (j === nr.soma) break; j = nr.toward[j]; }
+    const ref = nr.dist[i], v = vel('dend');
+    // A short burst that travels to the soma: each point glows only briefly as the signal passes.
+    waves.push({ nr, nodes: Int32Array.from(path), t0: now, v, ref, amp0: 0.95, lam: nr.lambda, floor: 0.35, tau: 70,
+      end: now + ref / v + 70 * 6, somaAt: now + ref / v, somaAmp: Math.exp(-ref / nr.lambda), delivered: false });
+  }
+  function deliver(nr, a, t) {
+    nr.v = nr.v * Math.exp(-(t - nr.vT) / TAU_M) + a; nr.vT = t;
+    if (nr.v >= THRESH && t - nr.lastSpike > REFRACT) fire(nr, t, 1);
+  }
+  function fire(nr, t, gain) {
+    nr.lastSpike = t; nr.spikeGain = gain; nr.v = 0; nr.vT = t;
+    const va = vel('axon'), vb = vel('bap');
+    waves.push({ nr, nodes: nr.axon, t0: t, v: va, ref: 0, amp0: gain, lam: Infinity, floor: 1, tau: 240, end: t + nr.maxAxon / va + 1200 });
+    // Tips stay bright enough that each point fades a set time after the wave reaches it, so the fade sweeps outward too.
+    waves.push({ nr, nodes: nr.dend, t0: t, v: vb, ref: 0, amp0: 0.55 * gain, lam: nr.lambda * 2, floor: 0.45, tau: 200, end: t + nr.maxDend / vb + 1200 });
+  }
+  function drawActive(nr) {
+    const [r, g, bl] = nr.rgb;
+    ctx.save(); ctx.translate(nr.cx + nr.dx, nr.cy + nr.dy);
+    for (let pass = 0; pass < 2; pass++) {
+      for (let k = 1; k <= BUCKETS; k++) {
+        const lo = (k - 1) / BUCKETS, hi = k / BUCKETS;
+        ctx.beginPath();
+        let any = false;
+        for (let i = 0; i < nr.n; i++) {
+          const val = nr.bright[i];
+          if (val < 0.015 || val <= lo || (val > hi && k < BUCKETS)) continue;
+          const p = nr.parent[i];
+          if (p < 0 || (nr.type[i] === 1 && nr.type[p] === 1)) continue;
+          ctx.moveTo(nr.x[p], nr.y[p]); ctx.lineTo(nr.x[i], nr.y[i]); any = true;
+        }
+        if (!any) continue;
+        const mid = (lo + hi) / 2; // draw each step at its middle, so fades taper instead of popping off
+        if (pass === 0) { ctx.lineWidth = 5 + 5 * mid; ctx.strokeStyle = `rgba(${r},${g},${bl},${(P.dark ? 0.2 : 0.1) * mid})`; }
+        else { ctx.lineWidth = nr.wMean + 1.3 * mid; ctx.strokeStyle = `rgba(${r},${g},${bl},${Math.min(1, (P.dark ? 1.1 : 0.95) * mid)})`; }
+        ctx.stroke();
+      }
+    }
+    ctx.restore();
+  }
+  function drawSoma(nr, now) {
+    const sx = nr.cx + nr.dx, sy = nr.cy + nr.dy, [r, g, bl] = nr.rgb;
+    const vNow = nr.v * Math.exp(-(now - nr.vT) / TAU_M), fl = Math.exp(-(now - nr.lastSpike) / 220) * nr.spikeGain;
+    const a = Math.min(1, vNow * 0.5 + fl);
+    if (a > 0.02) {
+      const ripple = fl > 0.02 ? 1 - fl : 0; // the glow expands as it fades
+      const rad = nr.somaR * (3 + 7 * ripple), gr = ctx.createRadialGradient(sx, sy, 0, sx, sy, rad);
+      gr.addColorStop(0, `rgba(${r},${g},${bl},${a * (P.dark ? 0.9 : 0.6)})`); gr.addColorStop(1, `rgba(${r},${g},${bl},0)`);
+      ctx.fillStyle = gr; ctx.beginPath(); ctx.arc(sx, sy, rad, 0, Math.PI * 2); ctx.fill();
+    }
+    const [dr, dg, db] = P.dapi;
+    ctx.fillStyle = `rgba(${dr},${dg},${db},${Math.min(1, (P.dark ? 0.3 + 0.25 * nr.depth : 0.3 + 0.2 * nr.depth) + 0.4 * fl)})`;
+    ctx.beginPath(); ctx.arc(sx, sy, Math.max(1.3, nr.somaR * 0.55), 0, Math.PI * 2); ctx.fill();
+  }
+  function draw(now) {
+    ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+    ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = 1;
+    ctx.fillStyle = P.bg; ctx.fillRect(0, 0, W, H);
+    if (!bgToggle.checked) return;
+    if (nuclei) ctx.drawImage(nuclei, 0, 0, W, H);
+    for (const nr of neurons) { ctx.globalAlpha = nr.staticA; ctx.drawImage(nr.sprite, nr.cx + nr.dx + nr.sx, nr.cy + nr.dy + nr.sy, nr.sw, nr.sh); }
+    ctx.globalAlpha = 1;
+    const active = [];
+    for (const wv of waves) {
+      const nr = wv.nr, d = nr.dist, b = nr.bright, nodes = wv.nodes;
+      if (nr.stamp !== frameNo) { nr.stamp = frameNo; b.fill(0); active.push(nr); }
+      for (let k = 0; k < nodes.length; k++) {
+        const i = nodes[k], dd = Math.abs(wv.ref - d[i]);
+        const a0 = wv.amp0 * Math.max(wv.floor, Math.exp(-dd / wv.lam));
+        if (a0 < 0.015) continue;
+        const dt = now - (wv.t0 + dd / wv.v);
+        if (dt < 0 || dt > wv.tau * 5) continue;
+        const a = Math.min(1, a0 * (dt < 24 ? dt / 24 : Math.exp(-(dt - 24) / wv.tau)));
+        if (a > b[i]) b[i] = a;
+      }
+    }
+    ctx.globalCompositeOperation = P.composite; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+    for (const nr of active) drawActive(nr);
+    for (const nr of neurons) drawSoma(nr, now);
+    ctx.globalCompositeOperation = 'source-over';
+  }
+  function frame(now) {
+    requestAnimationFrame(frame);
+    if (!P) return;
+    frameNo++;
+    const motion = !reduced.matches;
+    for (const nr of neurons) {
+      nr.dx = motion ? Math.sin(now / nr.per + nr.ph) * nr.amp : 0;
+      nr.dy = motion ? Math.cos(now / (nr.per * 1.31) + nr.ph) * nr.amp * 0.7 : 0;
+    }
+    if (samples.length) {
+      if (bgToggle.checked) for (const s of samples.splice(0, 80)) for (const nr of neurons) { const i = hit(nr, s.x, s.y); if (i >= 0) inject(nr, i, now); }
+      samples.length = 0;
+    }
+    if (bgToggle.checked && motion && neurons.length && now > nextSpont) {
+      const nr = neurons[Math.floor(Math.random() * neurons.length)];
+      if (now - nr.lastSpike > 1500) fire(nr, now, 0.5);
+      nextSpont = now + 1600 + Math.random() * 2600;
+    }
+    for (const wv of waves) if (wv.somaAt !== undefined && !wv.delivered && now >= wv.somaAt) { wv.delivered = true; deliver(wv.nr, wv.somaAmp, wv.somaAt); }
+    waves = waves.filter(wv => now < wv.end);
+    draw(now);
+  }
+  hero.addEventListener('pointermove', e => {
+    if (e.pointerType !== 'mouse' && e.buttons === 0) return;
+    const box = hero.getBoundingClientRect(), p = { x: e.clientX - box.left, y: e.clientY - box.top };
+    if (lastPtr) {
+      const d = Math.hypot(p.x - lastPtr.x, p.y - lastPtr.y), k = Math.min(24, Math.ceil(d / 10));
+      for (let j = 1; j <= k; j++) samples.push({ x: lastPtr.x + ((p.x - lastPtr.x) * j) / k, y: lastPtr.y + ((p.y - lastPtr.y) * j) / k });
+    } else samples.push(p);
+    lastPtr = p;
+  }, { passive: true });
+  hero.addEventListener('pointerleave', () => { lastPtr = null; });
+  addEventListener('pointerup', () => { lastPtr = null; });
+
+  let resizeTimer = 0;
+  new ResizeObserver(() => { placeLabels(); clearTimeout(resizeTimer); resizeTimer = setTimeout(layout, 150); }).observe(hero);
+  size.addEventListener('input', placeLabels);
+  new ResizeObserver(placeLabels).observe(wrap);
+  addEventListener('scroll', placeLabels, { passive: true });
+  darkMQ.addEventListener('change', layout);
+  new MutationObserver(layout).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+  layout();
+  nextSpont = performance.now() + 900;
+  requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>
