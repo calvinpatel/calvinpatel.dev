@@ -115,24 +115,22 @@ test('the same inputs always give the same spikes', () => {
 
   // Pinned, so a change to the hash, the generator, or the order of draws
   // shows. The role starts at 246.01px, which moves to the pixel center at
-  // 246.5px; in a row that itself starts half a pixel across, to 246px.
+  // 246.5px.
   assert.deepEqual(rasterRow(ROLES[3], AXIS, 1192, PATTERN).spikes, [246.5, 250.5, 254.5, 269.5, 273.5, 277.5, 281.5]);
-  assert.deepEqual(rasterRow(ROLES[3], AXIS, 1192, PATTERN, 116.5).spikes, [246, 250, 254, 269, 273, 277, 281]);
 });
 
-test('every spike and the marker sit on a pixel center, at most half a pixel from their dates', () => {
-  // Where a row's left end can fall: on a pixel, half way, or anywhere.
-  for (const left of [0, 0.5, 116.5, 37.65, 20.3]) {
-    for (const role of ROLES) {
-      for (const width of WIDTHS) {
-        const { spikes, marker } = rasterRow(role, AXIS, width, PATTERN, left);
-        const offCenter = (x: number) => Math.abs(((left + x) % 1) - HALF_PIXEL);
-        for (const x of spikes) assert.ok(offCenter(x) < EPSILON, `a spike at ${left} + ${x}`);
-        if (spikes.length > 0) assert.ok(Math.abs(spikes[0] - dateToX(span(role)[0], AXIS, width)) <= HALF_PIXEL + EPSILON);
-        if (marker === null) continue;
-        assert.ok(offCenter(marker) < EPSILON, `the marker at ${left} + ${marker}`);
-        assert.ok(Math.abs(marker - width) <= HALF_PIXEL + EPSILON);
-      }
+test("every spike and the marker sit on one of the row's pixel centers, at most half a pixel from their dates", () => {
+  // The pixels are the row's own, counted from its left end, which is where
+  // the browser starts painting it.
+  for (const role of ROLES) {
+    for (const width of WIDTHS) {
+      const { spikes, marker } = rasterRow(role, AXIS, width, PATTERN);
+      const offCenter = (x: number) => Math.abs((x % 1) - HALF_PIXEL);
+      for (const x of spikes) assert.ok(offCenter(x) < EPSILON, `a spike at ${x}`);
+      if (spikes.length > 0) assert.ok(Math.abs(spikes[0] - dateToX(span(role)[0], AXIS, width)) <= HALF_PIXEL + EPSILON);
+      if (marker === null) continue;
+      assert.ok(offCenter(marker) < EPSILON, `the marker at ${marker}`);
+      assert.ok(Math.abs(marker - width) <= HALF_PIXEL + EPSILON);
     }
   }
 });
@@ -203,20 +201,19 @@ test('a role ending 2021-07 runs through July 31', () => {
 
 test("the ongoing role's marker sits at the now end, its schedule's smallest gap or more past the last spike", () => {
   // The marker sits where the next burst would start, so it never reads as
-  // part of a burst. Checked for both schedules, wherever the row's left end
-  // falls.
+  // part of a burst. Checked for both schedules, at every width down to a
+  // tenth of a pixel.
   const ongoing: Role[] = [ROLES[0], { start: '2025-03', end: 'present', schedule: 'part-time' }];
   let rows = 0;
   for (const role of ongoing) {
     const [smallestGap] = PATTERN.gap[role.schedule];
-    for (const left of [0, 0.5, 116.5, 37.65, 20.3]) {
-      for (let width = 280; width <= 1192; width += 0.5) {
-        const { spikes, marker } = rasterRow(role, AXIS, width, PATTERN, left);
-        assert.ok(marker !== null && Math.abs(marker - width) <= HALF_PIXEL + EPSILON);
-        if (spikes.length === 0) continue;
-        assert.ok(marker - spikes.at(-1)! >= smallestGap - EPSILON, `${marker - spikes.at(-1)!}px before the marker at ${width}`);
-        rows += 1;
-      }
+    for (let tenths = 2800; tenths <= 11920; tenths++) {
+      const width = tenths / 10;
+      const { spikes, marker } = rasterRow(role, AXIS, width, PATTERN);
+      assert.ok(marker !== null && Math.abs(marker - width) <= HALF_PIXEL + EPSILON);
+      if (spikes.length === 0) continue;
+      assert.ok(marker - spikes.at(-1)! >= smallestGap - EPSILON, `${marker - spikes.at(-1)!}px before the marker at ${width}`);
+      rows += 1;
     }
   }
   assert.ok(rows > 15000);

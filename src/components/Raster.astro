@@ -17,9 +17,9 @@
 //     real width and redraws when that width changes. Spacing is in px, so a
 //     narrower row holds fewer spikes, not tighter ones. Where each one goes
 //     is worked out in src/lib/raster.ts, which centers every spike and the
-//     marker on a pixel so each row is equally sharp on a 1x screen. Their
-//     sizes are set in the styles below, and the script only moves each one
-//     to its place.
+//     marker on one of the row's own pixels, so each row is equally sharp on
+//     a 1x screen. Their sizes are set in the styles below, and the script
+//     only moves each one to its place.
 import type { Role } from '../lib/raster.ts';
 
 interface Props extends Role {
@@ -84,40 +84,34 @@ const { start, end, schedule, axisStart, now } = Astro.props;
     );
   }
 
-  // `left` is the row's left end across the page. The pattern uses it to put
-  // each spike and the marker on a pixel center.
-  function draw(row: HTMLElement, left: number, width: number) {
+  function draw(row: HTMLElement, width: number) {
     const { start = '', end = '', schedule, axisStart, now = '' } = row.dataset;
     const { ticks, spikes, marker } = rasterRow(
       { start, end, schedule: schedule as Schedule },
       { startYear: Number(axisStart), now },
       width,
       pattern,
-      left,
     );
     place(row.querySelector('.ticks')!, ticks);
     place(row.querySelector('.spikes')!, spikes);
     place(row.querySelector('.marker')!, marker === null ? [] : [marker]);
   }
 
-  // Draws each row when it is first measured, and again whenever its width or
-  // its place across the page changes. A row can move without changing width:
-  // past --page-max the centered column slides as the window widens. The
-  // page's own size is watched for that.
+  // Draws each row when it is first measured, and again whenever its width
+  // changes. Where the row sits on the page doesn't matter: the browser
+  // paints an SVG from the screen pixel nearest its corner, so the row's own
+  // pixels are the screen's.
   const rows = document.querySelectorAll<HTMLElement>('[data-raster]');
-  const drawn = new WeakMap<Element, string>();
+  const drawn = new WeakMap<Element, number>();
   const sizes = new ResizeObserver(() => {
     for (const row of rows) {
-      const box = row.getBoundingClientRect();
-      const left = box.left + window.scrollX;
-      const state = `${left} ${box.width}`;
-      if (drawn.get(row) === state) continue;
-      drawn.set(row, state);
-      draw(row, left, box.width);
+      const { width } = row.getBoundingClientRect();
+      if (drawn.get(row) === width) continue;
+      drawn.set(row, width);
+      draw(row, width);
     }
   });
   rows.forEach((row) => sizes.observe(row));
-  sizes.observe(document.documentElement);
 </script>
 
 <style>

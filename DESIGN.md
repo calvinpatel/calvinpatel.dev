@@ -215,7 +215,7 @@ Media queries can't read custom properties, so these widths are written as numbe
 
 ## Drawings
 
-Every drawing is ink line art measured from its chosen artboard. The numbers are tokens in tokens.css; shapes that are drawn by hand rather than generated are given here as SVG path data. Draw each one at its real pixel size, in an SVG sized in CSS px. Never stretch a drawing with a `viewBox` that scales its text or its line widths. Colors are always `--ink` (or `--color-bg` where a shape cuts a gap) with the opacity tokens below. Every drawing is decorative and hidden from screen readers, because the text beside it says what it shows.
+Every drawing is ink line art measured from its chosen artboard. The numbers are tokens in tokens.css; shapes that are drawn by hand rather than generated are given here as SVG path data. Draw each one at its real pixel size, in an SVG sized in CSS px. Never stretch a drawing with a `viewBox` that scales its text or its line widths. A drawing snaps to its own pixels, counted from its SVG's corner, because that's where Chrome starts painting it: an SVG's contents are painted from the screen pixel nearest its corner, wherever the SVG falls on the page. Colors are always `--ink` (or `--color-bg` where a shape cuts a gap) with the opacity tokens below. Every drawing is decorative and hidden from screen readers, because the text beside it says what it shows.
 
 ### Spike raster (Experience)
 
@@ -230,7 +230,7 @@ One raster row sits above each entry, across the full content width.
 
   Full-time bursts are always tight clusters and part-time spikes stand nearly alone, so even a short role on a phone shows its schedule. Spacing is in pixels, so a narrower row has fewer spikes, not tighter ones.
 - **Seeded pattern.** The pattern is identical on every load and every build. Seed a mulberry32 generator with the 32-bit FNV-1a hash of the string `start|end|schedule` (for example `2021-06|2021-09|full-time`). Then, from left to right, draw each burst's size and then the gap after it, each as a whole number spread evenly across its range.
-- **Pixel centers.** Each role's first spike and the ongoing marker move to the nearest pixel center (n + 0.5px across the page), so they sit within half a pixel of the position formula. Spacing is in whole pixels, so every spike then lands on a pixel center and sits mostly in one pixel column on a 1x screen, and every row is equally sharp.
+- **Pixel centers.** Each role's first spike and the ongoing marker move to the nearest pixel center (n + 0.5px from the row's left end), so they sit within half a pixel of the position formula. Spacing is in whole pixels, so every spike then lands on a pixel center and sits mostly in one pixel column on a 1x screen, and every row is equally sharp.
 - **Ongoing role.** A `--raster-marker` (18px) vertical line, `--raster-marker-stroke` wide with round ends, at full ink, at the "now" end of the axis. Its spikes stop at least one minimum gap short of it, by the role's own schedule (`--raster-ft-gap-min` for full-time, `--raster-pt-gap-min` for part-time). The marker sits where the next burst would start, so it never reads as part of a burst.
 - **Labels.** "2020" (the axis start year) and "now" at the two ends, `--space-3xs` below the band, in `--step-text-7` muted. "now" is design text, not copy.
 - **Phones.** Same geometry at the phone's real width.

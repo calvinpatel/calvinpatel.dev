@@ -11,7 +11,9 @@
 //   - Each role's start and the marker move by up to half a pixel so that
 //     every spike and the marker are centered on a pixel. A spike is a little
 //     over 1px wide, so it then sits mostly in one pixel column on a 1x
-//     screen, and every row looks equally sharp.
+//     screen, and every row looks equally sharp. The pixels are the row's
+//     own, counted from its left end: the browser paints the row's SVG from
+//     the screen pixel nearest its corner, wherever the row falls on the page.
 //
 // No DOM and no Astro imports, so Node can run tests/raster.test.ts against it
 // directly. Every size comes in through `pattern`, which the script fills from
@@ -92,12 +94,8 @@ export function dateToX(date: number, axis: Axis, width: number): number {
   return ((date - start) / (dayStart(axis.now) - start)) * width;
 }
 
-/**
- * One row's year marks, spikes, and marker at a given width. `left` is the
- * row's left end in px from the page's left edge, which is what the spikes
- * and the marker are lined up with the pixels by.
- */
-export function rasterRow(role: Role, axis: Axis, width: number, pattern: Pattern, left = 0): Row {
+/** One row's year marks, spikes, and marker at a given width. */
+export function rasterRow(role: Role, axis: Axis, width: number, pattern: Pattern): Row {
   const now = dayStart(axis.now);
   const x = (date: number) => dateToX(Math.min(date, now), axis, width);
 
@@ -112,8 +110,8 @@ export function rasterRow(role: Role, axis: Axis, width: number, pattern: Patter
   // one. Spacing is in whole pixels, so once the first spike is on a pixel
   // center the rest are too.
   const ongoing = role.end === 'present';
-  const from = toPixelCenter(x(monthStart(role.start)), left);
-  const marker = ongoing ? toPixelCenter(width, left) : null;
+  const from = toPixelCenter(x(monthStart(role.start)));
+  const marker = ongoing ? toPixelCenter(width) : null;
   const end = ongoing ? width : x(monthStart(role.end, 1));
   const [smallestGap] = pattern.gap[role.schedule];
   const fits = (spike: number) => (marker === null ? spike < end : spike <= marker - smallestGap);
