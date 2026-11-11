@@ -265,6 +265,10 @@ def flatten(cell: Cell, projection: str) -> np.ndarray:
         values, vectors = np.linalg.eigh(cov)
         widest = vectors[:, np.argsort(values)[::-1][:2]]
         uv = rel @ widest
+        # eigh may return either direction for an axis, and NumPy builds differ. Point each
+        # axis toward the point farthest from the soma along it, so the output never depends on that.
+        farthest = uv[np.abs(uv).argmax(axis=0), [0, 1]]
+        uv = uv * np.where(farthest < 0, -1.0, 1.0)
     return orient(uv, cell.kind)
 
 

@@ -41,7 +41,7 @@ Cal Patel's portfolio site. It reads as a nervous system: real neuron reconstruc
 | `npx astro build` | Builds the site into `dist/`; must finish with no errors or warnings |
 | `uv run scripts/swc_to_web.py data/swc public/cells --sources data/swc/sources.csv` | Converts every SWC file into cell-web/1 JSON and updates `public/cells/index.json` |
 | add `--preview <folder>` | Also writes an SVG of each cell for a quick visual check |
-| `pytest tests/test_swc_to_web.py` | Runs the converter's tests (from the repo root) |
+| `uv run --with pytest --with numpy pytest tests/test_swc_to_web.py` | Runs the converter's tests (from the repo root) |
 | `node --test tests/*.test.ts` | Runs every `src/lib/` module's tests (from the repo root) |
 | `npx astro dev --background` | Runs the dev server in the background so Claude Code can keep working and take screenshots; `npx astro dev status`, `logs`, and `stop` manage it |
 
@@ -66,7 +66,7 @@ Deploys happen through Workers Builds. Don't run `wrangler deploy` unless Cal as
 
 **Building**
 
-10. Build order: the static shell, then each section, then the interactive pieces, then the data, then motion last. Each interactive piece is built with its keyboard, touch, and reduced-motion behavior at the same time, not afterward.
+10. Build order: the static shell, then each section, then the data, then the interactive pieces, then motion last. Each interactive piece is built with its keyboard, touch, and reduced-motion behavior at the same time, not afterward.
 11. Check visually before calling a piece done. Take Playwright screenshots at 375, 768, 1440, and 1920px wide and compare them against the artboards and DESIGN.md. Save each one as .playwright-mcp/<page>-<width>.png, so Cal can review them.
 12. Commit after every piece that works, and push to GitHub.
 

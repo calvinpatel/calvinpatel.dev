@@ -8,6 +8,7 @@ One JSON file describes one neuron, flattened to 2D and ready to draw. `scripts/
 - The point farthest from the soma is at distance 1. Everything is scaled to that, so the site can draw a cell at any size by multiplying.
 - y points down, matching how browsers draw. "Up" on screen is negative y.
 - The view is the plane where the arbor spreads out most (PCA), turned so the apical dendrite points up. Cells with no apical dendrite are turned so the axon points down.
+- Each of that plane's two axes points toward the point farthest from the soma along it, set before the turn, so the same cell always comes out the same way, on any machine and in any 3D orientation.
 
 ## Fields
 

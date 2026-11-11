@@ -1,0 +1,75 @@
+{
+  "format": "cell-web-index/1",
+  "cells": [
+    {
+      "id": "0009-10-3-30x-02a-xyz-7685-6653-270-cng",
+      "file": "0009-10-3-30x-02a-xyz-7685-6653-270-cng.json",
+      "cellType": "medium spiny",
+      "credit": "0009_10-3_30x_02A_xyz-7685-6653-270 (Yang_XW archive), via NeuroMorpho.Org, CC BY 4.0",
+      "url": "https://neuromorpho.org/neuron_info.jsp?neuron_name=0009_10-3_30x_02A_xyz-7685-6653-270"
+    },
+    {
+      "id": "0015-10-3-30x-02a-xyz-8057-11814-435-cng",
+      "file": "0015-10-3-30x-02a-xyz-8057-11814-435-cng.json",
+      "cellType": "medium spiny",
+      "credit": "0015_10-3_30x_02A_xyz-8057-11814-435 (Yang_XW archive), via NeuroMorpho.Org, CC BY 4.0",
+      "url": "https://neuromorpho.org/neuron_info.jsp?neuron_name=0015_10-3_30x_02A_xyz-8057-11814-435"
+    },
+    {
+      "id": "0029-10-3-30x-02a-xyz-8736-9877-138-cng",
+      "file": "0029-10-3-30x-02a-xyz-8736-9877-138-cng.json",
+      "cellType": "medium spiny",
+      "credit": "0029_10-3_30x_02A_xyz-8736-9877-138 (Yang_XW archive), via NeuroMorpho.Org, CC BY 4.0",
+      "url": "https://neuromorpho.org/neuron_info.jsp?neuron_name=0029_10-3_30x_02A_xyz-8736-9877-138"
+    },
+    {
+      "id": "0034-10-3-30x-02a-xyz-9118-8840-355-cng",
+      "file": "0034-10-3-30x-02a-xyz-9118-8840-355-cng.json",
+      "cellType": "medium spiny",
+      "credit": "0034_10-3_30x_02A_xyz-9118-8840-355 (Yang_XW archive), via NeuroMorpho.Org, CC BY 4.0",
+      "url": "https://neuromorpho.org/neuron_info.jsp?neuron_name=0034_10-3_30x_02A_xyz-9118-8840-355"
+    },
+    {
+      "id": "0046-10-3-30x-02a-xyz-9543-10081-388-cng",
+      "file": "0046-10-3-30x-02a-xyz-9543-10081-388-cng.json",
+      "cellType": "medium spiny",
+      "credit": "0046_10-3_30x_02A_xyz-9543-10081-388 (Yang_XW archive), via NeuroMorpho.Org, CC BY 4.0",
+      "url": "https://neuromorpho.org/neuron_info.jsp?neuron_name=0046_10-3_30x_02A_xyz-9543-10081-388"
+    },
+    {
+      "id": "011-09-1-30x-02b-xyz-3725-11359-348-cng",
+      "file": "011-09-1-30x-02b-xyz-3725-11359-348-cng.json",
+      "cellType": "medium spiny",
+      "credit": "011_09-1_30x_02B_xyz-3725-11359-348 (Yang_XW archive), via NeuroMorpho.Org, CC BY 4.0",
+      "url": "https://neuromorpho.org/neuron_info.jsp?neuron_name=011_09-1_30x_02B_xyz-3725-11359-348"
+    },
+    {
+      "id": "013-08-1-30x-02a-xyz-6287-7988-142-cng",
+      "file": "013-08-1-30x-02a-xyz-6287-7988-142-cng.json",
+      "cellType": "medium spiny",
+      "credit": "013_08-1_30x_02A_xyz-6287-7988-142 (Yang_XW archive), via NeuroMorpho.Org, CC BY 4.0",
+      "url": "https://neuromorpho.org/neuron_info.jsp?neuron_name=013_08-1_30x_02A_xyz-6287-7988-142"
+    },
+    {
+      "id": "2020-02-28-08-52-23etv1morf3ms03-1tam100x3v5-647-04-1-cng",
+      "file": "2020-02-28-08-52-23etv1morf3ms03-1tam100x3v5-647-04-1-cng.json",
+      "cellType": "pyramidal",
+      "credit": "2020-02-28_08-52-23Etv1MORF3MS03-1TAM100x3V5-647-04-1 (Yang_XW archive), via NeuroMorpho.Org, CC BY 4.0",
+      "url": "https://neuromorpho.org/neuron_info.jsp?neuron_name=2020-02-28_08-52-23Etv1MORF3MS03-1TAM100x3V5-647-04-1"
+    },
+    {
+      "id": "2020-02-28-15-46-02cux2morf3ml02-4tam50x1v5-647-06-1-2-cng",
+      "file": "2020-02-28-15-46-02cux2morf3ml02-4tam50x1v5-647-06-1-2-cng.json",
+      "cellType": "pyramidal",
+      "credit": "2020-02-28_15-46-02Cux2MORF3ML02-4TAM50x1V5-647-06-1-2 (Yang_XW archive), via NeuroMorpho.Org, CC BY 4.0",
+      "url": "https://neuromorpho.org/neuron_info.jsp?neuron_name=2020-02-28_15-46-02Cux2MORF3ML02-4TAM50x1V5-647-06-1-2"
+    },
+    {
+      "id": "2020-03-16-09-40-00cux2morf3ml02-4tam50x1v5-647-06a-rec1-cng",
+      "file": "2020-03-16-09-40-00cux2morf3ml02-4tam50x1v5-647-06a-rec1-cng.json",
+      "cellType": "pyramidal",
+      "credit": "2020-03-16_09-40-00Cux2MORF3ML02-4TAM50x1V5-647-06A-Rec1 (Yang_XW archive), via NeuroMorpho.Org, CC BY 4.0",
+      "url": "https://neuromorpho.org/neuron_info.jsp?neuron_name=2020-03-16_09-40-00Cux2MORF3ML02-4TAM50x1V5-647-06A-Rec1"
+    }
+  ]
+}

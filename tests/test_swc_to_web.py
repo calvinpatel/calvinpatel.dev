@@ -1,7 +1,9 @@
-"""Tests for scripts/swc_to_web.py. Run from the repo root: pytest tests/test_swc_to_web.py"""
+"""Tests for scripts/swc_to_web.py. Run from the repo root:
+uv run --with pytest --with numpy pytest tests/test_swc_to_web.py"""
 from __future__ import annotations
 
 import importlib.util
+import itertools
 import json
 import math
 import sys
@@ -117,6 +119,58 @@ def test_pca_recovers_a_tilted_flat_cell():
 
     assert tip_reaches("pca") == [0.5, 0.5, 1.0, 1.0]
     assert tip_reaches("xy") != [0.5, 0.5, 1.0, 1.0]
+
+
+def lopsided_cell(trunk_kind):
+    """A cell with no symmetry and no flat side: three branches of different lengths, and a fork."""
+    rows = [(1, 1, 0, 0, 0, 4, -1)]
+    rows += run(2, 1, trunk_kind, (0, 0, 0), (1, 0.2, 0.1), 50)
+    rows += run(100, 1, 3, (0, 0, 0), (-0.6, 0.9, 0.2), 35)
+    rows += run(200, 1, 3, (0, 0, 0), (-0.2, -0.7, 0.4), 20)
+    rows += run(300, 26, trunk_kind, rows[25][2:5], (0.3, 0.5, -0.8), 15)
+    return rows
+
+
+def moved(rows, matrix):
+    """The same cell turned or mirrored by a 3x3 matrix, at full precision so only its pose changes."""
+    return [(i, t, *(matrix @ np.array([x, y, z], dtype=float)).tolist(), r, p) for i, t, x, y, z, r, p in rows]
+
+
+def rotations(count):
+    rng = np.random.default_rng(3)
+    turns = []
+    for _ in range(count):
+        q, _ = np.linalg.qr(rng.normal(size=(3, 3)))
+        turns.append(q * np.sign(np.linalg.det(q)))  # determinant +1: a turn, not a mirror
+    return turns
+
+
+# All basal has no apical dendrite or axon to turn the cell by, like a medium spiny cell.
+@pytest.mark.parametrize("trunk_kind", [swc.BASAL, swc.APICAL])
+def test_rotated_or_mirrored_cell_converts_identically(trunk_kind):
+    rows = lopsided_cell(trunk_kind)
+    expected, _ = swc.convert_text(text_of(rows), SOURCE, "cell")
+    turns = rotations(4)
+    mirror = np.diag([-1.0, 1.0, 1.0])
+    for matrix in [*turns, mirror, np.diag([1.0, 1.0, -1.0]), turns[0] @ mirror]:
+        doc, _ = swc.convert_text(text_of(moved(rows, matrix)), SOURCE, "cell")
+        assert doc == expected
+
+
+@pytest.mark.parametrize("trunk_kind", [swc.BASAL, swc.APICAL])
+def test_eigenvector_signs_do_not_change_the_output(trunk_kind, monkeypatch):
+    text = text_of(lopsided_cell(trunk_kind))
+    expected, _ = swc.convert_text(text, SOURCE, "cell")
+    eigh = np.linalg.eigh
+    for signs in itertools.product((1.0, -1.0), repeat=3):
+        # Another NumPy build may hand back any eigenvector pointing the other way.
+        def flipped(matrix, signs=signs):
+            values, vectors = eigh(matrix)
+            return values, vectors * np.array(signs)
+
+        monkeypatch.setattr(np.linalg, "eigh", flipped)
+        doc, _ = swc.convert_text(text, SOURCE, "cell")
+        assert doc == expected
 
 
 def test_apical_dendrite_points_up():
