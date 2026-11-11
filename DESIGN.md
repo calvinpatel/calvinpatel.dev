@@ -207,7 +207,7 @@ Media queries can't read custom properties, so these widths are written as numbe
 - **What keeps it from being a plexus.** Every dot is labeled, every connection is curved and carries real data, and the flow runs in one direction. Never use straight lines or unlabeled dots, and never use the diagram as background decoration.
 - **Phones.** One small diagram per group, with the group name as its heading. Each skill connects straight to its own places, with no group node, so the static figure never implies a connection that isn't true. There is no hover on phones.
 - **Which one shows.** The section's own content width decides, in rem (see Breakpoints): the desktop diagram at 45rem or more, one diagram per group from 17.5rem to 45rem, and the plain list below 17.5rem.
-- **The plain list.** Nine groups, each with its skills, each item written like the master sheet's Site copy line: "Anthropic API (tool use, structured outputs, streaming): NotePilot". Screen readers get it at every width. It is visible, in place of the diagrams, below 17.5rem and with JavaScript off, because the script draws the diagrams. When visible, group names are `--step-text-7` muted, as on phones, and the skills are body text in the secondary color.
+- **The plain list.** Nine groups, each with its skills, each item written like the Site copy line: "Anthropic API (tool use, structured outputs, streaming): NotePilot". Screen readers get it at every width. It is visible, in place of the diagrams, below 17.5rem and with JavaScript off, because the script draws the diagrams. When visible, group names are `--step-text-7` muted, as on phones, and the skills are body text in the secondary color.
 
 **Contact.**
 - **Desktop.** A myelinated axon with three sheaths curves up from the lower left. A short bare stretch leads into a terminal that flares open toward the contact side, with vesicles packed at its face. Across the gap, the receiving membrane and its bright receptor band sit right against the contact block. The email is large in Fraunces, with GitHub and LinkedIn beneath it.
@@ -296,7 +296,7 @@ Each divider is a `--axon-band` (28px) strip with the axon through its middle. C
 - **Phones (the section's content narrower than 45rem).** One diagram per group:
   - Columns: skill labels end at 47.4% and skill dots sit at 49.7%; place dots sit at 70.3% and place labels start at 73.1%.
   - Column shift: where the longest labels don't fit those fractions (windows narrower than about 363px at default text), the two columns move toward each other just far enough to keep them inside the content. Skill labels end at the larger of 47.4% and the longest skill label's width; place labels start at the smaller of 73.1% and the content width less the longest place label's width. Each dot keeps its distance from its label (2.3% and 2.8% of the width), and every group uses the same columns. The script measures the labels, so a longer name adjusts itself.
-  - Dots are 5px for skills and 8px for places.
+  - Dots are `--wire-skill-dot-phone` (5px) for skills and `--wire-place-dot-phone` (8px) for places.
   - Rows are `--wire-row` apart, with the skills and the places each centered in the group's height.
   - Wires use the same curves at `--wire-op`.
   - All labels are `--step-text-7`: skills secondary, places main.

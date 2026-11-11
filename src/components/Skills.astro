@@ -23,7 +23,7 @@ const skills = (await getEntry('skills', 'skills'))!.data;
 
 const placeLabel = new Map(skills.places.map((place) => [place.id, place.label]));
 
-// One list item, written like the master sheet's Site copy line:
+// One list item, written like the Site copy line:
 // "Anthropic API (tool use, structured outputs, streaming): NotePilot".
 const line = (skill: (typeof skills.groups)[number]['skills'][number]) =>
   `${skill.name}${skill.detail ? ` (${skill.detail})` : ''}: ${skill.places.map((place) => placeLabel.get(place)).join(', ')}`;
