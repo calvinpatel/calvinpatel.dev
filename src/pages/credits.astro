@@ -13,6 +13,10 @@ const credits = (await getEntry('credits', 'credits'))!.data;
 const hero = (await getEntry('hero', 'hero'))!.data;
 // A missing, empty, or broken index stops the build here.
 const cells = readCellIndex();
+
+// Where a credit's last part, the license, starts: after its last ", ". The
+// page keeps that part on one line; the text itself is unchanged.
+const licenseStart = (credit: string) => credit.lastIndexOf(', ') + 2;
 ---
 
 <Layout title={`${copyText(credits.heading)} – ${copyText(hero.name)}`}>
@@ -22,10 +26,13 @@ const cells = readCellIndex();
       <p class="intro"><Copy text={credits.intro} /></p>
       <ul class="cells" role="list">
         {
-          cells.map((cell) => (
+          cells.map(({ credit, url }) => (
             <li>
-              {/* A credit line is data, not copy: it prints exactly as the converter wrote it. */}
-              <a href={cell.url}>{cell.credit}</a>
+              {/* A credit line is data, not copy: it prints exactly as the converter wrote it.
+                  The outer span keeps the text one piece inside the link's flex box. */}
+              <a href={url}>
+                <span>{credit.slice(0, licenseStart(credit))}<span class="license">{credit.slice(licenseStart(credit))}</span></span>
+              </a>
             </li>
           ))
         }
@@ -57,7 +64,8 @@ const cells = readCellIndex();
     display: flex;
     flex-direction: column;
     align-items: flex-start;
-    gap: var(--space-2xs);
+    /* Wide enough that each wrapped credit reads as one item. */
+    gap: var(--space-s);
     margin-top: var(--space-m);
     color: var(--color-text-secondary);
     /* A neuron's name is one long word. If it has no hyphen to break at, it
@@ -69,6 +77,11 @@ const cells = readCellIndex();
     display: inline-flex;
     align-items: center;
     min-height: var(--link-box);
+  }
+
+  /* "CC BY 4.0" never splits, and "4.0" never sits alone on a line. */
+  .license {
+    white-space: nowrap;
   }
 
   /* Touch screens: every credit is a standalone link, so a tap-height box. */
