@@ -1,0 +1,341 @@
+---
+// A case study page's content (DESIGN.md, Sections: Case study page): the
+// title block from the project, then the study's parts in one reading column,
+// with a myelinated axon through the page: its soma under the title block, a
+// divider before each part after the first, and its terminal above the link
+// back to Projects.
+//
+// A paragraph's figure comes right after it in the page's source, which is
+// where it sits on phones. Where the content is wide enough, the grid moves
+// it into the margin beside that paragraph.
+import type { CollectionEntry } from 'astro:content';
+
+import Axon from './Axon.astro';
+import Copy from './Copy.astro';
+import Results from './Results.astro';
+
+interface Props {
+  study: CollectionEntry<'caseStudies'>['data'];
+  project: CollectionEntry<'projects'>['data'];
+}
+
+const { study, project } = Astro.props;
+
+// The project's links, without the one that leads to this page.
+const links = project.links.filter((link) => link.href !== `/projects/${study.project}`);
+---
+
+<article class="container page study">
+  <header class="intro">
+    <p class="status">
+      <Copy text={project.status} />
+    </p>
+    <h1>
+      <Copy text={project.name} />
+    </h1>
+    <p class="lede">
+      <Copy text={study.lede} />
+    </p>
+    {
+      links.length > 0 && (
+        <ul class="links" role="list">
+          {links.map((link) => (
+            <li>
+              <a href={link.href}>
+                <Copy text={link.label} />
+              </a>
+            </li>
+          ))}
+        </ul>
+      )
+    }
+  </header>
+  <div class="rule">
+    <Axon part="soma" />
+  </div>
+  {
+    study.parts.map((part, i) => (
+      <>
+        {i > 0 && (
+          <div class="rule">
+            <Axon />
+          </div>
+        )}
+        <section class="part" id={part.id}>
+          <h2>
+            <Copy text={part.heading} />
+          </h2>
+          {part.showResults && project.results && <Results class="results" results={project.results} />}
+          {part.blocks.map((block) => {
+            if ('list' in block) {
+              return (
+                <ul class="list">
+                  {block.list.map((item) => (
+                    <li>
+                      <Copy text={item} />
+                    </li>
+                  ))}
+                </ul>
+              );
+            }
+            const figure = block.figure && study.figures[block.figure];
+            return (
+              <>
+                <p class:list={{ emphasis: block.emphasis }}>
+                  <Copy text={block.text} />
+                </p>
+                {figure && (
+                  <figure class="figure">
+                    <dl>
+                      {figure.rows.map((row) => (
+                        <div>
+                          <dt>
+                            <Copy text={row.phrase} />
+                          </dt>
+                          <dd>
+                            <Copy text={row.reading} />
+                          </dd>
+                        </div>
+                      ))}
+                    </dl>
+                    <figcaption>
+                      <Copy text={figure.caption} />
+                    </figcaption>
+                  </figure>
+                )}
+              </>
+            );
+          })}
+        </section>
+      </>
+    ))
+  }
+  <div class="rule terminal">
+    <Axon part="terminal" />
+  </div>
+  <p class="back">
+    <a href="/#projects">
+      <Copy text={study.backLabel} />
+    </a>
+  </p>
+</article>
+
+<style>
+  .study {
+    /* One standalone link's box: its line of text, or a tap-height box on
+       touch screens. */
+    --link-box: 1lh;
+    --link-gap: var(--space-2xs);
+    /* How far a tap-height box reaches above its text. The space above a
+       link gives this much back, so the text stays where a plain line of
+       text would sit. */
+    --link-slack: calc((var(--link-box) - 1lh) / 2);
+
+    /* The figure moves into the margin by this content width (see the end). */
+    container-type: inline-size;
+    /* With text enlarged on a narrow phone, a word wider than the column
+       (the title) breaks rather than running off the screen. */
+    overflow-wrap: break-word;
+  }
+
+  /* --- The title block: status, title, lede, links ------------------------ */
+
+  .intro {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-s);
+    max-width: var(--reading-max);
+  }
+
+  .status {
+    color: var(--color-text-muted);
+    font-size: var(--step-text-6);
+    line-height: var(--leading-label);
+  }
+
+  h1 {
+    font-size: var(--step-display-2);
+    line-height: var(--leading-none);
+  }
+
+  .lede {
+    font-size: var(--step-text-1);
+    line-height: var(--leading-snug);
+    text-wrap: balance;
+  }
+
+  .links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--link-gap) var(--space-m);
+    margin-top: calc(var(--space-3xs) - var(--link-slack));
+  }
+
+  .links a,
+  .back a {
+    display: inline-flex;
+    align-items: center;
+    min-height: var(--link-box);
+  }
+
+  /* --- The axon dividers, as wide as the reading column ------------------- */
+
+  .rule {
+    max-width: var(--reading-max);
+    margin-block: var(--space-l) var(--space-m);
+  }
+
+  .rule.terminal {
+    margin-top: var(--space-xl);
+  }
+
+  .back {
+    margin-top: calc(-1 * var(--link-slack));
+  }
+
+  /* --- One part: its heading, then its paragraphs, lists, and figure ------ */
+
+  .part {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    row-gap: var(--space-s);
+    color: var(--color-text-secondary);
+    font-size: var(--step-text-3);
+    line-height: var(--leading-prose);
+  }
+
+  h2,
+  .part p,
+  .list,
+  .figure {
+    max-width: var(--reading-max);
+  }
+
+  h2 {
+    color: var(--color-text);
+    font-size: var(--step-display-7);
+    line-height: var(--leading-heading);
+  }
+
+  .emphasis {
+    color: var(--color-text);
+  }
+
+  .list {
+    padding-left: var(--space-s);
+  }
+
+  .list li + li {
+    margin-top: var(--space-2xs);
+  }
+
+  /* The results run wider than the reading column (Results.astro). */
+  .results {
+    margin-block: var(--space-2xs) var(--space-xs);
+  }
+
+  /* --- The figure box (DESIGN.md, Components) ------------------------------ */
+
+  .figure {
+    margin-block: var(--space-3xs);
+    border: var(--line) solid var(--color-border);
+    border-radius: var(--radius);
+    padding: var(--figure-padding);
+    background: var(--color-surface);
+    color: var(--color-text-muted);
+    font-size: var(--step-text-7);
+    line-height: var(--leading-label);
+  }
+
+  /* Each row: a phrase from a chart, then how the checks read it. */
+  dl {
+    display: grid;
+    gap: var(--space-s);
+    margin: 0;
+  }
+
+  dt {
+    width: fit-content;
+    color: var(--color-text);
+    font-size: var(--step-text-4);
+    line-height: var(--leading-snug);
+  }
+
+  /* How far the phrase's first word reaches: an ink bracket under the words
+     it covers, a line with a short tick up at each end. It hangs clear of the
+     text so it can't pass for an underline, which on this site marks a link.
+     It is decoration: the reading under it says the same thing in words. */
+  dt::after {
+    display: block;
+    height: var(--space-3xs);
+    margin-top: var(--space-3xs);
+    border: var(--line) solid var(--ink);
+    border-top: 0;
+    content: '';
+  }
+
+  dd {
+    margin: var(--space-2xs) 0 0;
+  }
+
+  figcaption {
+    margin-top: var(--space-s);
+    border-top: var(--line) solid var(--color-hairline);
+    padding-top: var(--space-xs);
+  }
+
+  /* --- Breakpoints --------------------------------------------------------- */
+
+  @media (width < 760px) {
+    .results {
+      --results-columns: 2;
+    }
+  }
+
+  /* Touch screens: every standalone link is a tap-height box, and the boxes
+     touch instead of overlapping. */
+  @media (pointer: coarse) {
+    .study {
+      --link-box: var(--tap-min);
+      --link-gap: 0px;
+    }
+
+    .links a,
+    .back a {
+      min-width: var(--tap-min);
+    }
+  }
+
+  /* Content at least --reading-max + --space-l at its widest (48px) +
+     --figure-width wide: a second column for the figure, beside its
+     paragraph. A container query, so it measures the content's real width
+     whatever the scrollbar takes; container queries can't read custom
+     properties, so the sum is written as a number, like the breakpoints. */
+  @container (width >= 1048px) {
+    .part {
+      grid-template-columns: minmax(0, var(--reading-max)) var(--figure-width);
+      column-gap: var(--space-l);
+      justify-content: start;
+    }
+
+    h2,
+    .part p,
+    .list {
+      grid-column: 1;
+    }
+
+    /* Four across, the results end level with the figure's right edge. */
+    .results {
+      grid-column: 1 / -1;
+    }
+
+    /* The figure follows its paragraph in the source, so it lands on that
+       paragraph's row. Its top meets the first line's text rather than the
+       top of the line's box, half the line's extra height lower. */
+    .figure {
+      grid-column: 2;
+      align-self: start;
+      margin-block: calc((var(--leading-prose) - 1) / 2 * var(--step-text-3)) 0;
+    }
+  }
+</style>

@@ -173,7 +173,9 @@ const projects = defineCollection({
 // --- Case studies (one page each, at /projects/<project id>) ----------------
 
 const block = z.union([
-  z.object({ text: inline, figure: slug.optional() }).strict(), // a paragraph, optionally with a figure beside it
+  // A paragraph, optionally with a figure beside it. `emphasis` sets it in the
+  // main text color (DESIGN.md, Color: the hard part's closing line).
+  z.object({ text: inline, figure: slug.optional(), emphasis: z.boolean().default(false) }).strict(),
   z.object({ list: z.array(inline).min(1) }).strict(), // a bulleted list
 ]);
 

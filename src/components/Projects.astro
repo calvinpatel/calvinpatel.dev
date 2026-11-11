@@ -8,6 +8,7 @@ import { getCollection } from 'astro:content';
 
 import Axon from './Axon.astro';
 import Copy from './Copy.astro';
+import Results from './Results.astro';
 
 const projects = (await getCollection('projects')).sort((a, b) => a.data.order - b.data.order);
 ---
@@ -28,20 +29,7 @@ const projects = (await getCollection('projects')).sort((a, b) => a.data.order -
             <p class="description">
               <Copy text={project.description} />
             </p>
-            {project.results && (
-              <ul class="results" role="list">
-                {project.results.map((result) => (
-                  <li>
-                    <span class="value display">
-                      <Copy text={result.value} />
-                    </span>{' '}
-                    <span class="label">
-                      <Copy text={result.label} />
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            )}
+            {project.results && <Results class="results" results={project.results} />}
             {project.measurementNote && (
               <p class="note">
                 <Copy text={project.measurementNote} />
@@ -118,34 +106,9 @@ const projects = (await getCollection('projects')).sort((a, b) => a.data.order -
     line-height: var(--leading-snug);
   }
 
+  /* The results themselves are drawn by Results.astro. */
   .results {
-    display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: var(--space-m) var(--space-s);
     margin-top: var(--space-l);
-  }
-
-  .results li {
-    border-top: var(--line) solid var(--color-hairline);
-    padding-top: var(--space-xs);
-  }
-
-  /* The number, then its label on the lines below. */
-  .value,
-  .label {
-    display: block;
-  }
-
-  .value {
-    font-size: var(--step-display-6);
-    line-height: var(--leading-none);
-  }
-
-  .label {
-    margin-top: var(--space-3xs);
-    color: var(--color-text-secondary);
-    font-size: var(--step-text-5);
-    line-height: var(--leading-snug);
   }
 
   .note {
@@ -195,7 +158,7 @@ const projects = (await getCollection('projects')).sort((a, b) => a.data.order -
     }
 
     .results {
-      grid-template-columns: repeat(2, minmax(0, 1fr));
+      --results-columns: 2;
     }
 
     /* The links run in a row. A tap-height box keeps its text where a plain

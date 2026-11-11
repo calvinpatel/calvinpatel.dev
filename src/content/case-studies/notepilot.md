@@ -80,6 +80,7 @@ parts:
             What the rules still can't read is written into the spec as a known
             limit, with an optional LLM judge as a second layer.
       - text: Healthcare AI that shows its work has to show its limits too.
+        emphasis: true
 
   - id: results
     heading: Results

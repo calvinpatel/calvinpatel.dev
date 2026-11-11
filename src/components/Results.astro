@@ -1,0 +1,65 @@
+---
+// A project's large results: each number in Fraunces over its label, under a
+// hairline. Projects shows them in NotePilot's row, and the case study at the
+// top of its Results part.
+//
+// Four across. A parent turns them into a 2×2 grid by setting
+// --results-columns to 2 at its own breakpoint, and sets the space around the
+// list through the class it passes.
+import Copy from './Copy.astro';
+
+interface Props {
+  results: { value: string; label: string }[];
+  class?: string;
+}
+
+// `rest` carries the parent's style scope, so its class applies here.
+const { results, class: className, ...rest } = Astro.props;
+---
+
+<ul class:list={['result-list', className]} role="list" {...rest}>
+  {
+    results.map((result) => (
+      <li>
+        <span class="value display">
+          <Copy text={result.value} />
+        </span>{' '}
+        <span class="label">
+          <Copy text={result.label} />
+        </span>
+      </li>
+    ))
+  }
+</ul>
+
+<style>
+  .result-list {
+    display: grid;
+    grid-template-columns: repeat(var(--results-columns, 4), minmax(0, 1fr));
+    gap: var(--space-m) var(--space-s);
+  }
+
+  li {
+    border-top: var(--line) solid var(--color-hairline);
+    padding-top: var(--space-xs);
+  }
+
+  /* The number, then its label on the lines below. */
+  .value,
+  .label {
+    display: block;
+  }
+
+  .value {
+    color: var(--color-text);
+    font-size: var(--step-display-6);
+    line-height: var(--leading-none);
+  }
+
+  .label {
+    margin-top: var(--space-3xs);
+    color: var(--color-text-secondary);
+    font-size: var(--step-text-5);
+    line-height: var(--leading-snug);
+  }
+</style>

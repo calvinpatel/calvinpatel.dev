@@ -44,7 +44,7 @@ All on the design canvas. Every other artboard is a rejected option kept for the
 Rules:
 
 - **No accent color.** Links stay whatever color their text already is and are marked by an underline. A colored accent would compete with the fluorescence in the hero, and the underline is enough.
-- **The three text colors have fixed jobs.** Main text names things, secondary text is for reading, and muted text holds details. Three exceptions from the artboards: NotePilot's Projects description and the case study lede use the main text color, and Experience dates use the secondary color while their location stays muted.
+- **The three text colors have fixed jobs.** Main text names things, secondary text is for reading, and muted text holds details. Four exceptions from the artboards: NotePilot's Projects description, the case study lede, and a case study paragraph marked `emphasis: true` in its content file (the hard part's closing line) use the main text color, and Experience dates use the secondary color while their location stays muted.
 - **Border and hairline are decoration only.** They measure 1.21:1 and 1.54:1 against black, so they can never be the only sign of something, such as the edge of a control.
 
 ### Illustration colors
@@ -157,6 +157,7 @@ Media queries can't read custom properties, so these widths are written as numbe
 
 - **Below 760px:** the hero stacks (text, then the brain at full width), Experience rows stack, and the case study results go from four across to a 2×2 grid.
 - **Below 900px:** Projects rows stack and their results go from four across to a 2×2 grid, the About photo moves under the opener, and the Contact figure turns to flow down onto the email.
+- **Below 1048px of content width:** the case study's comma figure leaves the margin and follows its paragraph. This one is a container query on the page's content width, not on the window, so it doesn't depend on the scrollbar's width. 1048px is the reading column, the gap at its widest, and the figure: `--reading-max` + 48px + `--figure-width`.
 
 ## Components
 
@@ -168,7 +169,7 @@ Media queries can't read custom properties, so these widths are written as numbe
 
 **Top bar.** It holds the CP mark (Fraunces, `--size-mark`) and the five section links (About, Projects, Experience, Skills, Contact) in Plex at `--step-text-5`, all in the main text color. On phones the links move into a full-width second row under the mark, each with a 44px tap target. The case study page uses the same bar.
 
-**Figure box.** Used for the case study's comma diagram. A `--color-surface` box with a 1px `--color-border` edge, `--radius` (12px) corners, and 20px padding.
+**Figure box.** Used for the case study's comma diagram. A `--color-surface` box with a 1px `--color-border` edge, `--radius` (12px) corners, and `--figure-padding` (20px) of padding. In the margin it is `--figure-width` (320px) wide.
 
 **Brain label (shelf).** The callout dendrite ends in a short horizontal line, and the label sits on it with no box. The first line is the section name in Plex at `--step-text-4`, weight 500, in the main text color. The second line is the lobe and what it does, such as "Frontal lobe: personality and planning," at `--step-text-7` in the muted color. A soft dark shadow (`--label-shadow`) sits behind the letters. The text goes on the side away from the brain: right-aligned for labels on the left, left-aligned for labels on the right. The Skills label, the only one below the brain, hangs under its shelf and wraps to two lines. On phones, the labels appear under the brain.
 
@@ -184,7 +185,7 @@ Media queries can't read custom properties, so these widths are written as numbe
 
 **Projects.** Each project is one row: the status in the left column, the name in Fraunces, then the description, and the links in the right column. NotePilot's row adds its four results in Fraunces (`--step-display-6`), with labels at `--step-text-5` and a note on how they were measured at `--step-text-6`. A myelinated axon runs through the section: a soma and tapering hillock under the heading, a divider between projects with sheaths and faint wrapped layers, and branching terminals at the end. Desktop nodes sit every `--axon-node-spacing` (80px) so they land on the column gutters; place them from the real column positions at each width. Below 900px, each project stacks status, name, description, and links, and the results form a 2×2 grid. The dividers keep the same 80px spacing at every width, with the last sheath cut off at the edge.
 
-**Case study page** (for example, `/projects/notepilot`). The top bar, then the status, the title, the lede, and the links, with the axon's soma and hillock under that block. A divider comes before each part (What it does, The hard part, Results, What's next). On desktop the dividers match the 680px reading column; on phones they run the full screen width. Section headings use `--step-display-7`. The comma diagram sits in the margin beside the hard part's third paragraph on desktop, and full width right after that paragraph on phones. The branching terminal replaces the line above "Back to projects."
+**Case study page** (for example, `/projects/notepilot`). The top bar, then the status, the title, the lede, and the links, with the axon's soma and hillock under that block. A divider comes before each part (What it does, The hard part, Results, What's next). On desktop the dividers match the 680px reading column; on phones they run the full content width, inside the gutters. Section headings use `--step-display-7`. The comma diagram sits in the margin beside the hard part's third paragraph on desktop, and full width right after that paragraph on phones. The branching terminal replaces the line above "Back to projects."
 
 **About.** The heading, the opener as a Fraunces lede, then the story with the photo to its right. "Prelude" links to the Projects section and "NotePilot" to its case study. A thin dendrite grows down the margin beside the story. It has a soma at the first paragraph, a fainter pruned branch at medical school, branches on both sides at building, two branches at today, and a growth cone lined up with the last paragraph. On phones, the dendrite moves into the 20px left edge so the story keeps its full width, with each turning point as a single short twig angled toward the edge. The photo sits right after the opener, up to `--about-photo-phone` (300px) wide at 4:5.
 
@@ -238,7 +239,7 @@ Each divider is a `--axon-band` (28px) strip with the axon through its middle. C
 - **Lamellae.** Two lines per sheath, `M{a+10} 12.4 L{a+62} 12.4 M{a+10} 15.6 L{a+62} 15.6`, `--lamella-stroke` wide at `--lamella-op`.
 - **Nodes.** A `--node-radius` dot at x = a − 4 in front of each sheath, full ink, resting at `--ink-rest`.
 - **Terminal** (the last divider only; W is the divider's width). The axon splits at W − 82 into three branches: `M{W−82} 14 Q{W−64} 14 {W−42} 5`, `M{W−82} 14 Q{W−64} 14 {W−34} 14`, and `M{W−82} 14 Q{W−64} 14 {W−42} 23`, each a `--line` at `--axon-op`. Boutons of `--bouton-radius` sit at (W−39, 5), (W−31, 14), and (W−39, 23), full ink, resting at `--ink-rest`.
-- **Where they go.** In Projects, the first divider sits under the heading, one sits between projects, and the last ends the section; on desktop, nudge the sheath start so nodes land on the column gutters. On the case study page, the first sits under the title block, one comes before each part, and the last replaces the line above "Back to projects." The case study's dividers are 680px wide on desktop and full width on phones. Phones use the same 80px spacing.
+- **Where they go.** In Projects, the first divider sits under the heading, one sits between projects, and the last ends the section; on desktop, nudge the sheath start so nodes land on the column gutters. On the case study page, the first sits under the title block, one comes before each part, and the last replaces the line above "Back to projects." The case study's dividers are 680px wide on desktop and the full content width on phones. Phones use the same 80px spacing.
 
 ### Dendrite (About)
 

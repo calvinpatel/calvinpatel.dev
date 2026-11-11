@@ -1,9 +1,10 @@
 ---
 // A case study page, one per file in src/content/case-studies/, at
-// /projects/<project id>. Its title comes from the project it names.
+// /projects/<project id>. Its title, status, and links come from the project
+// it names.
 import { getCollection, getEntry } from 'astro:content';
 
-import Copy from '../../components/Copy.astro';
+import CaseStudy from '../../components/CaseStudy.astro';
 import Layout from '../../components/Layout.astro';
 import { copyText } from '../../lib/copy.ts';
 
@@ -12,24 +13,15 @@ export async function getStaticPaths() {
   return Promise.all(
     studies.map(async (study) => ({
       params: { id: study.data.project },
-      props: { project: (await getEntry('projects', study.data.project))!.data },
+      props: { study: study.data, project: (await getEntry('projects', study.data.project))!.data },
     })),
   );
 }
 
-const { project } = Astro.props;
+const { study, project } = Astro.props;
 const hero = (await getEntry('hero', 'hero'))!.data;
 ---
 
-<Layout title={`${copyText(project.name)} – ${copyText(hero.name)}`}>
-  <div class="container page">
-    <h1><Copy text={project.name} /></h1>
-  </div>
+<Layout title={`${copyText(project.name)} – ${copyText(hero.name)}`} description={copyText(study.lede)}>
+  <CaseStudy study={study} project={project} />
 </Layout>
-
-<style>
-  h1 {
-    font-size: var(--step-display-2);
-    line-height: var(--leading-none);
-  }
-</style>

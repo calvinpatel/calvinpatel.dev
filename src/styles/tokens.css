@@ -13,6 +13,12 @@
      900px  Projects rows, About photo, and Contact figure stack below this
             width
 
+   One switch is a container query on the case study's content width, so it
+   doesn't depend on the scrollbar's width:
+     1048px the comma figure sits in the margin at this content width or
+            more: --reading-max + --space-l at its widest (48px) +
+            --figure-width. Below it, the figure follows its paragraph.
+
    Fluid sizes run from the 390px phone mocks to the 1440px desktop mocks.
    Steps written as a plain vw value keep the chosen mock's own formula. */
 
@@ -124,6 +130,8 @@
   --page-max:          1320px;  /* includes gutters: 1192px of content at full width */
   --reading-max:       680px;   /* case study column, About story */
   --measure:           66ch;    /* descriptions */
+  --figure-width:      320px;   /* a figure box in the case study's margin */
+  --figure-padding:    20px;    /* inside a figure box */
   --dendrite-margin:   40px;    /* About's dendrite column beside the story (20px edge on phones) */
   --dendrite-gap:      20px;    /* between the dendrite column and the story */
   --about-photo:       340px;   /* desktop photo column, 4:5 */
