@@ -26,6 +26,11 @@ const { title, description, home = false } = Astro.props;
     {description && <meta name="description" content={description} />}
     <Font cssVariable="--font-fraunces" preload />
     <Font cssVariable="--font-plex" preload={[{ weight: 400, style: 'normal' }]} />
+    {/* Smooth scrolling to a section starts only after the page has loaded and
+        gone to wherever its address points (global.css). */}
+    <script is:inline>
+      addEventListener('load', () => requestAnimationFrame(() => document.documentElement.classList.add('is-loaded')));
+    </script>
   </head>
   <body>
     <TopBar home={home} />

@@ -38,6 +38,17 @@ html {
   text-size-adjust: 100%;
 }
 
+/* A link to a section scrolls there smoothly, at the browser's own pace; with
+   reduced motion on, it jumps (DESIGN.md, Motion: Scrolling to a section).
+   Layout.astro adds the class once the page has loaded. Until then a page
+   opened at a section, such as the case study's "Back to projects", lands on
+   it at once instead of gliding down from the top. */
+@media (prefers-reduced-motion: no-preference) {
+  html.is-loaded {
+    scroll-behavior: smooth;
+  }
+}
+
 body,
 h1,
 h2,
