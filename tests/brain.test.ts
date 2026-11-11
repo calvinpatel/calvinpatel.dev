@@ -8,6 +8,7 @@ import {
   VIEW,
   areaOf,
   buildBrain,
+  closeView,
   dotsD,
   foliaD,
   inside,
@@ -188,6 +189,23 @@ test('a cerebral lobe lifts away from the middle of the brain, the cerebellum fr
     } else {
       assert.ok(Math.abs(x - (left + right) / 2) < 25 && Math.abs(y - (top + bottom) / 2) < 25, `${lobe.id} ${x}, ${y}`);
     }
+  }
+});
+
+test("the close view holds the brain's own bounds and none of the labels' room", () => {
+  const view = closeView(brain);
+  assert.deepEqual(view, { x: 61.6, y: 39.9, width: 539, height: 431.2 });
+  for (const [x, y] of [...brain.outline, ...brain.cerebellum, ...brain.stem]) {
+    assert.ok(x >= view.x + 5.9 && x <= view.x + view.width - 5.9, `${x}`);
+    assert.ok(y >= view.y + 5.9 && y <= view.y + view.height - 5.9, `${y}`);
+  }
+  assert.ok(view.x >= VIEW.x && view.x + view.width <= VIEW.x + VIEW.width);
+  assert.ok(view.y >= VIEW.y && view.y + view.height <= VIEW.y + VIEW.height);
+  // Every lobe is then a tap target on a 320px phone, whose content is 280px wide.
+  const scale = 280 / view.width;
+  for (const lobe of brain.lobes) {
+    const [left, top, right, bottom] = boundsOf(lobe.region);
+    assert.ok((right - left) * scale >= 44 && (bottom - top) * scale >= 44, lobe.id);
   }
 });
 

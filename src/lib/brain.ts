@@ -554,6 +554,23 @@ export interface Brain {
   lobes: Lobe[]; // in navigation order
 }
 
+// Room around the brain's own bounds in the close view: its rim and the
+// start of its glow. The rest of the glow spills into the page's margins.
+const CLOSE_ROOM = 6;
+
+/**
+ * The part of the viewBox the brain itself takes: its outline, cerebellum,
+ * and stem, with a little room. Phones show only this, since they have no
+ * callouts or labels to leave room for.
+ */
+export function closeView(brain: Brain): { x: number; y: number; width: number; height: number } {
+  const { x0, x1, y0, y1 } = boundsOf([...brain.outline, ...brain.cerebellum, ...brain.stem]);
+  const tenth = (value: number) => Math.round(value * 10) / 10;
+  const x = tenth(x0 - CLOSE_ROOM);
+  const y = tenth(y0 - CLOSE_ROOM);
+  return { x, y, width: tenth(x1 + CLOSE_ROOM - x), height: tenth(y1 + CLOSE_ROOM - y) };
+}
+
 /** A quadratic curve's samples, enough to box it. */
 const sampleFolium = ({ from, control, to }: Folium): Vec[] =>
   Array.from({ length: 21 }, (_, i): Vec => {

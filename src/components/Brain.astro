@@ -12,12 +12,15 @@
 // Its tissue scales with it. The ink drawn over it (callouts, twigs, lobe
 // edges, focus rings) keeps its width in CSS px at every size (see the styles).
 //
+// Below 760px there are no callouts or labels, so the figure shows only the
+// part of its viewBox the brain takes, and the brain fills the content width.
+//
 // The cells and the nuclei are written as strings, not as tags in the
 // template: there are about 550 of them, and a string carries no scoping
 // attribute. Their styles reach them with :global.
 import { getEntry } from 'astro:content';
 
-import { DRIFT, LOOK, VIEW, buildBrain, foliaD, linesD, nucleiGroups, pathD, unit } from '../lib/brain.ts';
+import { DRIFT, LOOK, VIEW, buildBrain, closeView, foliaD, linesD, nucleiGroups, pathD, unit } from '../lib/brain.ts';
 import type { Cell, Nuclei } from '../lib/brain.ts';
 import { copyText } from '../lib/copy.ts';
 import Copy from './Copy.astro';
@@ -65,6 +68,15 @@ const down = (y: number) => (y - VIEW.y) / VIEW.height;
 
 const origin = ([x, y]: readonly [number, number]) => `transform-origin: ${unit(x)}px ${unit(y)}px`;
 
+// The phone figure. Its box takes the close view's proportions, and the scene
+// is scaled and moved so the close view fills that box: a point u of the
+// viewBox is drawn where zoom × u + shift would have been.
+const close = closeView(brain);
+const zoom = VIEW.width / close.width;
+const phoneFit =
+  `translate(${(VIEW.x - close.x * zoom).toFixed(2)}px, ${(VIEW.y - close.y * zoom).toFixed(2)}px) ` +
+  `scale(${zoom.toFixed(4)})`;
+
 // The focus ring's mask has to hold the ring where it leaves the viewBox.
 const ROOM = 40;
 const maskBox = {
@@ -78,6 +90,8 @@ const maskBox = {
 const { cell, callout } = LOOK;
 const px = (pair: readonly [number, number]) => `${pair[0]}px ${pair[1]}px`;
 const look = Object.entries({
+  'phone-ratio': `${close.width} / ${close.height}`,
+  'phone-fit': phoneFit,
   'drift-a-from': px(DRIFT.a.from),
   'drift-a-to': px(DRIFT.a.to),
   'drift-b-from': px(DRIFT.b.from),
@@ -119,7 +133,7 @@ const look = Object.entries({
   <div class="figure">
     <nav aria-label={copyText(site.brainLabel)}>
       {/* role="none": a screen reader hears the nav and its five links, not a picture holding them. */}
-      <svg viewBox={`${VIEW.x} ${VIEW.y} ${VIEW.width} ${VIEW.height}`} role="none">
+      <svg viewBox={`${VIEW.x} ${VIEW.y} ${VIEW.width} ${VIEW.height}`} preserveAspectRatio="xMinYMin" role="none">
         <defs>
           {/* Every shape that is drawn more than once is written once, here. */}
           <path id="brain-outline" d={pathD(brain.outline, true)}></path>
@@ -163,101 +177,103 @@ const look = Object.entries({
           </filter>
         </defs>
 
-        <g aria-hidden="true">
-          {/* The one glow on the site: DAPI blue, as if the stain lit the slide from behind. */}
-          <g class="backlight" filter="url(#brain-glow)">
-            <use href="#brain-outline"></use>
-            <use href="#brain-cerebellum"></use>
-            <use href="#brain-stem"></use>
+        <g class="scene">
+          <g aria-hidden="true">
+            {/* The one glow on the site: DAPI blue, as if the stain lit the slide from behind. */}
+            <g class="backlight" filter="url(#brain-glow)">
+              <use href="#brain-outline"></use>
+              <use href="#brain-cerebellum"></use>
+              <use href="#brain-stem"></use>
+            </g>
+            <g class="stem" stroke-width={LOOK.stem.stroke} stroke-opacity={LOOK.stem.opacity}>
+              <use href="#brain-stem" fill="url(#brain-tissue)" fill-opacity={LOOK.stem.fill}></use>
+              <g set:html={nucleiHtml(brain.stemNuclei)} />
+              <path d={LOOK.stem.fibres} fill="none"></path>
+            </g>
           </g>
-          <g class="stem" stroke-width={LOOK.stem.stroke} stroke-opacity={LOOK.stem.opacity}>
-            <use href="#brain-stem" fill="url(#brain-tissue)" fill-opacity={LOOK.stem.fill}></use>
-            <g set:html={nucleiHtml(brain.stemNuclei)} />
-            <path d={LOOK.stem.fibres} fill="none"></path>
-          </g>
-        </g>
 
-        {
-          lobes.map((lobe) => {
-            const cerebellar = lobe.id === 'cerebellum';
-            const clip = `url(#clip-${lobe.id})`;
-            return (
-              <a
-                class="lobe"
-                href={`#${lobe.copy.id}`}
-                aria-label={`${copyText(lobe.copy.label)}, ${copyText(lobe.copy.lobeLine)}`}
-                data-lobe={lobe.id}
-              >
-                <g class="body" style={origin(lobe.origin)}>
-                  <use class="hit" href={`#lobe-${lobe.id}`} fill="url(#brain-tissue)" />
-                  <g clip-path={clip}>
-                    <use
-                      class="shade"
-                      href={cerebellar ? '#brain-cerebellum' : '#brain-outline'}
-                      filter="url(#brain-inner)"
-                      stroke-width={LOOK.inner.stroke}
-                      stroke-opacity={LOOK.inner.opacity}
-                    />
-                    <Fragment set:html={nucleiHtml(lobe.nuclei)} />
-                    <g class="shade" filter="url(#brain-groove)" stroke-linecap="round" stroke-opacity={LOOK.groove.opacity}>
-                      {cerebellar ? (
-                        <path d={foliaD(brain.folia)} stroke-width={LOOK.groove.stroke} />
-                      ) : (
-                        <use href="#brain-sulci" stroke-width={LOOK.groove.stroke} />
-                      )}
-                    </g>
-                    {!cerebellar && (
-                      <g class="shade" filter="url(#brain-groove)" stroke-linecap="round" stroke-opacity={LOOK.fissure.opacity}>
-                        <use href="#brain-sylvian" stroke-width={LOOK.fissure.sylvian} />
-                        <use href="#brain-central" stroke-width={LOOK.fissure.central} />
-                      </g>
-                    )}
-                    <Fragment set:html={lobe.cells.map(cellHtml).join('')} />
-                    <use class="wash" href={`#lobe-${lobe.id}`} />
-                  </g>
-                  <use class="edge" href={`#lobe-${lobe.id}`} />
-                </g>
-              </a>
-            );
-          })
-        }
-
-        <g aria-hidden="true">
-          {/* Where two lobes meet with no sulcus between them. */}
-          <path
-            class="border"
-            d={linesD(brain.borders)}
-            stroke-width={LOOK.border.stroke}
-            stroke-opacity={LOOK.border.opacity}
-            stroke-dasharray={LOOK.border.dash}></path>
-          <g class="rim" fill="none" stroke="url(#brain-rim)" stroke-width={LOOK.rim.stroke}>
-            <use href="#brain-outline"></use>
-            <use href="#brain-cerebellum"></use>
-          </g>
           {
-            lobes.map((lobe) => (
-              <use
-                class="ring"
-                href={`#lobe-${lobe.id}`}
-                mask={`url(#ring-${lobe.id})`}
-                style={origin(lobe.origin)}
-                data-ring={lobe.id}
-              />
-            ))
+            lobes.map((lobe) => {
+              const cerebellar = lobe.id === 'cerebellum';
+              const clip = `url(#clip-${lobe.id})`;
+              return (
+                <a
+                  class="lobe"
+                  href={`#${lobe.copy.id}`}
+                  aria-label={`${copyText(lobe.copy.label)}, ${copyText(lobe.copy.lobeLine)}`}
+                  data-lobe={lobe.id}
+                >
+                  <g class="body" style={origin(lobe.origin)}>
+                    <use class="hit" href={`#lobe-${lobe.id}`} fill="url(#brain-tissue)" />
+                    <g clip-path={clip}>
+                      <use
+                        class="shade"
+                        href={cerebellar ? '#brain-cerebellum' : '#brain-outline'}
+                        filter="url(#brain-inner)"
+                        stroke-width={LOOK.inner.stroke}
+                        stroke-opacity={LOOK.inner.opacity}
+                      />
+                      <Fragment set:html={nucleiHtml(lobe.nuclei)} />
+                      <g class="shade" filter="url(#brain-groove)" stroke-linecap="round" stroke-opacity={LOOK.groove.opacity}>
+                        {cerebellar ? (
+                          <path d={foliaD(brain.folia)} stroke-width={LOOK.groove.stroke} />
+                        ) : (
+                          <use href="#brain-sulci" stroke-width={LOOK.groove.stroke} />
+                        )}
+                      </g>
+                      {!cerebellar && (
+                        <g class="shade" filter="url(#brain-groove)" stroke-linecap="round" stroke-opacity={LOOK.fissure.opacity}>
+                          <use href="#brain-sylvian" stroke-width={LOOK.fissure.sylvian} />
+                          <use href="#brain-central" stroke-width={LOOK.fissure.central} />
+                        </g>
+                      )}
+                      <Fragment set:html={lobe.cells.map(cellHtml).join('')} />
+                      <use class="wash" href={`#lobe-${lobe.id}`} />
+                    </g>
+                    <use class="edge" href={`#lobe-${lobe.id}`} />
+                  </g>
+                </a>
+              );
+            })
           }
-          <g class="callouts">
+
+          <g aria-hidden="true">
+            {/* Where two lobes meet with no sulcus between them. */}
+            <path
+              class="border"
+              d={linesD(brain.borders)}
+              stroke-width={LOOK.border.stroke}
+              stroke-opacity={LOOK.border.opacity}
+              stroke-dasharray={LOOK.border.dash}></path>
+            <g class="rim" fill="none" stroke="url(#brain-rim)" stroke-width={LOOK.rim.stroke}>
+              <use href="#brain-outline"></use>
+              <use href="#brain-cerebellum"></use>
+            </g>
             {
-              lobes.map(({ id, callout: line }) => (
-                <g class="callout" data-callout={id} data-length={unit(line.length)}>
-                  {/* The script adds the pulse, a copy of this line. */}
-                  <path class="lead" pathLength="1" d={pathD(line.main)} />
-                  <path class="twig" d={linesD(line.twigs)} />
-                  <circle class="bouton" cx={unit(line.from[0])} cy={unit(line.from[1])} />
-                  <circle class="flash" cx={unit(line.to[0])} cy={unit(line.to[1])} />
-                  <circle class="tip" cx={unit(line.to[0])} cy={unit(line.to[1])} />
-                </g>
+              lobes.map((lobe) => (
+                <use
+                  class="ring"
+                  href={`#lobe-${lobe.id}`}
+                  mask={`url(#ring-${lobe.id})`}
+                  style={origin(lobe.origin)}
+                  data-ring={lobe.id}
+                />
               ))
             }
+            <g class="callouts">
+              {
+                lobes.map(({ id, callout: line }) => (
+                  <g class="callout" data-callout={id} data-length={unit(line.length)}>
+                    {/* The script adds the pulse, a copy of this line. */}
+                    <path class="lead" pathLength="1" d={pathD(line.main)} />
+                    <path class="twig" d={linesD(line.twigs)} />
+                    <circle class="bouton" cx={unit(line.from[0])} cy={unit(line.from[1])} />
+                    <circle class="flash" cx={unit(line.to[0])} cy={unit(line.to[1])} />
+                    <circle class="tip" cx={unit(line.to[0])} cy={unit(line.to[1])} />
+                  </g>
+                ))
+              }
+            </g>
           </g>
         </g>
       </svg>
@@ -391,12 +407,22 @@ const look = Object.entries({
       return boxes;
     }
 
+    // Where the figure is and how many px one viewBox unit is drawn at, read
+    // from the brain's outline: its box in px against its box in units. The
+    // SVG's own box doesn't say, because phones show only part of the viewBox.
+    const outline = svg.querySelector<SVGUseElement>('.rim use')!;
+    const units = outline.getBBox();
+    function measure() {
+      const box = outline.getBoundingClientRect();
+      const scale = box.width / units.width;
+      const toUnits = (x: number, y: number) => [units.x + (x - box.left) / scale, units.y + (y - box.top) / scale];
+      return { scale, toUnits };
+    }
+
     function place() {
-      const frame = svg.getBoundingClientRect();
-      if (frame.width === 0) return;
-      // How many px one viewBox unit is drawn at. The callouts' lines and dots
-      // divide by it to keep their px sizes.
-      const scale = frame.width / svg.viewBox.baseVal.width;
+      const { scale } = measure();
+      if (!(scale > 0)) return;
+      // The callouts' lines and dots divide by the scale to keep their px sizes.
       root.style.setProperty('--brain-scale', String(scale));
       for (const { callout, label } of partsOf.values()) {
         const pulse = `${pulseMs(Number(callout.dataset.length), scale, speed, pulseMin, pulseMax)}ms`;
@@ -481,11 +507,7 @@ const look = Object.entries({
         if (!canMove()) return;
         if (pointer === undefined) {
           requestAnimationFrame(() => {
-            const frame = svg.getBoundingClientRect();
-            const view = svg.viewBox.baseVal;
-            const scale = frame.width / view.width;
-            const x = (pointer!.clientX - frame.left) / scale + view.x;
-            const y = (pointer!.clientY - frame.top) / scale + view.y;
+            const [x, y] = measure().toUnits(pointer!.clientX, pointer!.clientY);
             pointer = undefined;
             const near = nearestCell(somas, x, y);
             if (near >= 0) fire(cells[near]);
@@ -700,14 +722,6 @@ const look = Object.entries({
 
   .hit {
     pointer-events: all;
-  }
-
-  /* The occipital lobe is narrower than a tap target on a phone. Its target
-     reaches past the brain's edge, unseen. It is drawn under its neighbors,
-     so it takes nothing from them. */
-  .lobe[data-lobe='occipital'] .hit {
-    stroke: transparent;
-    stroke-width: calc(2 * var(--space-xs));
   }
 
   .wash {
@@ -1088,18 +1102,41 @@ const look = Object.entries({
       opacity: 0;
       transition: opacity var(--fade-out) var(--ease-out);
     }
+
+    /* Beside the hero text the brain can be small enough that the occipital
+       lobe is narrower than a tap target (a tablet held upright, say). Its
+       target reaches past the brain's edge, unseen. It is drawn under its
+       neighbors, so it takes nothing from them. */
+    .lobe[data-lobe='occipital'] .hit {
+      stroke: transparent;
+      stroke-width: calc(2 * var(--space-xs));
+    }
   }
 
   @media (width < 760px) {
+    /* The figure shows only the brain's own part of the viewBox, so the brain
+       fills the content width. Its backlight spills into the page's margins. */
+    svg {
+      aspect-ratio: var(--phone-ratio);
+    }
+
+    .scene {
+      transform: var(--phone-fit);
+    }
+
     /* No callouts or labels on phones: the first tap swaps the hint for the
-       lobe's phone line, which can take two lines. */
+       lobe's phone line, which can take two lines. The hint keeps room for
+       the second line without counting it in the hero's centered group, so
+       nothing moves when the phone line shows. */
     .callouts,
     .labels {
       display: none;
     }
 
     .hint {
-      min-height: calc(2 * var(--step-text-6) * var(--leading-label));
+      --line-box: calc(var(--step-text-6) * var(--leading-label));
+      min-height: calc(2 * var(--line-box));
+      margin-bottom: calc(-1 * var(--line-box));
     }
 
     .has-active .rest {

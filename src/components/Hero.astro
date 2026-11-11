@@ -69,16 +69,9 @@ const hero = (await getEntry('hero', 'hero'))!.data;
   }
 
   @media (width < 760px) {
-    /* The text sits above the brain's area, which takes the rest of the
-       first screen. */
-    .hero {
-      align-items: stretch;
-    }
-
+    /* The text, then the brain: one group, centered in the first screen. */
     .grid {
       grid-template-columns: minmax(0, 1fr);
-      grid-template-rows: auto 1fr;
-      align-items: stretch;
     }
   }
 </style>
