@@ -1,0 +1,186 @@
+---
+// One spike raster row (DESIGN.md, Drawings: Spike raster): a band with a
+// baseline through its middle, year marks, the role's spikes across its dates,
+// a marker at the "now" end for the ongoing role, and a label under each end.
+// Experience puts one above each entry, all on the same time axis.
+//
+// Drawn at rest: the resting state and the reduced-motion state. The playback
+// cursor and the spike flashes come with the motion step; the spikes are
+// separate elements, left to right, ready for it.
+//
+// Two layers:
+//
+//   - The baseline and the two labels, which are plain CSS. They give the row
+//     its full height, so the page is the same before the script runs and
+//     without JavaScript.
+//   - The year marks, spikes, and marker, which the script adds at the row's
+//     real width and redraws when that width changes. Spacing is in px, so a
+//     narrower row holds fewer spikes, not tighter ones. Where each one goes
+//     is worked out in src/lib/raster.ts; their sizes are set in the styles
+//     below, and the script only moves each one to its place.
+import type { Role } from '../lib/raster.ts';
+
+interface Props extends Role {
+  /** The year the shared axis starts in, on January 1. */
+  axisStart: number;
+  /** The build date, YYYY-MM-DD: the axis's "now" end. */
+  now: string;
+}
+
+const { start, end, schedule, axisStart, now } = Astro.props;
+---
+
+<div
+  class="raster"
+  data-raster
+  data-start={start}
+  data-end={end}
+  data-schedule={schedule}
+  data-axis-start={axisStart}
+  data-now={now}
+  aria-hidden="true"
+>
+  <div class="band">
+    <svg>
+      <g class="ticks"></g>
+      <g class="spikes"></g>
+      <g class="marker"></g>
+    </svg>
+  </div>
+  {/* "now" is design text, not copy (DESIGN.md). */}
+  <div class="labels"><span>{axisStart}</span><span>now</span></div>
+</div>
+
+<script>
+  import { rasterRow } from '../lib/raster.ts';
+  import type { Pattern, Schedule } from '../lib/raster.ts';
+
+  // The pattern's numbers, from tokens.css.
+  const tokens = getComputedStyle(document.documentElement);
+  const token = (name: string) => parseFloat(tokens.getPropertyValue(name));
+  const pattern: Pattern = {
+    pitch: token('--raster-pitch'),
+    burst: {
+      'full-time': [token('--raster-ft-burst-min'), token('--raster-ft-burst-max')],
+      'part-time': [1, token('--raster-pt-burst-max')],
+    },
+    gap: {
+      'full-time': [token('--raster-ft-gap-min'), token('--raster-ft-gap-max')],
+      'part-time': [token('--raster-pt-gap-min'), token('--raster-pt-gap-max')],
+    },
+  };
+
+  // One mark per position, each a <rect> the styles size and center on its
+  // own origin.
+  function place(group: Element, positions: number[]) {
+    group.replaceChildren(
+      ...positions.map((x) => {
+        const mark = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+        mark.setAttribute('transform', `translate(${x})`);
+        return mark;
+      }),
+    );
+  }
+
+  function draw(row: HTMLElement, width: number) {
+    const { start = '', end = '', schedule, axisStart, now = '' } = row.dataset;
+    const { ticks, spikes, marker } = rasterRow(
+      { start, end, schedule: schedule as Schedule },
+      { startYear: Number(axisStart), now },
+      width,
+      pattern,
+    );
+    place(row.querySelector('.ticks')!, ticks);
+    place(row.querySelector('.spikes')!, spikes);
+    place(row.querySelector('.marker')!, marker === null ? [] : [marker]);
+  }
+
+  // Draws each row when it is first measured and again whenever its width
+  // changes.
+  const drawn = new WeakMap<Element, number>();
+  const rows = new ResizeObserver((entries) => {
+    for (const { target, contentRect } of entries) {
+      if (drawn.get(target) === contentRect.width) continue;
+      drawn.set(target, contentRect.width);
+      draw(target as HTMLElement, contentRect.width);
+    }
+  });
+  document.querySelectorAll('[data-raster]').forEach((row) => rows.observe(row));
+</script>
+
+<style>
+  .raster {
+    color: var(--ink);
+    pointer-events: none;
+    user-select: none;
+  }
+
+  .band {
+    position: relative;
+    height: var(--raster-band);
+  }
+
+  /* The baseline, through the band's middle. */
+  .band::before {
+    content: '';
+    position: absolute;
+    inset-inline: 0;
+    top: calc(50% - var(--line) / 2);
+    height: var(--line);
+    background: currentColor;
+    opacity: var(--raster-baseline-op);
+  }
+
+  /* As wide as the row, in px, so the script's positions are the row's own.
+     The marker is taller than the band, and it and the first year mark are
+     centered on the row's two ends. */
+  svg {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    overflow: visible;
+    fill: currentColor;
+  }
+
+  /* The script's marks carry no style scope, hence :global. Each is centered
+     on the baseline, and on x = 0 before the script moves it. Round ends are
+     part of a spike's and the marker's height. */
+  .ticks :global(rect) {
+    x: calc(var(--line) / -2);
+    y: calc((var(--raster-band) - var(--raster-tick)) / 2);
+    width: var(--line);
+    height: var(--raster-tick);
+    opacity: var(--raster-tick-op);
+    /* One full pixel column at 1x instead of two half-bright ones, as for the
+       axon's line (Axon.astro). */
+    shape-rendering: crispEdges;
+  }
+
+  .spikes :global(rect) {
+    x: calc(var(--raster-spike-stroke) / -2);
+    y: calc((var(--raster-band) - var(--raster-spike)) / 2);
+    width: var(--raster-spike-stroke);
+    height: var(--raster-spike);
+    rx: calc(var(--raster-spike-stroke) / 2);
+    opacity: var(--ink-rest);
+  }
+
+  .marker :global(rect) {
+    x: calc(var(--raster-marker-stroke) / -2);
+    y: calc((var(--raster-band) - var(--raster-marker)) / 2);
+    width: var(--raster-marker-stroke);
+    height: var(--raster-marker);
+    rx: calc(var(--raster-marker-stroke) / 2);
+  }
+
+  /* The axis start year at the left end and "now" at the right. */
+  .labels {
+    display: flex;
+    justify-content: space-between;
+    margin-top: var(--space-3xs);
+    color: var(--color-text-muted);
+    font-size: var(--step-text-7);
+    line-height: var(--leading-label);
+  }
+</style>

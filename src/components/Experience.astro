@@ -1,0 +1,119 @@
+---
+// The Experience section: the entries in experience.md, newest first, each
+// under its own spike raster. Every raster shares one time axis, from
+// January 1 of the earliest start year to "now", so a role's spikes sit where
+// its dates fall.
+import { getEntry } from 'astro:content';
+
+import Copy from './Copy.astro';
+import Raster from './Raster.astro';
+import { axisStartYear } from '../lib/raster.ts';
+
+const { entries } = (await getEntry('experience', 'experience'))!.data;
+
+const axisStart = axisStartYear(entries.map((entry) => entry.start));
+// "now" is the build date (UTC), written into the page: it moves forward with
+// each deploy and stands still between deploys.
+const now = new Date().toISOString().slice(0, 10);
+---
+
+<div class="experience">
+  {
+    entries.map((entry, i) => (
+      <article class="entry" aria-labelledby={`experience-${i + 1}`}>
+        <Raster start={entry.start} end={entry.end} schedule={entry.schedule} axisStart={axisStart} now={now} />
+        <div class="row">
+          <p class="when">
+            <span class="dates"><Copy text={entry.dates} /></span><span class="comma">, </span><span class="location"><Copy text={entry.location} /></span>
+          </p>
+          <div class="body">
+            <h3 id={`experience-${i + 1}`}>
+              <Copy text={entry.role} />
+            </h3>
+            <p class="org">
+              <Copy text={entry.org} />
+            </p>
+            <p class="description">
+              <Copy text={entry.description} />
+            </p>
+          </div>
+        </div>
+      </article>
+    ))
+  }
+</div>
+
+<style>
+  .experience {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-l);
+  }
+
+  /* Dates and location | role, organization, description. */
+  .row {
+    /* The role's first line. The dates sit in its middle. */
+    --role-line: calc(var(--step-display-8) * var(--leading-heading));
+
+    display: grid;
+    grid-template-columns: var(--col-dates) minmax(0, 1fr);
+    column-gap: var(--col-gap);
+    align-items: start;
+    margin-top: var(--space-s);
+  }
+
+  /* The dates, with the location on the line under them. */
+  .when {
+    padding-top: calc((var(--role-line) - 1lh) / 2);
+    color: var(--color-text-secondary);
+    font-size: var(--step-text-6);
+    line-height: var(--leading-label);
+  }
+
+  .dates,
+  .location {
+    display: block;
+  }
+
+  .comma {
+    display: none;
+  }
+
+  .location {
+    color: var(--color-text-muted);
+  }
+
+  h3 {
+    font-size: var(--step-display-8);
+    line-height: var(--leading-heading);
+  }
+
+  .org {
+    margin-top: var(--space-3xs);
+    color: var(--color-text-muted);
+  }
+
+  .description {
+    max-width: var(--measure);
+    margin-top: var(--space-xs);
+    color: var(--color-text-secondary);
+  }
+
+  @media (width < 760px) {
+    /* One column: dates and location on one line, then the role. */
+    .row {
+      grid-template-columns: minmax(0, 1fr);
+    }
+
+    .when {
+      padding-top: 0;
+      margin-bottom: var(--space-3xs);
+    }
+
+    .dates,
+    .location,
+    .comma {
+      display: inline;
+    }
+  }
+</style>

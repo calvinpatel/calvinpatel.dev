@@ -3,7 +3,8 @@
    DESIGN.md says what each one is for.
 
    Breakpoints (media queries can't read custom properties):
-     760px  the top bar and the hero change to their phone layouts below this
+     760px  the top bar and the hero change to their phone layouts below
+            this, and Experience rows stack (step 6)
      900px  Projects rows, About's photo, and Contact's figure stack below
             this (step 6) */
 

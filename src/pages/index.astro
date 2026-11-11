@@ -3,6 +3,7 @@
 import { getEntry } from 'astro:content';
 
 import About from '../components/About.astro';
+import Experience from '../components/Experience.astro';
 import Hero from '../components/Hero.astro';
 import Layout from '../components/Layout.astro';
 import Projects from '../components/Projects.astro';
@@ -13,7 +14,7 @@ const site = (await getEntry('site', 'site'))!.data;
 const hero = (await getEntry('hero', 'hero'))!.data;
 
 // Each section's content, by its id. A section not listed yet has only its heading.
-const content: Partial<Record<string, typeof About>> = { about: About, projects: Projects };
+const content: Partial<Record<string, typeof About>> = { about: About, projects: Projects, experience: Experience };
 ---
 
 <Layout title={copyText(hero.name)} description={hero.lines.map(copyText).join(' ')} home>
