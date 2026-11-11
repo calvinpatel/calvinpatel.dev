@@ -128,7 +128,7 @@ test('every spike and the marker sit on a pixel center, at most half a pixel fro
         const { spikes, marker } = rasterRow(role, AXIS, width, PATTERN, left);
         const offCenter = (x: number) => Math.abs(((left + x) % 1) - HALF_PIXEL);
         for (const x of spikes) assert.ok(offCenter(x) < EPSILON, `a spike at ${left} + ${x}`);
-        assert.ok(Math.abs(spikes[0] - dateToX(span(role)[0], AXIS, width)) <= HALF_PIXEL + EPSILON);
+        if (spikes.length > 0) assert.ok(Math.abs(spikes[0] - dateToX(span(role)[0], AXIS, width)) <= HALF_PIXEL + EPSILON);
         if (marker === null) continue;
         assert.ok(offCenter(marker) < EPSILON, `the marker at ${left} + ${marker}`);
         assert.ok(Math.abs(marker - width) <= HALF_PIXEL + EPSILON);
@@ -179,7 +179,8 @@ test('a long role uses every burst size and both ends of the gap range', () => {
 test("every spike falls inside its role's dates, months inclusive", () => {
   everyRow([...ROLES, ...LONG], (role, width, row) => {
     const [start, end] = span(role).map((date) => dateToX(date, AXIS, width));
-    assert.ok(row.spikes.length > 0);
+    // Only the ongoing role can be too short to show a burst (tested below).
+    if (row.spikes.length === 0) return assert.equal(role.end, 'present');
     // The first spike sits on the pixel center nearest the first day of the
     // start month, so it can fall up to half a pixel before it. No spike
     // passes the end.
@@ -200,12 +201,27 @@ test('a role ending 2021-07 runs through July 31', () => {
   assert.equal(dayOf(spikes.at(-1)!), '2021-07-31');
 });
 
-test("the ongoing role's marker sits at the now end, and its spikes stop a pitch short", () => {
-  everyRow(ROLES, (role, width, row) => {
-    if (role.end !== 'present') return assert.equal(row.marker, null);
-    assert.ok(row.marker !== null && Math.abs(row.marker - width) <= HALF_PIXEL + EPSILON);
-    assert.ok(row.spikes.at(-1)! <= row.marker - PATTERN.pitch + EPSILON);
-  });
+test("the ongoing role's marker sits at the now end, its schedule's smallest gap or more past the last spike", () => {
+  // The marker sits where the next burst would start, so it never reads as
+  // part of a burst. Checked for both schedules, wherever the row's left end
+  // falls.
+  const ongoing: Role[] = [ROLES[0], { start: '2025-03', end: 'present', schedule: 'part-time' }];
+  let rows = 0;
+  for (const role of ongoing) {
+    const [smallestGap] = PATTERN.gap[role.schedule];
+    for (const left of [0, 0.5, 116.5, 37.65, 20.3]) {
+      for (let width = 280; width <= 1192; width += 0.5) {
+        const { spikes, marker } = rasterRow(role, AXIS, width, PATTERN, left);
+        assert.ok(marker !== null && Math.abs(marker - width) <= HALF_PIXEL + EPSILON);
+        if (spikes.length === 0) continue;
+        assert.ok(marker - spikes.at(-1)! >= smallestGap - EPSILON, `${marker - spikes.at(-1)!}px before the marker at ${width}`);
+        rows += 1;
+      }
+    }
+  }
+  assert.ok(rows > 15000);
+
+  for (const role of ROLES.slice(1)) assert.equal(rasterRow(role, AXIS, 1192, PATTERN).marker, null);
 });
 
 test('a narrower row has fewer spikes at the same spacing', () => {
@@ -221,10 +237,24 @@ test('a narrower row has fewer spikes at the same spacing', () => {
   }
 });
 
-test('every role shows at least one whole burst in a 320px window', () => {
-  for (const role of ROLES) {
-    const groups = bursts(rasterRow(role, AXIS, 280, PATTERN).spikes);
-    assert.ok(groups.length >= 1);
-    assert.ok(groups[0].length >= PATTERN.burst[role.schedule][0]);
-  }
+const showsWholeBurst = (role: Role, width: number, axis = AXIS) => {
+  const groups = bursts(rasterRow(role, axis, width, PATTERN).spikes);
+  return groups.length >= 1 && groups[0].length >= PATTERN.burst[role.schedule][0];
+};
+
+test('every role shows at least one whole burst on a 375px phone', () => {
+  for (const role of ROLES) assert.ok(showsWholeBurst(role, 335));
+});
+
+test('an ongoing role too short for a burst and the gap before its marker shows the marker alone', () => {
+  // In a 320px window the row is 280px, and the ongoing role's six months are
+  // under 22px of it: less than its first burst (12px) plus the smallest
+  // full-time gap (11px).
+  const row = rasterRow(ROLES[0], AXIS, 280, PATTERN);
+  assert.deepEqual(row.spikes, []);
+  assert.ok(row.marker !== null);
+  // It fits once the role is a few weeks longer.
+  assert.ok(showsWholeBurst(ROLES[0], 280, { ...AXIS, now: '2026-12-31' }));
+  // The roles with an end date show a burst there today.
+  for (const role of ROLES.slice(1)) assert.ok(showsWholeBurst(role, 280));
 });

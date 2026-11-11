@@ -106,21 +106,25 @@ export function rasterRow(role: Role, axis: Axis, width: number, pattern: Patter
 
   // Months are inclusive: a role runs from the first day of its start month
   // through the last day of its end month, so its spikes stop before the next
-  // month starts. The ongoing role runs to "now", and its spikes stop one
-  // pitch short of the marker there. Spacing is in whole pixels, so once the
-  // first spike is on a pixel center the rest are too.
+  // month starts. The ongoing role runs to "now", and its spikes stop at
+  // least its schedule's smallest gap short of the marker there, so the
+  // marker sits where the next burst would start and never reads as part of
+  // one. Spacing is in whole pixels, so once the first spike is on a pixel
+  // center the rest are too.
   const ongoing = role.end === 'present';
   const from = toPixelCenter(x(monthStart(role.start)));
   const marker = ongoing ? toPixelCenter(width) : null;
   const end = ongoing ? width : x(monthStart(role.end, 1));
-  const fits = (spike: number) => (marker === null ? spike < end : spike <= marker - pattern.pitch);
+  const [smallestGap] = pattern.gap[role.schedule];
+  const fits = (spike: number) => (marker === null ? spike < end : spike <= marker - smallestGap);
 
   const random = mulberry32(fnv1a(`${role.start}|${role.end}|${role.schedule}`));
   const whole = ([min, max]: [number, number]) => min + Math.floor(random() * (max - min + 1));
 
   // Each burst's size, then the gap after it. A burst is placed only if all
   // of it fits, so a full-time row never ends on a lone spike; the first burst
-  // that doesn't fit ends the row.
+  // that doesn't fit ends the row. An ongoing role too short for one burst
+  // and the gap before its marker shows the marker alone.
   const spikes: number[] = [];
   let first = from;
   for (;;) {
