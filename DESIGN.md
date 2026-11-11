@@ -155,8 +155,8 @@ Spacing inside sections follows the artboards, using the nearest token from this
 
 Media queries can't read custom properties, so these widths are written as numbers in the CSS and listed in tokens.css's header.
 
-- **Below 760px:** the hero stacks (text, then the brain at full width), Projects and Experience rows stack, and the case study results go from four across to a 2×2 grid.
-- **Below 900px:** the About photo moves under the opener, and the Contact figure turns to flow down onto the email.
+- **Below 760px:** the hero stacks (text, then the brain at full width), Experience rows stack, and the case study results go from four across to a 2×2 grid.
+- **Below 900px:** Projects rows stack and their results go from four across to a 2×2 grid, the About photo moves under the opener, and the Contact figure turns to flow down onto the email.
 
 ## Components
 
@@ -182,7 +182,7 @@ Media queries can't read custom properties, so these widths are written as numbe
 
 **Brain navigation.** Five lobes, each a real link to a section: frontal lobe → About, occipital → Projects, temporal → Experience, cerebellum → Skills, parietal → Contact. Hover or keyboard focus shows that lobe's label. On touch, the first tap shows the label and the second tap goes to the section.
 
-**Projects.** Each project is one row: the status in the left column, the name in Fraunces, then the description, and the links in the right column. NotePilot's row adds its four results in Fraunces (`--step-display-6`), with labels at `--step-text-5` and a note on how they were measured at `--step-text-6`. A myelinated axon runs through the section: a soma and tapering hillock under the heading, a divider between projects with sheaths and faint wrapped layers, and branching terminals at the end. Desktop nodes sit every `--axon-node-spacing` (80px) so they land on the column gutters; place them from the real column positions at each width. On phones, each project stacks status, name, description, and links, the results form a 2×2 grid, and each divider has four evenly spaced sheaths.
+**Projects.** Each project is one row: the status in the left column, the name in Fraunces, then the description, and the links in the right column. NotePilot's row adds its four results in Fraunces (`--step-display-6`), with labels at `--step-text-5` and a note on how they were measured at `--step-text-6`. A myelinated axon runs through the section: a soma and tapering hillock under the heading, a divider between projects with sheaths and faint wrapped layers, and branching terminals at the end. Desktop nodes sit every `--axon-node-spacing` (80px) so they land on the column gutters; place them from the real column positions at each width. Below 900px, each project stacks status, name, description, and links, and the results form a 2×2 grid. The dividers keep the same 80px spacing at every width, with the last sheath cut off at the edge.
 
 **Case study page** (for example, `/projects/notepilot`). The top bar, then the status, the title, the lede, and the links, with the axon's soma and hillock under that block. A divider comes before each part (What it does, The hard part, Results, What's next). On desktop the dividers match the 680px reading column; on phones they run the full screen width. Section headings use `--step-display-7`. The comma diagram sits in the margin beside the hard part's third paragraph on desktop, and full width right after that paragraph on phones. The branching terminal replaces the line above "Back to projects."
 

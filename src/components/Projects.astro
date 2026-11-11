@@ -1,0 +1,209 @@
+---
+// The Projects section: one row per file in src/content/projects/, in each
+// file's `order`, with a myelinated axon running through the section: its soma
+// under the heading, a divider after each project, and its terminal at the
+// end. A project with results (NotePilot) shows them large under its
+// description, which is set a step larger in the main text color.
+import { getCollection } from 'astro:content';
+
+import Axon from './Axon.astro';
+import Copy from './Copy.astro';
+
+const projects = (await getCollection('projects')).sort((a, b) => a.data.order - b.data.order);
+---
+
+<div class="projects">
+  <Axon part="soma" />
+  {
+    projects.map(({ id, data: project }, i) => (
+      <>
+        <article class:list={['project', { featured: project.results }]} aria-labelledby={`project-${id}`}>
+          <p class="status">
+            <Copy text={project.status} />
+          </p>
+          <div class="body">
+            <h3 id={`project-${id}`}>
+              <Copy text={project.name} />
+            </h3>
+            <p class="description">
+              <Copy text={project.description} />
+            </p>
+            {project.results && (
+              <ul class="results" role="list">
+                {project.results.map((result) => (
+                  <li>
+                    <span class="value display">
+                      <Copy text={result.value} />
+                    </span>{' '}
+                    <span class="label">
+                      <Copy text={result.label} />
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
+            {project.measurementNote && (
+              <p class="note">
+                <Copy text={project.measurementNote} />
+              </p>
+            )}
+          </div>
+          {project.links.length > 0 && (
+            <ul class="links" role="list">
+              {project.links.map((link) => (
+                <li>
+                  <a href={link.href}>
+                    <Copy text={link.label} />
+                  </a>
+                </li>
+              ))}
+            </ul>
+          )}
+        </article>
+        <Axon part={i === projects.length - 1 ? 'terminal' : undefined} />
+      </>
+    ))
+  }
+</div>
+
+<style>
+  .projects {
+    /* Each divider puts a node on the center of the gutter between the status
+       and text columns (Axon.astro). At the full content width the same
+       spacing lands one on the gutter before the links too. */
+    --axon-node-at: calc(var(--col-status) + var(--col-gap) / 2);
+
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-m);
+  }
+
+  /* Status | name, description, results | links. */
+  .project {
+    /* The name's first line. The status and the first link sit in its middle. */
+    --name-line: calc(var(--step-display-5) * var(--leading-heading));
+    /* One link's box: its line of text, or a tap-height box on touch screens. */
+    --link-box: 1lh;
+    --link-gap: var(--space-2xs);
+
+    display: grid;
+    grid-template-columns: var(--col-status) minmax(0, 1fr) var(--col-links);
+    column-gap: var(--col-gap);
+    align-items: start;
+  }
+
+  .status {
+    display: flex;
+    align-items: center;
+    min-height: var(--name-line);
+    color: var(--color-text-muted);
+    font-size: var(--step-text-6);
+    line-height: var(--leading-label);
+  }
+
+  h3 {
+    font-size: var(--step-display-5);
+    line-height: var(--leading-heading);
+  }
+
+  .description {
+    max-width: var(--measure);
+    margin-top: var(--space-xs);
+    color: var(--color-text-secondary);
+  }
+
+  .featured .description {
+    color: var(--color-text);
+    font-size: var(--step-text-3);
+    line-height: var(--leading-snug);
+  }
+
+  .results {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: var(--space-m) var(--space-s);
+    margin-top: var(--space-l);
+  }
+
+  .results li {
+    border-top: var(--line) solid var(--color-hairline);
+    padding-top: var(--space-xs);
+  }
+
+  /* The number, then its label on the lines below. */
+  .value,
+  .label {
+    display: block;
+  }
+
+  .value {
+    font-size: var(--step-display-6);
+    line-height: var(--leading-none);
+  }
+
+  .label {
+    margin-top: var(--space-3xs);
+    color: var(--color-text-secondary);
+    font-size: var(--step-text-5);
+    line-height: var(--leading-snug);
+  }
+
+  .note {
+    max-width: var(--measure);
+    margin-top: var(--space-s);
+    color: var(--color-text-muted);
+    font-size: var(--step-text-6);
+    line-height: var(--leading-label);
+  }
+
+  .links {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--link-gap);
+    margin-top: calc((var(--name-line) - var(--link-box)) / 2);
+  }
+
+  .links a {
+    display: inline-flex;
+    align-items: center;
+    min-height: var(--link-box);
+  }
+
+  /* Touch screens: every link is a tap-height box, and the boxes touch
+     instead of overlapping. */
+  @media (pointer: coarse) {
+    .project {
+      --link-box: var(--tap-min);
+      --link-gap: 0px;
+    }
+
+    .links a {
+      min-width: var(--tap-min);
+    }
+  }
+
+  @media (width < 900px) {
+    /* One column: status, name, description, results, links. */
+    .project {
+      grid-template-columns: minmax(0, 1fr);
+    }
+
+    .status {
+      min-height: 0;
+      margin-bottom: var(--space-2xs);
+    }
+
+    .results {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    /* The links run in a row. A tap-height box keeps its text where a plain
+       line of text would sit. */
+    .links {
+      flex-flow: row wrap;
+      gap: var(--link-gap) var(--space-m);
+      margin-top: calc(var(--space-m) - (var(--link-box) - 1lh) / 2);
+    }
+  }
+</style>

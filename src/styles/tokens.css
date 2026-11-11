@@ -8,9 +8,10 @@
    Dark only for v1.
 
    Breakpoints (media queries can't read custom properties, so they're listed here):
-     760px  hero, Projects rows, Experience rows, and case study results
-            change to their phone layouts below this width
-     900px  About photo and Contact figure stack below this width
+     760px  hero, Experience rows, and case study results change to their
+            phone layouts below this width
+     900px  Projects rows, About photo, and Contact figure stack below this
+            width
 
    Fluid sizes run from the 390px phone mocks to the 1440px desktop mocks.
    Steps written as a plain vw value keep the chosen mock's own formula. */
@@ -134,7 +135,7 @@
   --col-dates:         200px;   /* Experience rows: dates | text */
   --col-gap:           32px;
   --contact-figure:    430px;   /* Contact: figure | contact block */
-  --axon-node-spacing: 80px;    /* desktop dividers; phones use four even sheaths */
+  --axon-node-spacing: 80px;    /* dividers at every width; the last sheath is cut off at the edge */
   --tap-min:           44px;
 
   /* ---------------------------------------------------------------------

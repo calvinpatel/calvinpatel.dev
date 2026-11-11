@@ -1,0 +1,220 @@
+---
+// One myelinated axon divider (DESIGN.md, Drawings: Myelinated axon dividers).
+// Projects and the case study page stack them: `part="soma"` under the
+// heading, none between items, and `part="terminal"` at the end.
+//
+// Drawn at rest: the resting state and the reduced-motion state. The node
+// flash comes with the motion step; the soma, every node, and the boutons are
+// separate elements in hop order, left to right, ready for it.
+//
+// Two layers, both at real pixel size. The path data is DESIGN.md's,
+// unchanged, with a = 0 for the sheath and W = 0 for the terminal.
+//
+//   - The fiber: one SVG as wide as the divider, holding the axon and its
+//     soma or terminal. Whatever hangs off the right end sits in a nested SVG
+//     at x = 100%, so it follows the divider's width.
+//   - The sheath row: a leading node, then one unit per sheath, each
+//     --axon-node-spacing wide: the sheath, its two lamellae, and the node
+//     after it. The row is laid out by CSS, so the right edge cuts the last
+//     sheath off, and before a terminal a unit that doesn't fit whole is
+//     dropped.
+//
+// The axon is a single line on purpose, and it carries on through the split
+// as the terminal's middle branch, which DESIGN.md draws as a straight curve
+// from W − 82 to W − 34. Two pieces meeting at the split would show their
+// join, as the dendrite's trunk did.
+
+interface Props {
+  /** `'soma'` for the first divider in a section, `'terminal'` for the last. */
+  part?: 'soma' | 'terminal';
+}
+
+const { part } = Astro.props;
+
+// Enough sheaths to cross the widest divider: --page-max leaves 1192px of
+// content, and sheaths sit --axon-node-spacing (80px) apart. Markup can't read
+// custom properties, so both are restated here, like the breakpoints.
+const CONTENT_MAX = 1192;
+const NODE_SPACING = 80;
+const units = Array.from({ length: Math.ceil(CONTENT_MAX / NODE_SPACING) });
+---
+
+<div class="axon" data-part={part} aria-hidden="true">
+  <svg class="fiber">
+    <g class="strand">
+      {/* The straight axon: a --line-tall bar centered on y = 14, the area a
+          stroked line would cover. crispEdges puts it on one full pixel row at
+          1x instead of two half-bright ones, and Chromium honors crispEdges on
+          a filled shape but not on a stroke. The curves stay anti-aliased.
+          After a soma the bar starts at x = 30 and the SVG's edge trims what
+          runs past the right end. */}
+      <rect
+        class="line"
+        x={part === 'soma' ? 30 : 0}
+        width="100%"
+        transform={part === 'terminal' ? 'translate(-34)' : undefined}
+        shape-rendering="crispEdges"></rect>
+      {
+        part === 'terminal' && (
+          <svg x="100%" overflow="visible">
+            <path d="M-82 14 Q-64 14 -42 5 M-82 14 Q-64 14 -42 23" />
+          </svg>
+        )
+      }
+    </g>
+    {
+      part === 'soma' && (
+        <>
+          <path class="hillock" d="M14 9.5 L34 13.3 L34 14.7 L14 18.5 Z" />
+          <circle class="soma" cx="9" cy="14" />
+        </>
+      )
+    }
+    {
+      part === 'terminal' && (
+        <svg x="100%" overflow="visible">
+          <circle class="bouton" cx="-39" cy="5" />
+          <circle class="bouton" cx="-31" cy="14" />
+          <circle class="bouton" cx="-39" cy="23" />
+        </svg>
+      )
+    }
+  </svg>
+  <div class="sheaths">
+    <svg class="lead"><circle class="node" cx="50%" cy="14"></circle></svg>
+    {
+      units.map(() => (
+        <svg class="unit">
+          <path
+            class="sheath"
+            d="M0 14 Q3 10.5 9 10.5 L63 10.5 Q69 10.5 72 14 Q69 17.5 63 17.5 L9 17.5 Q3 17.5 0 14 Z"
+          />
+          <path class="lamellae" d="M10 12.4 L62 12.4 M10 15.6 L62 15.6" />
+          <circle class="node" cx="76" cy="14" />
+        </svg>
+      ))
+    }
+  </div>
+</div>
+
+<style>
+  /* The drawing's geometry, from DESIGN.md's axon section. These belong with
+     the path data above rather than in tokens.css. */
+  .axon {
+    /* The bare stretch between two sheaths, with a node in its middle. */
+    --node-gap: calc(var(--axon-node-spacing) - var(--sheath-length));
+    /* Where a node must land, from the divider's left end. A section with
+       columns sets --axon-node-at to a gutter's center; without one, the
+       first node sits at 16px, which starts the sheaths at a = 20. */
+    --lead: mod(var(--axon-node-at, 16px) - var(--node-gap) / 2, var(--axon-node-spacing));
+    --axon-y: 14px; /* the axon's center, from the band's top */
+
+    position: relative;
+    height: var(--axon-band);
+    color: var(--ink);
+    pointer-events: none;
+  }
+
+  .fiber {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+  }
+
+  /* The axon and the terminal's branches share one opacity, so where the
+     branches leave along the axon they don't add up to a brighter stretch. */
+  .strand {
+    fill: none;
+    stroke: currentColor;
+    stroke-width: var(--line);
+    opacity: var(--axon-op);
+  }
+
+  .line {
+    y: calc(var(--axon-y) - var(--line) / 2);
+    height: var(--line);
+    fill: currentColor;
+    stroke: none;
+  }
+
+  .hillock {
+    fill: currentColor;
+    opacity: var(--hillock-op);
+  }
+
+  .soma,
+  .node,
+  .bouton {
+    fill: currentColor;
+    opacity: var(--ink-rest);
+  }
+
+  .soma {
+    r: calc(var(--axon-soma) / 2);
+  }
+
+  .node {
+    r: var(--node-radius);
+  }
+
+  .bouton {
+    r: var(--bouton-radius);
+  }
+
+  /* The leading node, then the units, from --lead to the right end. The row
+     doesn't wrap, so the right end cuts the last sheath off. */
+  .sheaths {
+    position: relative;
+    display: flex;
+    height: var(--axon-band);
+    margin-left: var(--lead);
+    overflow: hidden;
+  }
+
+  .lead,
+  .unit {
+    flex: none;
+    height: var(--axon-band);
+  }
+
+  .lead {
+    width: var(--node-gap);
+  }
+
+  .unit {
+    width: var(--axon-node-spacing);
+    overflow: visible; /* the sheath's edge runs half a line past its points */
+  }
+
+  .sheath {
+    fill: currentColor;
+    fill-opacity: var(--sheath-fill-op);
+    stroke: currentColor;
+    stroke-width: var(--line);
+    stroke-opacity: var(--sheath-edge-op);
+  }
+
+  .lamellae {
+    fill: none;
+    stroke: currentColor;
+    stroke-width: var(--lamella-stroke);
+    opacity: var(--lamella-op);
+  }
+
+  /* After a soma the sheaths start one place later, at a = 100: the hillock
+     takes the first place. The node in front of that sheath stays. */
+  .axon[data-part='soma'] .lead,
+  .axon[data-part='soma'] .lead + .unit > :not(.node) {
+    visibility: hidden;
+  }
+
+  /* Before a terminal the row ends at the split and wraps. A unit that doesn't
+     fit whole moves to a second row, which the band's height hides, so the
+     sheaths always end with a node and then bare axon. */
+  .axon[data-part='terminal'] .sheaths {
+    flex-wrap: wrap;
+    align-content: flex-start;
+    margin-right: var(--terminal-length);
+  }
+</style>

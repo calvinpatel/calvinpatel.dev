@@ -4,7 +4,8 @@
 
    Breakpoints (media queries can't read custom properties):
      760px  the top bar and the hero change to their phone layouts below this
-     900px  About's photo and Contact's figure stack below this (step 6) */
+     900px  Projects rows, About's photo, and Contact's figure stack below
+            this (step 6) */
 
 @import './tokens.css';
 
