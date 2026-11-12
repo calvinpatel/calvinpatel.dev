@@ -56,7 +56,8 @@ Cal Patel's portfolio site. It reads as a nervous system: real neuron reconstruc
 | add `--preview <folder>` | Also writes an SVG of each cell for a quick visual check |
 | `uv run --with pytest --with numpy pytest tests/test_swc_to_web.py` | Runs the converter's tests (from the repo root) |
 | `node --test tests/*.test.ts` | Runs every `src/lib/` module's tests (from the repo root) |
-| `npx astro dev --background` | Runs the dev server in the background so Claude Code can keep working and take screenshots; `npx astro dev status`, `logs`, and `stop` manage it |
+| `npx astro dev --background` | Runs the dev server in the background so Claude Code can keep working; `npx astro dev status`, `logs`, and `stop` manage it |
+| `npx astro preview` | Serves the built site from `dist/` at http://localhost:4321, in the background; checks and screenshots run against this (rule 16). `npx astro preview status`, `logs`, and `stop` manage it, and `--port` moves it when the dev server has 4321 |
 | `http://localhost:4321/?carry=0.8` | Dev server only: tries another value for how far a neuron's input carries along its dendrite (0.55 without it; `SIGNAL.input.length` in `src/lib/neuron-signal.ts`). The parameter isn't in the built site |
 
 Deploys happen through Workers Builds. Don't run `wrangler deploy` unless Cal asks.
@@ -89,3 +90,7 @@ Deploys happen through Workers Builds. Don't run `wrangler deploy` unless Cal as
 13. Every SWC file needs a row in `data/swc/sources.csv` before it converts. The credit line it produces must appear on the site.
 14. Never edit `public/cells/*.json` by hand. Rerun the script and commit its output.
 15. `swc_to_web.py` is scaffolding. Dendrometer's export replaces it later, and today's outputs become fixtures for that export's tests. The file format is in `docs/cell-web-v1.md`.
+
+**Checking**
+
+16. Run every check against the production build (`npx astro build`, then `npx astro preview`), not the dev server: screenshots, timing, behavior, and frame times. The build rewrites what scripts read. Its minifier turned every time token from `130ms` into `.13s`, and until 7b14cce the built site ran all its timing a thousand times too short while dev looked right. The dev server is for working, and for comparing against when the build behaves differently.
