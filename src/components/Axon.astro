@@ -3,9 +3,12 @@
 // Projects and the case study page stack them: `part="soma"` under the
 // heading, none between items, and `part="terminal"` at the end.
 //
-// Drawn at rest: the resting state and the reduced-motion state. The node
-// flash comes with the motion step; the soma, every node, and the boutons are
-// separate elements in hop order, left to right, ready for it.
+// The markup and styles draw it at rest: the resting state, the
+// reduced-motion state, and the state without JavaScript. The script flashes
+// the soma, each node that shows, and the boutons once, in hop order, the
+// first time the divider is fully in view (DESIGN.md, Motion: Axon dividers).
+// They are separate elements, left to right, and they rest with fill-opacity,
+// which is what the flash changes.
 //
 // Two layers, both at real pixel size. The path data is DESIGN.md's,
 // unchanged, with a = 0 for the sheath and W = 0 for the terminal.
@@ -39,7 +42,7 @@ const NODE_SPACING = 80;
 const units = Array.from({ length: Math.ceil(CONTENT_MAX / NODE_SPACING) });
 ---
 
-<div class="axon" data-part={part} aria-hidden="true">
+<div class="axon" data-axon data-part={part} aria-hidden="true">
   <svg class="fiber">
     <g class="strand">
       {/* The straight axon: a --line-tall bar centered on y = 14, the area a
@@ -97,6 +100,40 @@ const units = Array.from({ length: Math.ceil(CONTENT_MAX / NODE_SPACING) });
   </div>
 </div>
 
+<script>
+  import { flashSchedule, nodeShows } from '../lib/axon.ts';
+  import type { Part } from '../lib/axon.ts';
+  import { flasher } from '../lib/flash.ts';
+  import { animated, playOnce } from '../lib/play-once.ts';
+
+  const flash = flasher();
+
+  for (const divider of document.querySelectorAll<HTMLElement>('[data-axon]')) {
+    playOnce(
+      divider,
+      animated(() => {
+        // Which nodes show depends on the divider's width, so it is measured
+        // as the divider starts. A resize after that sends it to rest.
+        const row = divider.querySelector('.sheaths')!.getBoundingClientRect();
+        const nodes = [...divider.querySelectorAll('.sheaths .node')];
+        const shows = nodes.map((node) =>
+          nodeShows(node.getBoundingClientRect(), row, getComputedStyle(node).visibility === 'hidden'),
+        );
+        const schedule = flashSchedule(divider.dataset.part as Part, shows);
+
+        const flashes: Animation[] = [];
+        const at = (parts: Iterable<Element>, hops: number | null) => {
+          if (hops !== null) for (const part of parts) flashes.push(flash(part, hops));
+        };
+        at(divider.querySelectorAll('.soma'), schedule.soma);
+        nodes.forEach((node, i) => at([node], schedule.nodes[i]));
+        at(divider.querySelectorAll('.bouton'), schedule.boutons);
+        return flashes;
+      }),
+    );
+  }
+</script>
+
 <style>
   /* The drawing's geometry, from DESIGN.md's axon section. These belong with
      the path data above rather than in tokens.css. */
@@ -143,11 +180,14 @@ const units = Array.from({ length: Math.ceil(CONTENT_MAX / NODE_SPACING) });
     opacity: var(--hillock-op);
   }
 
+  /* The parts that flash. They rest with fill-opacity, a painted property,
+     because that is what the flash animates (DESIGN.md, Motion: Brain cells
+     and nuclei). */
   .soma,
   .node,
   .bouton {
     fill: currentColor;
-    opacity: var(--ink-rest);
+    fill-opacity: var(--ink-rest);
   }
 
   .soma {

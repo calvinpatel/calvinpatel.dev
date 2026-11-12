@@ -434,14 +434,14 @@ The ten real reconstructions in `public/cells/`, on a canvas behind the first sc
 
 ### The language
 
-One motion language runs through the whole site: a signal travels at a set speed, the thing it reaches brightens, and it fades back to rest. Travel uses `--ease-travel` (linear), because a signal moves at constant speed. Anything that appears, grows, or fades uses `--ease-out`. Anything that moves back and forth uses `--ease-oscillate` (ease-in-out), because it slows at each turn; that is only the brain's nuclei, drifting and breathing.
+One motion language runs through the whole site: a signal travels at a set speed, the thing it reaches brightens, and it fades back to rest. Travel uses `--ease-travel` (linear), because a signal moves at constant speed. Anything that appears, grows, or fades uses `--ease-out`. Anything that moves back and forth uses `--ease-oscillate` (ease-in-out), because it slows at each turn; that is only the brain's nuclei, drifting and breathing. One fade is the exception: the flash of an axon node. It rises over `--flash-in` and falls back over `--flash-out` at a steady rate (`--ease-travel`), as on the artboards, so that flashes one `--hop` apart read as one signal travelling rather than as separate blinks. The raster's spikes and Contact's nodes flash the same way.
 
 ### Rules for every piece
 
-1. **Each drawing plays once.** Each drawing, such as one raster row or one divider, plays the first time it is fully in view, then stays at rest. It doesn't wait for its section or fire with it, so drawings lower down don't play out of sight. The canvas mocks loop only so they could be reviewed.
-2. **Reduced motion.** With reduced motion on, nothing travels or drifts. Each section's drawing shows in its final, resting state. The table at the end says what each piece does instead.
+1. **Each drawing plays once.** Each drawing, such as one raster row or one divider, plays the first time it is fully in view, then stays at rest. It doesn't wait for its section or fire with it, so drawings lower down don't play out of sight. The canvas mocks loop only so they could be reviewed. A change of width or text size that resizes a drawing mid-play sends it straight to rest, and it counts as played.
+2. **Reduced motion.** With reduced motion on, nothing travels or drifts. Each section's drawing shows in its final, resting state. The table at the end says what each piece does instead. Switching it on mid-play sends a drawing straight to rest. A drawing that comes into view while it is on counts as played.
 3. **Five-second window.** The neuron layer fires on its own only for the first `--spontaneous-window` (5 seconds) after the page loads. After that, it moves only when the visitor's pointer or finger moves it. The brain's small cells stop firing on their own, and its nuclei stop drifting and breathing, at the same moment: all three ask one clock (`src/lib/spontaneous.ts`). The clock counts only while the tab is visible. WCAG 2.2.2 (Pause, Stop, Hide) requires a way to pause motion that starts by itself and runs longer than 5 seconds; motion the visitor starts doesn't count. This is why the hero has no pause button.
-4. **Nothing animates out of sight.** Animations stop while their part of the page is off screen and while the tab is hidden.
+4. **Nothing animates out of sight.** Animations stop while their part of the page is off screen and while the tab is hidden. A drawing that goes fully off screen mid-play, or whose tab is hidden, holds where it is and resumes when it's back.
 5. **Motion never sits behind or through text,** except the neuron layer, which stays under the brightness cap in Color.
 6. **Values come from tokens.css.** Never write a duration or speed into a component.
 
@@ -491,7 +491,15 @@ Clicking a lobe, a top bar link, or any other link to a section on the same page
 
 ### Axon dividers (Projects, case study)
 
-The soma fires and the signal hops node to node, one node every `--hop` (130ms). Each node rises from `--ink-rest` (45% opacity) to full over `--flash-in`, then falls back over `--flash-out`, about half a second in all. Each divider plays once as it scrolls in. **Reduced motion:** every node at rest.
+A signal hops along each divider, one node every `--hop` (130ms).
+
+- **What flashes.** The soma, the nodes, and the boutons, all the same way: from `--ink-rest` (45% opacity) to full over `--flash-in`, then back over `--flash-out`, at a steady rate (see The language), about half a second in all. The axon, hillock, sheaths, lamellae, and branches stay still.
+- **The order.** On the first divider the soma flashes first, and the first node one `--hop` later. On the others the first node flashes as the divider starts. Each node follows the one before by one `--hop`. On the last divider the three boutons flash together, one `--hop` after the last node.
+- **Only nodes that show count.** A node past the divider's right end, the first divider's hidden leading node, and a node wrapped away before the terminal are skipped, so the signal never pauses on a node nobody can see, and the gaps stay one `--hop` at every width. A node the right end cuts through counts while its center shows.
+- **Each divider plays on its own,** the first time it is fully in view (rule 1). The artboards chain a section's dividers into one signal; this replaces that.
+- **The flash is painted.** It changes `fill-opacity`, not `opacity`, as the brain's cells do (see Brain cells and nuclei).
+
+**Reduced motion:** every node at rest.
 
 ### About dendrite
 
@@ -499,7 +507,7 @@ The dendrite grows down the margin once as About scrolls in. Each segment grows 
 
 ### Experience raster
 
-A playback cursor sweeps each row once over `--sweep`, left to right. It's a `--line` vertical line as tall as `--raster-band`, at `--sweep-cursor` opacity. It fades in over `--flash-in` as it starts and out over `--flash-in` at the end, and is absent at rest. Each spike starts to rise the moment the cursor reaches it, with the same rise and fall as an axon node. The marker and year marks don't flash. If a row leaves view mid-sweep it holds and resumes; if it's resized mid-sweep it goes straight to rest. **Reduced motion:** no cursor, spikes at rest.
+A playback cursor sweeps each row once over `--sweep`, left to right. It's a `--line` vertical line as tall as `--raster-band`, at `--sweep-cursor` opacity. It fades in over `--flash-in` as it starts and out over `--flash-in` at the end, and is absent at rest. Each spike starts to rise the moment the cursor reaches it, with the same rise and fall as an axon node. The marker and year marks don't flash. **Reduced motion:** no cursor, spikes at rest.
 
 ### Skills tracing
 
