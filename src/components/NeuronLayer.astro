@@ -1,0 +1,944 @@
+---
+// The hero's neuron layer (DESIGN.md, Drawings: Neuron layer; Motion: Hero
+// neuron layer): the ten real cells from public/cells/ behind everything in
+// the first screen, with a field of DAPI nuclei. A pointer or a finger over a
+// dendrite sends input to the soma, which fires. Hero.astro places it.
+//
+// The canvas reaches behind the top bar as well as the hero. It can only
+// because none of its ancestors is positioned: its box is then measured from
+// the page's top, not from the hero's. Its z-index puts it behind the page's
+// content, over the page's background, which is on html alone (global.css).
+//
+// The rules are in src/lib: neuron-field.ts (where things go), neuron-cell.ts
+// (one cell), neuron-signal.ts (input and firing), neuron-zones.ts (the
+// brightness cap behind text). The script loads the cells after the first
+// paint, draws, and listens.
+import { readCellIndex } from '../lib/cells.ts';
+
+const files = readCellIndex().map((cell) => `/cells/${cell.file}`);
+---
+
+<canvas class="neurons" aria-hidden="true" data-neurons data-cells={JSON.stringify(files)}></canvas>
+
+<script>
+  import type { Box } from '../lib/brain-nav.ts';
+  import { inkOf } from '../lib/ink.ts';
+  import { POINTER, SHAPE, blurAlpha, hitCell, pathToSoma, prepareCell, readCell } from '../lib/neuron-cell.ts';
+  import type { CellFile, DrawnCell } from '../lib/neuron-cell.ts';
+  import {
+    FIELD,
+    REST_MAX,
+    blurOf,
+    canvasScale,
+    driftAt,
+    placeCells,
+    placeNuclei,
+    restAlpha,
+  } from '../lib/neuron-field.ts';
+  import type { Placement } from '../lib/neuron-field.ts';
+  import {
+    SIGNAL,
+    brighten,
+    deliver,
+    firingLength,
+    flashAt,
+    inputWave,
+    isQuiet,
+    restingMembrane,
+    somaGlow,
+    spike,
+    spikeWave,
+    takeInput,
+    touchSoma,
+  } from '../lib/neuron-signal.ts';
+  import type { Membrane, Timing, Wave } from '../lib/neuron-signal.ts';
+  import { ZONE, capGray, coverageMask, sameZones, veils } from '../lib/neuron-zones.ts';
+  import { spontaneousWindow } from '../lib/spontaneous.ts';
+  import { tokenReader } from '../lib/tokens.ts';
+
+  type Rgb = readonly [number, number, number];
+
+  /** One placed cell and its state. */
+  interface Neuron {
+    placement: Placement;
+    cell: DrawnCell;
+    rgb: Rgb;
+    membrane: Membrane;
+    bright: Float32Array; // each point's brightness this frame
+    lit: number; // the frame `bright` was last filled in
+    sprite: HTMLCanvasElement | null; // the resting cell, blurred; freed once the rest is baked
+    spriteBox: Box; // where the sprite goes, around the soma
+    dx: number; // its drift
+    dy: number;
+  }
+
+  const canvas = document.querySelector<HTMLCanvasElement>('[data-neurons]');
+  if (canvas) start(canvas);
+
+  function start(canvas: HTMLCanvasElement) {
+    const hero = canvas.closest('section') ?? canvas;
+    const heroText = hero.querySelector('[data-brain-clear]');
+    const brain = hero.querySelector('[data-brain]');
+    // The top bar is the layout's; its links are text over the canvas too.
+    const topBar = document.querySelector('.top-bar');
+
+    // alpha: false is a hint where it's supported. Every frame starts with an
+    // opaque fill either way, which is what the cap's last step relies on.
+    const context = canvas.getContext('2d', { alpha: false })!;
+    const signals = document.createElement('canvas');
+    const signalsContext = signals.getContext('2d')!;
+
+    const token = tokenReader();
+    const timing: Timing = {
+      dendrite: token('--signal-dendrite'),
+      backprop: token('--signal-backprop'),
+      tau: token('--membrane-tau'),
+      threshold: token('--fire-threshold'),
+      refractory: token('--refractory'),
+      rise: token('--signal-rise'),
+      inputFade: token('--signal-input-fade'),
+      inputGap: token('--signal-input-gap'),
+      backpropFade: token('--signal-backprop-fade'),
+      flash: token('--soma-flash'),
+    };
+    const somaShare = token('--neuron-soma');
+    const appear = token('--neuron-appear');
+    const idleMin = token('--neuron-idle-min');
+    const idleMax = token('--neuron-idle-max');
+    const quiet = token('--neuron-quiet');
+    const drift = { min: token('--neuron-drift-min'), max: token('--neuron-drift-max') };
+
+    const styles = getComputedStyle(document.documentElement);
+    const rgbOf = (name: string): Rgb => {
+      const hex = parseInt(styles.getPropertyValue(name).trim().slice(1), 16);
+      return [(hex >> 16) & 255, (hex >> 8) & 255, hex & 255];
+    };
+    const paint = (rgb: Rgb, alpha = 1) => `rgba(${rgb[0]},${rgb[1]},${rgb[2]},${alpha})`;
+    const colors = { gfp: rgbOf('--fluor-gfp'), tdtomato: rgbOf('--fluor-tdtomato') };
+    const dapi = rgbOf('--fluor-dapi');
+    const background = paint(rgbOf('--color-bg'));
+
+    // The cap (neuron-zones.ts): the gray every channel is held under behind
+    // text, and how far the layer is dimmed there first.
+    const gray = capGray(token('--canvas-cap-luminance'), token('--canvas-cap-brain'));
+    const veil = veils(gray, REST_MAX);
+    // A browser that doesn't know a blend mode keeps the one before it.
+    context.globalCompositeOperation = 'darken';
+    const darkens = context.globalCompositeOperation === 'darken';
+    context.globalCompositeOperation = 'source-over';
+
+    const reduced = matchMedia('(prefers-reduced-motion: reduce)');
+    const clock = spontaneousWindow();
+
+    // --- Size ----------------------------------------------------------------
+
+    let width = 0; // the canvas, in px
+    let height = 0;
+    let scale = 1; // device px drawn per px
+    let placedWidth = -1; // the width the cells were last placed for
+
+    // The canvas runs from the page's top to the hero's bottom edge, so it
+    // covers a hero that grows past the first screen. Returns whether its
+    // size changed, which also clears it.
+    function fit(): boolean {
+      const w = document.documentElement.clientWidth;
+      const h = Math.ceil(hero.getBoundingClientRect().bottom + scrollY);
+      const s = canvasScale(w, h, devicePixelRatio);
+      if (w === width && h === height && s === scale) return false;
+      [width, height, scale] = [w, h, s];
+      canvas.style.height = `${h}px`;
+      canvas.width = signals.width = Math.round(w * s);
+      canvas.height = signals.height = Math.round(h * s);
+      if (import.meta.env.DEV) {
+        const at = canvas.getBoundingClientRect();
+        if (Math.abs(at.top + scrollY) > 0.5 || Math.abs(at.left + scrollX) > 0.5) {
+          console.warn(
+            "The neuron canvas doesn't start at the page's top, so it no longer reaches behind the top bar. " +
+              'One of its ancestors has become positioned (see NeuronLayer.astro).',
+          );
+        }
+      }
+      return true;
+    }
+
+    // --- The cap's zones -----------------------------------------------------
+
+    let zones: Box[] = [];
+    // The coverage mask twice over: in black, to dim, and in the cap's gray, to clamp.
+    const veilMask = document.createElement('canvas');
+    const clampMask = document.createElement('canvas');
+
+    // Every piece of text over the canvas, in px from the canvas's corner:
+    // the hero text's ink, each brain label where it would show, the hint
+    // (and the phone line that takes its place), and the top bar's links.
+    function measureZones(): Box[] {
+      const origin = canvas.getBoundingClientRect();
+      const boxes: Box[] = [];
+      const add = (box: Box) => {
+        if (box.right <= box.left || box.bottom <= box.top) return; // not shown at this width
+        boxes.push({
+          left: box.left - origin.left,
+          top: box.top - origin.top,
+          right: box.right - origin.left,
+          bottom: box.bottom - origin.top,
+        });
+      };
+      if (heroText) inkOf(heroText).forEach(add);
+      for (const part of hero.querySelectorAll('[data-brain-label], [data-brain-hint]')) {
+        add(part.getBoundingClientRect());
+      }
+      for (const link of topBar?.querySelectorAll('a') ?? []) add(link.getBoundingClientRect());
+      return boxes;
+    }
+
+    function fillMask(mask: HTMLCanvasElement, columns: number, rows: number, alpha: Uint8ClampedArray, level: number) {
+      mask.width = columns;
+      mask.height = rows;
+      const image = new ImageData(columns, rows);
+      for (let i = 0; i < alpha.length; i++) {
+        image.data[4 * i] = image.data[4 * i + 1] = image.data[4 * i + 2] = level;
+        image.data[4 * i + 3] = alpha[i];
+      }
+      mask.getContext('2d')!.putImageData(image, 0, 0);
+    }
+
+    // Measures the zones again and, if they moved, redraws. The masks are
+    // written pixel by pixel, so a zone's alpha is exactly full.
+    function refreshZones(always = false) {
+      const measured = measureZones();
+      if (!always && sameZones(measured, zones)) return;
+      zones = measured;
+      const mask = coverageMask(zones, width, height);
+      fillMask(veilMask, mask.columns, mask.rows, mask.alpha, 0);
+      fillMask(clampMask, mask.columns, mask.rows, mask.alpha, gray);
+      draw(true);
+    }
+
+    // A mask is drawn at exactly ZONE.scale times its size, from its margin.
+    function drawMask(target: CanvasRenderingContext2D, mask: HTMLCanvasElement) {
+      const offset = -ZONE.margin * ZONE.scale;
+      target.imageSmoothingEnabled = true;
+      target.imageSmoothingQuality = 'low';
+      target.drawImage(mask, offset, offset, mask.width * ZONE.scale, mask.height * ZONE.scale);
+    }
+
+    // --- Cells ---------------------------------------------------------------
+
+    let files: CellFile[] = [];
+    let placements: Placement[] = [];
+    let neurons: Neuron[] = [];
+    let nuclei: HTMLCanvasElement | null = null; // freed once the rest is baked
+    let nucleiSize = [0, 0]; // the px it was drawn for
+    // The resting layer as one picture, kept once nothing drifts any more.
+    let rest: HTMLCanvasElement | null = null;
+    let restSize = [0, 0]; // the px it was baked for
+    let ready = false; // the cells have loaded
+    let shown = false; // and the layer has appeared
+    let building = 0;
+
+    // A cell's resting look: its dendrites, spines, and soma in its color,
+    // out of focus by its depth. Drawn once.
+    function buildSprite(neuron: Neuron) {
+      const { cell, placement, rgb } = neuron;
+      const { left, top, right, bottom } = neuron.spriteBox;
+      const sprite = document.createElement('canvas');
+      sprite.width = Math.max(1, Math.ceil((right - left) * scale));
+      sprite.height = Math.max(1, Math.ceil((bottom - top) * scale));
+      const g = sprite.getContext('2d')!;
+      g.scale(scale, scale);
+      g.translate(-left, -top);
+      g.strokeStyle = g.fillStyle = '#fff';
+      g.lineCap = g.lineJoin = 'round';
+      for (let i = 1; i < cell.count; i++) {
+        const p = cell.parent[i];
+        g.lineWidth = cell.width[i];
+        g.beginPath();
+        g.moveTo(cell.x[p], cell.y[p]);
+        g.lineTo(cell.x[i], cell.y[i]);
+        g.stroke();
+      }
+      g.lineWidth = SHAPE.spine.stroke;
+      g.beginPath();
+      for (let s = 0; s < cell.spines.length; s += 4) {
+        g.moveTo(cell.spines[s], cell.spines[s + 1]);
+        g.lineTo(cell.spines[s + 2], cell.spines[s + 3]);
+      }
+      g.stroke();
+      g.beginPath();
+      g.arc(0, 0, cell.somaRadius, 0, 2 * Math.PI);
+      g.fill();
+
+      // Blur what was drawn, and color it.
+      const image = g.getImageData(0, 0, sprite.width, sprite.height);
+      const alpha = new Uint8ClampedArray(sprite.width * sprite.height);
+      for (let i = 0; i < alpha.length; i++) alpha[i] = image.data[4 * i + 3];
+      const blurred = blurAlpha(alpha, sprite.width, sprite.height, blurOf(placement.depth) * scale);
+      for (let i = 0; i < alpha.length; i++) {
+        image.data[4 * i] = rgb[0];
+        image.data[4 * i + 1] = rgb[1];
+        image.data[4 * i + 2] = rgb[2];
+        image.data[4 * i + 3] = blurred[i];
+      }
+      g.putImageData(image, 0, 0);
+      neuron.sprite = sprite;
+    }
+
+    function buildNuclei() {
+      nuclei = document.createElement('canvas');
+      nuclei.width = canvas.width;
+      nuclei.height = canvas.height;
+      nucleiSize = [width, height];
+      const g = nuclei.getContext('2d')!;
+      g.scale(scale, scale);
+      for (const nucleus of placeNuclei(width, height)) {
+        g.fillStyle = paint(dapi, nucleus.alpha);
+        g.beginPath();
+        g.ellipse(nucleus.x, nucleus.y, nucleus.radius, nucleus.radius * nucleus.squash, nucleus.turn, 0, 2 * Math.PI);
+        g.fill();
+      }
+    }
+
+    const nextTask = () => new Promise((resolve) => setTimeout(resolve));
+
+    // Places the cells if the width changed, then draws every cell's sprite,
+    // one per task so the page stays responsive. A height change keeps every
+    // cell where it was: a phone's browser bars change the height on scroll.
+    async function build() {
+      if (!ready) return;
+      const mine = ++building;
+      fit();
+      if (width !== placedWidth) {
+        placements = placeCells(
+          width,
+          height,
+          files.map((file) => file.cellType === 'pyramidal'),
+          drift,
+        );
+        placedWidth = width;
+      }
+      const built = placements.map((placement, i): Neuron => {
+        const cell = prepareCell(files[placement.cell], {
+          size: placement.size,
+          reach: placement.reach,
+          rotation: placement.rotation,
+          mirror: placement.mirror,
+          somaShare,
+          seed: i + 1,
+        });
+        return {
+          placement,
+          cell,
+          rgb: colors[placement.color],
+          membrane: restingMembrane(),
+          bright: new Float32Array(cell.count),
+          lit: -1,
+          sprite: null,
+          spriteBox: {
+            left: cell.bounds.left - SHAPE.pad,
+            top: cell.bounds.top - SHAPE.pad,
+            right: cell.bounds.right + SHAPE.pad,
+            bottom: cell.bounds.bottom + SHAPE.pad,
+          },
+          dx: 0,
+          dy: 0,
+        };
+      });
+      for (const neuron of built) {
+        buildSprite(neuron);
+        await nextTask();
+        if (mine !== building) return; // a newer build has started
+      }
+      fit();
+      for (const neuron of neurons) free(neuron.sprite);
+      free(nuclei);
+      free(rest);
+      rest = null;
+      neurons = built;
+      waves = [];
+      buildNuclei();
+      setDrift();
+      refreshZones(true);
+      if (!shown) {
+        shown = true;
+        // The first cell to fire on its own waits for the layer to have appeared.
+        nextOwn = time + appear;
+        canvas.classList.add('is-ready');
+      }
+      wake();
+    }
+
+    function free(spent: HTMLCanvasElement | null) {
+      if (spent) spent.width = spent.height = 0;
+    }
+
+    // --- Signals -------------------------------------------------------------
+
+    let waves: Wave[] = [];
+    let time = 0; // the layer's own clock, in ms: it runs only while frames do
+    let driftTime = 0; // how long the cells have drifted
+    let nextOwn = 0; // when a cell next fires on its own
+    let frame = 0;
+    // For checks in dev: what has happened, and what each frame cost.
+    const counts = { inputs: 0, spikes: 0, own: 0, frames: 0, costs: [] as number[] };
+
+    const canMove = () => !reduced.matches && clock.isOpen();
+
+    function setDrift() {
+      for (const neuron of neurons) [neuron.dx, neuron.dy] = driftAt(neuron.placement, driftTime);
+    }
+
+    function fire(index: number, at: number, gain: number) {
+      counts.spikes++;
+      waves.push(spikeWave(index, neurons[index].cell, at, gain, timing, reduced.matches));
+    }
+
+    // What a pointer at (x, y) touches: on a dendrite, input; on a soma, a spike.
+    function touch(x: number, y: number, reach: number) {
+      neurons.forEach((neuron, index) => {
+        const { cell, membrane, placement } = neuron;
+        const point = hitCell(cell, x - placement.x - neuron.dx, y - placement.y - neuron.dy, reach);
+        if (point === 0) {
+          if (touchSoma(membrane, time, timing)) fire(index, time, 1);
+        } else if (point > 0 && takeInput(membrane, time, timing)) {
+          counts.inputs++;
+          waves.push(inputWave(index, cell, pathToSoma(cell, point), time, timing, reduced.matches));
+        }
+      });
+    }
+
+    // One step of the cells' state, to the layer's time.
+    function advance(moving: boolean) {
+      for (const sample of samples.splice(0, POINTER.perFrame)) touch(sample.x, sample.y, sample.reach);
+      samples.length = 0;
+
+      // On its own a cell fires only inside the window, and only if it can finish there.
+      if (moving && neurons.length > 0 && time >= nextOwn) {
+        const index = Math.floor(Math.random() * neurons.length);
+        const { cell, membrane } = neurons[index];
+        if (isQuiet(membrane, time, quiet) && clock.remaining() >= firingLength(cell, timing)) {
+          spike(membrane, time, SIGNAL.own);
+          fire(index, time, SIGNAL.own);
+          counts.own++;
+        }
+        nextOwn = time + idleMin + Math.random() * (idleMax - idleMin);
+      }
+
+      for (const wave of [...waves]) {
+        if (wave.delivered || time < wave.arrives) continue;
+        wave.delivered = true;
+        if (deliver(neurons[wave.cell].membrane, wave.charge, wave.arrives, timing)) fire(wave.cell, wave.arrives, 1);
+      }
+      waves = waves.filter((wave) => time < wave.end);
+    }
+
+    // --- Drawing -------------------------------------------------------------
+
+    // The resting layer: the nuclei, then each cell's sprite, farthest first,
+    // drawn normally over each other. Only each soma's DAPI dot adds its light.
+    function drawRest(g: CanvasRenderingContext2D) {
+      g.setTransform(scale, 0, 0, scale, 0, 0);
+      g.globalCompositeOperation = 'source-over';
+      g.globalAlpha = 1;
+      g.fillStyle = background;
+      g.fillRect(0, 0, width, height);
+      if (nuclei) g.drawImage(nuclei, 0, 0, nucleiSize[0], nucleiSize[1]);
+      for (const { placement, sprite, spriteBox, dx, dy } of neurons) {
+        if (!sprite) continue;
+        g.globalAlpha = restAlpha(placement.depth);
+        g.drawImage(
+          sprite,
+          placement.x + dx + spriteBox.left,
+          placement.y + dy + spriteBox.top,
+          spriteBox.right - spriteBox.left,
+          spriteBox.bottom - spriteBox.top,
+        );
+      }
+      g.globalAlpha = 1;
+      g.globalCompositeOperation = 'lighter';
+      const { nucleus } = FIELD;
+      for (const { placement, cell, dx, dy } of neurons) {
+        g.fillStyle = paint(dapi, nucleus.rest + nucleus.depth * placement.depth);
+        g.beginPath();
+        g.arc(placement.x + dx, placement.y + dy, nucleusRadius(cell), 0, 2 * Math.PI);
+        g.fill();
+      }
+      g.globalCompositeOperation = 'source-over';
+    }
+
+    const nucleusRadius = (cell: DrawnCell) => Math.max(FIELD.nucleus.min, cell.somaRadius * FIELD.nucleus.share);
+
+    // Once nothing drifts, the resting layer never changes again, so it is
+    // kept as one picture and the sprites it was made from are let go.
+    function bake() {
+      rest = document.createElement('canvas');
+      rest.width = canvas.width;
+      rest.height = canvas.height;
+      restSize = [width, height];
+      drawRest(rest.getContext('2d', { alpha: false })!);
+      for (const neuron of neurons) {
+        free(neuron.sprite);
+        neuron.sprite = null;
+      }
+      free(nuclei);
+      nuclei = null;
+    }
+
+    // A cell's lit dendrites, in steps of brightness: a soft wide line, then
+    // the signal itself. Each step is drawn at its middle, so fades taper.
+    function drawLit(g: CanvasRenderingContext2D, neuron: Neuron) {
+      const { cell, bright, rgb, placement } = neuron;
+      const { steps, faint, halo, core } = SIGNAL;
+      g.save();
+      g.translate(placement.x + neuron.dx, placement.y + neuron.dy);
+      for (const soft of [true, false]) {
+        for (let step = 1; step <= steps; step++) {
+          const low = (step - 1) / steps;
+          const high = step / steps;
+          g.beginPath();
+          let any = false;
+          for (let i = 1; i < cell.count; i++) {
+            const value = bright[i];
+            if (value < faint || value <= low || (value > high && step < steps)) continue;
+            const p = cell.parent[i];
+            g.moveTo(cell.x[p], cell.y[p]);
+            g.lineTo(cell.x[i], cell.y[i]);
+            any = true;
+          }
+          if (!any) continue;
+          const middle = (low + high) / 2;
+          g.lineWidth = soft ? halo.width + halo.widen * middle : cell.meanWidth + core.widen * middle;
+          g.strokeStyle = paint(rgb, soft ? halo.alpha * middle : Math.min(1, core.alpha * middle));
+          g.stroke();
+        }
+      }
+      g.restore();
+    }
+
+    // Where signals are drawn this frame, in px: every lit cell's box and
+    // every glowing soma's. Null when nothing is lit. Fills in each lit
+    // cell's brightness and each soma's glow on the way.
+    type Glow = ReturnType<typeof somaGlow>;
+    let glows: Glow[] = [];
+    function light(): Box | null {
+      for (const wave of waves) {
+        const neuron = neurons[wave.cell];
+        if (neuron.lit !== frame) {
+          neuron.lit = frame;
+          neuron.bright.fill(0);
+        }
+        brighten(wave, neuron.cell, time, timing, neuron.bright);
+      }
+      glows = neurons.map((neuron) => somaGlow(neuron.membrane, time, timing, reduced.matches));
+
+      let box: Box | null = null;
+      const add = (left: number, top: number, right: number, bottom: number) => {
+        box = box
+          ? {
+              left: Math.min(box.left, left),
+              top: Math.min(box.top, top),
+              right: Math.max(box.right, right),
+              bottom: Math.max(box.bottom, bottom),
+            }
+          : { left, top, right, bottom };
+      };
+      neurons.forEach((neuron, i) => {
+        const x = neuron.placement.x + neuron.dx;
+        const y = neuron.placement.y + neuron.dy;
+        const { spriteBox } = neuron;
+        if (neuron.lit === frame) add(x + spriteBox.left, y + spriteBox.top, x + spriteBox.right, y + spriteBox.bottom);
+        const glow = glows[i];
+        if (glow) {
+          const radius = neuron.cell.somaRadius * glow.radius + 1;
+          add(x - radius, y - radius, x + radius, y + radius);
+        }
+      });
+      return box;
+    }
+
+    const union = (a: Box | null, b: Box | null): Box | null =>
+      a && b
+        ? {
+            left: Math.min(a.left, b.left),
+            top: Math.min(a.top, b.top),
+            right: Math.max(a.right, b.right),
+            bottom: Math.max(a.bottom, b.bottom),
+          }
+        : (a ?? b);
+
+    // Keeps what is drawn next inside a box, on whole device px so the box
+    // leaves no seam. Undone by restore().
+    function clipTo(g: CanvasRenderingContext2D, box: Box) {
+      const left = Math.max(0, Math.floor(box.left * scale));
+      const top = Math.max(0, Math.floor(box.top * scale));
+      g.setTransform(1, 0, 0, 1, 0, 0);
+      g.beginPath();
+      g.rect(left, top, Math.ceil(box.right * scale) - left, Math.ceil(box.bottom * scale) - top);
+      g.clip();
+      g.setTransform(scale, 0, 0, scale, 0, 0);
+    }
+
+    // Everything a signal lights, on its own canvas: lit dendrites, each
+    // soma's glow, and its DAPI nucleus's flash. They add their light, as
+    // fluorescence channels do. Then it is dimmed behind text.
+    function drawSignals(g: CanvasRenderingContext2D) {
+      g.globalAlpha = 1;
+      g.globalCompositeOperation = 'lighter';
+      g.lineCap = g.lineJoin = 'round';
+      for (const neuron of neurons) if (neuron.lit === frame) drawLit(g, neuron);
+      neurons.forEach((neuron, i) => {
+        const glow = glows[i];
+        if (!glow) return;
+        const x = neuron.placement.x + neuron.dx;
+        const y = neuron.placement.y + neuron.dy;
+        const radius = neuron.cell.somaRadius * glow.radius;
+        const gradient = g.createRadialGradient(x, y, 0, x, y, radius);
+        gradient.addColorStop(0, paint(neuron.rgb, glow.alpha));
+        gradient.addColorStop(1, paint(neuron.rgb, 0));
+        g.fillStyle = gradient;
+        g.beginPath();
+        g.arc(x, y, radius, 0, 2 * Math.PI);
+        g.fill();
+        g.fillStyle = paint(dapi, FIELD.nucleus.lit * flashAt(neuron.membrane, time, timing));
+        g.beginPath();
+        g.arc(x, y, nucleusRadius(neuron.cell), 0, 2 * Math.PI);
+        g.fill();
+      });
+      g.globalCompositeOperation = 'destination-out';
+      g.globalAlpha = 1 - veil.signal;
+      drawMask(g, veilMask);
+    }
+
+    let lit: Box | null = null; // where the last frame drew signals
+
+    // One frame: the resting layer, dimmed behind text; the signals, dimmed
+    // further there, added on top; then every channel held under the cap's
+    // gray behind text, whatever was drawn.
+    //
+    // While the cells drift the whole canvas is drawn. Once the resting layer
+    // is baked, a frame only redraws where signals are or just were, unless
+    // `everything` asks for the whole canvas.
+    function draw(everything: boolean) {
+      if (!ready || width === 0) return;
+      frame++;
+      if (!canMove() && !rest && neurons.every((neuron) => neuron.sprite)) {
+        bake();
+        everything = true;
+      }
+      const lighted = light();
+      const changed = union(lit, lighted); // signals to draw, or to clear away
+      lit = lighted;
+      const whole = everything || !rest;
+      if (!whole && !changed) return;
+
+      const g = context;
+      g.save();
+      g.setTransform(scale, 0, 0, scale, 0, 0);
+      if (!whole) clipTo(g, changed!);
+      if (rest) {
+        g.globalCompositeOperation = 'source-over';
+        g.globalAlpha = 1;
+        g.fillStyle = background;
+        g.fillRect(0, 0, width, height);
+        g.drawImage(rest, 0, 0, restSize[0], restSize[1]);
+      } else {
+        drawRest(g);
+      }
+      g.globalAlpha = 1 - veil.rest;
+      drawMask(g, veilMask);
+
+      if (changed) {
+        const s = signalsContext;
+        s.save();
+        s.setTransform(scale, 0, 0, scale, 0, 0);
+        clipTo(s, changed);
+        s.globalCompositeOperation = 'source-over';
+        s.clearRect(0, 0, width, height);
+        if (lighted) drawSignals(s);
+        s.restore();
+        if (lighted) {
+          g.save();
+          clipTo(g, changed);
+          g.setTransform(1, 0, 0, 1, 0, 0);
+          g.globalAlpha = 1;
+          g.globalCompositeOperation = 'lighter';
+          g.drawImage(signals, 0, 0);
+          g.restore();
+        }
+      }
+
+      // The guarantee. Without the darken blend, dim everything to the gray instead.
+      g.globalCompositeOperation = darkens ? 'darken' : 'source-over';
+      g.globalAlpha = darkens ? 1 : 1 - gray / 255;
+      drawMask(g, darkens ? clampMask : veilMask);
+      g.restore();
+    }
+
+    // --- The loop ------------------------------------------------------------
+
+    let running = false;
+    let onScreen = true;
+    let lastStamp = 0;
+
+    const allowed = () => ready && onScreen && !document.hidden;
+    const alive = () =>
+      waves.length > 0 ||
+      samples.length > 0 ||
+      neurons.some((neuron) => somaGlow(neuron.membrane, time, timing, reduced.matches));
+
+    // Frames run only while something moves: the cells drifting inside the
+    // window, or a signal the visitor started. Then the canvas holds its last
+    // frame and nothing is drawn.
+    function tick(stamp: number) {
+      if (!allowed()) {
+        running = false;
+        return;
+      }
+      // The layer's clock stands still while no frames run, so a signal picks
+      // up where it was. A long gap between two frames counts as a short one.
+      const step = lastStamp ? Math.min(stamp - lastStamp, 100) : 0;
+      lastStamp = stamp;
+      time += step;
+      const moving = canMove();
+      if (moving) {
+        driftTime += step;
+        setDrift();
+      }
+      const began = performance.now();
+      advance(moving);
+      draw(false);
+      counts.frames++;
+      if (import.meta.env.DEV) counts.costs.push(performance.now() - began);
+      if (moving || alive()) requestAnimationFrame(tick);
+      else running = false;
+    }
+
+    function wake() {
+      if (running || !allowed()) return;
+      running = true;
+      lastStamp = 0;
+      requestAnimationFrame(tick);
+    }
+
+    // --- Pointer and finger --------------------------------------------------
+
+    // Nothing here stops a scroll or a tap: every listener is passive, on the
+    // window, and the canvas itself takes no pointer events.
+    const samples: { x: number; y: number; reach: number }[] = [];
+    let trail: { x: number; y: number; at: number } | null = null;
+
+    function pointOf(event: PointerEvent) {
+      const origin = canvas.getBoundingClientRect();
+      const x = event.clientX - origin.left;
+      const y = event.clientY - origin.top;
+      return x >= 0 && x <= width && y >= 0 && y <= height ? { x, y } : null;
+    }
+
+    // A touch at the pointer, and along the way from where it last was.
+    function follow(event: PointerEvent) {
+      const to = pointOf(event);
+      if (!to || !ready) {
+        trail = null;
+        return;
+      }
+      const reach = event.pointerType === 'mouse' ? POINTER.mouse : POINTER.finger;
+      const from = trail && event.timeStamp - trail.at < POINTER.gap ? trail : null;
+      const count = from
+        ? Math.min(POINTER.most, Math.ceil(Math.hypot(to.x - from.x, to.y - from.y) / POINTER.every))
+        : 1;
+      for (let k = 1; k <= count; k++) {
+        const t = k / count;
+        samples.push(from ? { x: from.x + (to.x - from.x) * t, y: from.y + (to.y - from.y) * t, reach } : { ...to, reach });
+      }
+      trail = { ...to, at: event.timeStamp };
+      wake();
+    }
+
+    function pressed(event: PointerEvent) {
+      if (!event.isPrimary) return;
+      trail = null;
+      follow(event);
+    }
+    // A mouse sends input wherever it moves. A finger or a pen does while it
+    // is down, until the browser takes the gesture over as a scroll.
+    function moved(event: PointerEvent) {
+      if (!event.isPrimary || (event.pointerType !== 'mouse' && event.buttons === 0)) return;
+      follow(event);
+    }
+    const lifted = () => {
+      trail = null;
+    };
+
+    const heard: [string, (event: PointerEvent) => void][] = [
+      ['pointerdown', pressed],
+      ['pointermove', moved],
+      ['pointerup', lifted],
+      ['pointercancel', lifted],
+      // A scroll moves the page under a still pointer, and a pointer can come back anywhere.
+      ['scroll', lifted],
+      ['blur', lifted],
+    ];
+    function listen(on: boolean) {
+      for (const [type, listener] of heard) {
+        if (on) addEventListener(type, listener as EventListener, { passive: true });
+        else removeEventListener(type, listener as EventListener);
+      }
+    }
+
+    // --- Start ---------------------------------------------------------------
+
+    // Every change of size redraws at once, so the cap never lags the text.
+    // The cells themselves are rebuilt once the size has settled.
+    let settle: ReturnType<typeof setTimeout> | undefined;
+    function resized() {
+      if (!fit()) {
+        refreshZones();
+        return;
+      }
+      refreshZones(true);
+      clearTimeout(settle);
+      settle = setTimeout(build, 150);
+    }
+    const sizes = new ResizeObserver(resized);
+    for (const watched of [hero, heroText, brain, topBar]) if (watched) sizes.observe(watched);
+    // The brain's labels slide to stay in bounds (Brain.astro says when), and
+    // a late font moves every line.
+    document.addEventListener('brain:placed', () => refreshZones());
+    document.fonts.ready.then(() => refreshZones());
+
+    new IntersectionObserver(([entry]) => {
+      onScreen = entry.isIntersecting;
+      listen(onScreen);
+      wake();
+    }).observe(canvas);
+    // A tab coming back may have lost what the canvas held.
+    const back = () => {
+      if (document.hidden) return;
+      draw(true);
+      wake();
+    };
+    document.addEventListener('visibilitychange', back);
+    addEventListener('pageshow', back);
+    // When the window closes, one more frame bakes the resting layer.
+    clock.whenClosed(wake);
+    reduced.addEventListener('change', build);
+
+    // The cells load after the first paint, so the hero's text and the brain
+    // never wait for them. Then the layer fades in, all at once.
+    async function load() {
+      const paths: string[] = JSON.parse(canvas.dataset.cells ?? '[]');
+      const loaded = await Promise.all(
+        paths.map(async (path) => {
+          try {
+            const response = await fetch(path);
+            if (!response.ok) throw new Error(`${response.status}`);
+            return readCell(await response.json());
+          } catch (error) {
+            if (import.meta.env.DEV) console.warn(`The neuron layer left out ${path}:`, error);
+            return null;
+          }
+        }),
+      );
+      files = loaded.filter((file) => file !== null);
+      ready = true;
+      build();
+    }
+    requestAnimationFrame(() => requestAnimationFrame(load));
+
+    // For checks in dev: what the layer holds and a way to fire it. Not in the build.
+    if (import.meta.env.DEV) {
+      Object.assign(window, {
+        __neurons: {
+          counts,
+          get frames() {
+            return counts.frames;
+          },
+          get time() {
+            return time;
+          },
+          get running() {
+            return running;
+          },
+          get zones() {
+            return zones;
+          },
+          get cells() {
+            return neurons.map((neuron) => ({
+              ...neuron.placement,
+              x: neuron.placement.x + neuron.dx,
+              y: neuron.placement.y + neuron.dy,
+              somaRadius: neuron.cell.somaRadius,
+              points: neuron.cell.count,
+            }));
+          },
+          gray,
+          veil,
+          darkens,
+          // A point partway along one of a cell's dendrites, in px from the canvas's corner.
+          dendrite(index: number) {
+            const neuron = neurons[index];
+            const point = Math.floor(neuron.cell.count * 0.4);
+            return {
+              x: neuron.placement.x + neuron.dx + neuron.cell.x[point],
+              y: neuron.placement.y + neuron.dy + neuron.cell.y[point],
+            };
+          },
+          // The whole canvas again, to compare with what the partial redraws left.
+          redraw: () => draw(true),
+          // Every canvas the layer holds, for its memory.
+          canvases() {
+            const held: [string, HTMLCanvasElement | null][] = [
+              ['canvas', canvas],
+              ['signals', signals],
+              ['rest', rest],
+              ['nuclei', nuclei],
+              ['veil mask', veilMask],
+              ['clamp mask', clampMask],
+              ...neurons.map((neuron, i): [string, HTMLCanvasElement | null] => [`sprite ${i}`, neuron.sprite]),
+            ];
+            return held.flatMap(([name, one]) => (one ? [{ name, width: one.width, height: one.height }] : []));
+          },
+          // The worst case for the cap: every cell firing at full strength,
+          // and an input from every few points of every cell.
+          flood() {
+            neurons.forEach((neuron, index) => {
+              spike(neuron.membrane, time, 1);
+              fire(index, time, 1);
+              for (let point = 5; point < neuron.cell.count; point += 40) {
+                waves.push(inputWave(index, neuron.cell, pathToSoma(neuron.cell, point), time, timing, reduced.matches));
+              }
+            });
+            wake();
+          },
+        },
+      });
+    }
+  }
+</script>
+
+<style>
+  /* Behind everything in the first screen, the top bar included: no ancestor
+     is positioned, so top: 0 is the page's top. The script sets the height to
+     the hero's bottom edge. It takes no pointer events and no focus. */
+  .neurons {
+    position: absolute;
+    top: 0;
+    left: 0;
+    z-index: -1;
+    display: block;
+    width: 100%;
+    height: 100svh;
+    pointer-events: none;
+    opacity: 0;
+  }
+
+  /* Once its cells are in, the layer fades in. */
+  .neurons.is-ready {
+    opacity: 1;
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .neurons {
+      transition: opacity var(--neuron-appear) var(--ease-out);
+    }
+  }
+</style>

@@ -6,7 +6,7 @@
 //   - Input on a dendrite travels to the soma as a short burst. Less of it
 //     arrives from further out.
 //   - The soma sums what arrives, which leaks away, and fires at a threshold.
-//     Touching the soma itself fires it at once.
+//     Touching the soma itself fires it at once, unless it has just fired.
 //   - A spike spreads back out through the dendrites and fades outward from
 //     the soma, whose glow ripples outward as it fades. None of the ten
 //     cells has a traced axon, so nothing runs down one.
@@ -24,7 +24,6 @@ export const SIGNAL = {
   // The floor keeps the tips bright enough that each point fades a set time
   // after the spike reaches it, so the fade sweeps outward too.
   spike: { strength: 0.55, floor: 0.45, length: 1.1 },
-  touch: 1.2, // what touching the soma delivers: over the threshold
   own: 0.5, // how strong a spike is when a cell fires on its own
   span: 5, // a fade is over after this many of its time constants
   faint: 0.015, // a point dimmer than this isn't drawn
@@ -149,6 +148,17 @@ export function deliver(membrane: Membrane, amount: number, at: number, timing: 
   membrane.at = at;
   if (membrane.charge < timing.threshold || at - membrane.lastSpike <= timing.refractory) return false;
   spike(membrane, at, 1);
+  return true;
+}
+
+/**
+ * A touch on the soma itself. The cell fires at once, whatever its charge and
+ * however lately it took an input, unless it is still refractory. Returns
+ * whether it fires.
+ */
+export function touchSoma(membrane: Membrane, now: number, timing: Timing): boolean {
+  if (now - membrane.lastSpike <= timing.refractory) return false;
+  spike(membrane, now, 1);
   return true;
 }
 

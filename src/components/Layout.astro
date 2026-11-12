@@ -33,6 +33,9 @@ const { title, description, home = false } = Astro.props;
     </script>
   </head>
   <body>
+    {/* The home page's neuron canvas sits behind the top bar and the hero.
+        It is measured from the page's top, so body and main stay
+        unpositioned and without a background (NeuronLayer.astro). */}
     <TopBar home={home} />
     <main>
       <slot />

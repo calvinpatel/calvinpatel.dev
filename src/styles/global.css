@@ -75,8 +75,9 @@ svg {
 
 /* --- Type ----------------------------------------------------------------- */
 
+/* The page's background is on html alone. One on body would paint over the
+   hero's neuron canvas, which sits behind the page's content. */
 body {
-  background: var(--color-bg);
   color: var(--color-text);
   font-family: var(--font-text);
   font-size: var(--step-text-4);

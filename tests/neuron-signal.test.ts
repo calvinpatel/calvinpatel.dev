@@ -18,6 +18,7 @@ import {
   spike,
   spikeWave,
   takeInput,
+  touchSoma,
 } from '../src/lib/neuron-signal.ts';
 import type { Arbor, Timing } from '../src/lib/neuron-signal.ts';
 
@@ -104,16 +105,28 @@ test('the soma sums its inputs, which leak away, and fires at the threshold', ()
   assert.equal(deliver(slow, 0.6, 1000 + 4 * TIMING.tau, TIMING), false);
 });
 
-test('touching the soma fires the cell at once', () => {
-  assert.equal(deliver(restingMembrane(), SIGNAL.touch, 500, TIMING), true);
+test('touching the soma fires the cell at once, even just after an input', () => {
+  const membrane = restingMembrane();
+  assert.ok(takeInput(membrane, 490, TIMING));
+  assert.equal(touchSoma(membrane, 500, TIMING), true);
+  assert.equal(membrane.lastSpike, 500);
+  assert.equal(membrane.gain, 1);
 });
 
 test("a cell can't fire again until its refractory time is over", () => {
   const membrane = restingMembrane();
-  assert.equal(deliver(membrane, SIGNAL.touch, 1000, TIMING), true);
-  assert.equal(deliver(membrane, SIGNAL.touch, 1000 + TIMING.refractory, TIMING), false);
+  assert.equal(touchSoma(membrane, 1000, TIMING), true);
+  assert.equal(touchSoma(membrane, 1000 + TIMING.refractory, TIMING), false);
+  assert.equal(deliver(membrane, 1.5, 1000 + TIMING.refractory, TIMING), false);
   assert.equal(membrane.lastSpike, 1000);
-  assert.equal(deliver(membrane, SIGNAL.touch, 1000 + TIMING.refractory + 1, TIMING), true);
+  assert.equal(touchSoma(membrane, 1000 + TIMING.refractory + 1, TIMING), true);
+});
+
+test("touches on a refractory soma don't build up charge", () => {
+  const membrane = restingMembrane();
+  touchSoma(membrane, 1000, TIMING);
+  for (let at = 1010; at < 1400; at += 10) touchSoma(membrane, at, TIMING);
+  assert.equal(chargeAt(membrane, 1400, TIMING), 0);
 });
 
 test('a spike spreads out through the dendrites and fades outward from the soma', () => {

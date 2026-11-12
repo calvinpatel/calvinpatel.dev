@@ -22,7 +22,7 @@ export const SHAPE = {
   step: 8, // the longest stretch between two points, so a signal moves smoothly
   // A line's width: the spike's formula, base + gain × radius, kept between
   // min and max. The radius is `tip` (a share of the cell's size) at a tip.
-  line: { tip: 0.0016, base: 0.35, gain: 0.9, min: 0.45, max: 2.6 },
+  line: { tip: 0.0022, base: 0.35, gain: 0.9, min: 0.45, max: 2.6 },
   soma: { min: 2.2, max: 7, reach: 8 }, // the radius's limits, and how far past it a pointer still touches it
   spine: {
     every: 0.02, // of the cell's size: one place for a spine this often along a dendrite
@@ -36,6 +36,16 @@ export const SHAPE = {
   },
   grid: 24, // the side of one square of the pointer's lookup grid
   pad: 10, // room around a cell's bounds for its spines and its blur
+} as const;
+
+/** How a pointer reaches the layer. Lengths are px and times ms. */
+export const POINTER = {
+  mouse: 14, // how near a dendrite a mouse has to pass to touch it
+  finger: 24, // and a finger or a pen; no more than one grid square
+  every: 10, // a fast pointer's path is filled in with a touch this often,
+  most: 24, // up to this many between two of its events
+  gap: 100, // two events further apart than this aren't one path
+  perFrame: 80, // the most touches worked out in one frame
 } as const;
 
 const AXON = 2;
@@ -310,29 +320,29 @@ export function blurAlpha(alpha: Uint8ClampedArray, width: number, height: numbe
   }
   for (let k = 0; k <= radius; k++) weights[k] /= sum;
 
-  // Across each row, then down each column. Past the sprite's edge is empty.
+  // Across each row, then down each column. A sprite is mostly empty, so each
+  // pass spreads only the pixels that hold something. What would land past
+  // the sprite's edge is lost.
   const across = new Float32Array(width * height);
   for (let row = 0; row < height; row++) {
     const start = row * width;
     for (let column = 0; column < width; column++) {
-      let value = alpha[start + column] * weights[0];
-      for (let k = 1; k <= radius; k++) {
-        if (column - k >= 0) value += alpha[start + column - k] * weights[k];
-        if (column + k < width) value += alpha[start + column + k] * weights[k];
-      }
-      across[start + column] = value;
+      const value = alpha[start + column];
+      if (value === 0) continue;
+      const from = Math.max(0, column - radius);
+      const to = Math.min(width - 1, column + radius);
+      for (let c = from; c <= to; c++) across[start + c] += value * weights[Math.abs(c - column)];
     }
   }
-  const blurred = new Uint8ClampedArray(width * height);
+  const down = new Float32Array(width * height);
   for (let row = 0; row < height; row++) {
+    const from = Math.max(0, row - radius);
+    const to = Math.min(height - 1, row + radius);
     for (let column = 0; column < width; column++) {
-      let value = across[row * width + column] * weights[0];
-      for (let k = 1; k <= radius; k++) {
-        if (row - k >= 0) value += across[(row - k) * width + column] * weights[k];
-        if (row + k < height) value += across[(row + k) * width + column] * weights[k];
-      }
-      blurred[row * width + column] = value; // rounds to the nearest whole number
+      const value = across[row * width + column];
+      if (value === 0) continue;
+      for (let r = from; r <= to; r++) down[r * width + column] += value * weights[Math.abs(r - row)];
     }
   }
-  return blurred;
+  return new Uint8ClampedArray(down); // each value rounds to the nearest whole number
 }

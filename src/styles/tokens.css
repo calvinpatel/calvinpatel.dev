@@ -72,11 +72,15 @@
 
   /* Neuron layer behind any text, including every brain label position.
      The brightest pixel, counting signals, soma glows, and overlaps, stays at
-     or under this luminance. Over black that equals these channel opacities. */
+     or under this luminance. Over black that equals these channel opacities,
+     each for its color alone; the layer holds every channel under one gray
+     instead, which also counts overlaps (DESIGN.md, Color: Contrast). */
   --canvas-cap-luminance: 0.053;
   --canvas-cap-gfp:       0.33;
   --canvas-cap-tdtomato:  0.45;
   --canvas-cap-dapi:      0.53;
+  --canvas-cap-brain:     0.0013;  /* the most the brain adds over the canvas behind a label;
+                                      the canvas keeps that much under the cap */
 
   /* ---------------------------------------------------------------------
      Type
@@ -229,6 +233,9 @@
   --brain-lift:           1.045;      /* the active lobe's scale */
   --brain-edge-op:        0.9;        /* the active lobe's edge */
 
+  /* Neuron layer (hero). Its other fixed values are in src/lib/neuron-*.ts. */
+  --neuron-soma:          0.022;      /* a soma's radius, as a share of its cell's size */
+
   /* ---------------------------------------------------------------------
      Motion. DESIGN.md's Motion section says where each value is used.
      Speeds are unitless px per ms; scripts parseFloat them.
@@ -236,12 +243,25 @@
 
   /* Signals: the hero's neuron layer and the brain callouts */
   --signal-dendrite:    0.32;
-  --signal-axon:        1.15;
+  --signal-axon:        1.15;    /* not used yet: none of the ten cells has a traced axon */
   --signal-backprop:    0.55;    /* also the pulse along a brain callout */
   --membrane-tau:       260ms;
   --fire-threshold:     1;
   --refractory:         420ms;
   --spontaneous-window: 5000ms;  /* the layer fires on its own only this long after load */
+
+  /* The neuron layer's signals and its own motion */
+  --signal-rise:          24ms;     /* a point brightening as a signal reaches it */
+  --signal-input-fade:    70ms;     /* an input burst fading behind its front */
+  --signal-input-gap:     70ms;     /* the least time between two inputs to one cell */
+  --signal-backprop-fade: 200ms;    /* a spike fading in the dendrites */
+  --soma-flash:           220ms;    /* the soma's glow fading, and rippling outward as it does */
+  --neuron-appear:        600ms;    /* the layer fading in once its cells have loaded */
+  --neuron-idle-min:      1600ms;   /* between cells firing on their own */
+  --neuron-idle-max:      4200ms;
+  --neuron-quiet:         1500ms;   /* a cell fires on its own only this long after its last spike */
+  --neuron-drift-min:     19000ms;  /* one full drift, side to side: each cell's own, between these */
+  --neuron-drift-max:     33000ms;
 
   /* Section drawings: each plays once, the first time it is fully in view */
   --hop:          130ms;   /* node to node along an axon; the stagger step */

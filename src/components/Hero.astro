@@ -1,15 +1,20 @@
 ---
 // The hero: the name and the two hero sentences, middle left, beside the
-// brain navigation. The neuron canvas comes later.
+// brain navigation, over the neuron layer.
 import { getEntry } from 'astro:content';
 
 import Brain from './Brain.astro';
 import Copy from './Copy.astro';
+import NeuronLayer from './NeuronLayer.astro';
 
 const hero = (await getEntry('hero', 'hero'))!.data;
 ---
 
 <section class="hero">
+  {/* The neuron canvas reaches behind the top bar too, which it can only
+      while neither this section nor anything above it is positioned
+      (NeuronLayer.astro). */}
+  <NeuronLayer />
   <div class="container grid">
     {/* The brain's labels keep clear of this text (Brain.astro's script). */}
     <div class="text" data-brain-clear>
@@ -29,7 +34,8 @@ const hero = (await getEntry('hero', 'hero'))!.data;
 </section>
 
 <style>
-  /* With the top bar above it, the hero fills the first screen. */
+  /* With the top bar above it, the hero fills the first screen. It stays
+     unpositioned: the neuron canvas is measured from the page's top. */
   .hero {
     display: flex;
     align-items: center;
