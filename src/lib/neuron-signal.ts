@@ -20,6 +20,8 @@
 export const SIGNAL = {
   // A wave's brightness at a point: strength × the larger of `floor` and how
   // far it has decayed over `length` (a share of the cell's longest path).
+  // An input's `length` is also how far it carries: the charge that reaches
+  // the soma falls to 1/e over it.
   input: { strength: 0.95, floor: 0.35, length: 0.55 },
   // The floor keeps the tips bright enough that each point fades a set time
   // after the spike reaches it, so the fade sweeps outward too.
@@ -48,7 +50,6 @@ export interface Timing {
   refractory: number; // --refractory
   rise: number; // --signal-rise
   inputFade: number; // --signal-input-fade
-  inputGap: number; // --signal-input-gap
   backpropFade: number; // --signal-backprop-fade
   flash: number; // --soma-flash
 }
@@ -66,11 +67,10 @@ export interface Membrane {
   at: number;
   lastSpike: number;
   gain: number; // the last spike's strength
-  lastInput: number;
 }
 
 export function restingMembrane(): Membrane {
-  return { charge: 0, at: 0, lastSpike: -Infinity, gain: 1, lastInput: -Infinity };
+  return { charge: 0, at: 0, lastSpike: -Infinity, gain: 1 };
 }
 
 /** One signal crossing a cell. */
@@ -90,16 +90,11 @@ export interface Wave {
   delivered: boolean;
 }
 
-/** Whether a cell takes an input now: at most one every --signal-input-gap. Takes it if so. */
-export function takeInput(membrane: Membrane, now: number, timing: Timing): boolean {
-  if (now - membrane.lastInput < timing.inputGap) return false;
-  membrane.lastInput = now;
-  return true;
-}
-
 /**
  * The burst an input at a dendrite point sends to the soma. `path` is the
- * points from there to the soma (pathToSoma).
+ * points from there to the soma (pathToSoma). Every crossing sends one, with
+ * no limit on how soon after the last. `carry` is how far it carries, as a
+ * share of the cell's longest path.
  */
 export function inputWave(
   cell: number,
@@ -108,9 +103,10 @@ export function inputWave(
   now: number,
   timing: Timing,
   still: boolean,
+  carry: number = SIGNAL.input.length,
 ): Wave {
   const from = arbor.dist[path[0]];
-  const length = arbor.farthest * SIGNAL.input.length;
+  const length = arbor.farthest * carry;
   const arrives = now + (still ? 0 : from / timing.dendrite);
   return {
     cell,
@@ -152,9 +148,8 @@ export function deliver(membrane: Membrane, amount: number, at: number, timing: 
 }
 
 /**
- * A touch on the soma itself. The cell fires at once, whatever its charge and
- * however lately it took an input, unless it is still refractory. Returns
- * whether it fires.
+ * A touch on the soma itself. The cell fires at once, whatever its charge,
+ * unless it is still refractory. Returns whether it fires.
  */
 export function touchSoma(membrane: Membrane, now: number, timing: Timing): boolean {
   if (now - membrane.lastSpike <= timing.refractory) return false;

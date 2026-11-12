@@ -253,7 +253,6 @@
   /* The neuron layer's signals and its own motion */
   --signal-rise:          24ms;     /* a point brightening as a signal reaches it */
   --signal-input-fade:    70ms;     /* an input burst fading behind its front */
-  --signal-input-gap:     70ms;     /* the least time between two inputs to one cell */
   --signal-backprop-fade: 200ms;    /* a spike fading in the dendrites */
   --soma-flash:           220ms;    /* the soma's glow fading, and rippling outward as it does */
   --neuron-appear:        600ms;    /* the layer fading in once its cells have loaded */

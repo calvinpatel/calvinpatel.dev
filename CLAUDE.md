@@ -55,6 +55,7 @@ Cal Patel's portfolio site. It reads as a nervous system: real neuron reconstruc
 | `uv run --with pytest --with numpy pytest tests/test_swc_to_web.py` | Runs the converter's tests (from the repo root) |
 | `node --test tests/*.test.ts` | Runs every `src/lib/` module's tests (from the repo root) |
 | `npx astro dev --background` | Runs the dev server in the background so Claude Code can keep working and take screenshots; `npx astro dev status`, `logs`, and `stop` manage it |
+| `http://localhost:4321/?carry=0.8` | Dev server only: tries another value for how far a neuron's input carries along its dendrite (0.55 without it; `SIGNAL.input.length` in `src/lib/neuron-signal.ts`). The parameter isn't in the built site |
 
 Deploys happen through Workers Builds. Don't run `wrangler deploy` unless Cal asks.
 

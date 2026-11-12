@@ -17,7 +17,6 @@ import {
   somaGlow,
   spike,
   spikeWave,
-  takeInput,
   touchSoma,
 } from '../src/lib/neuron-signal.ts';
 import type { Arbor, Timing } from '../src/lib/neuron-signal.ts';
@@ -31,7 +30,6 @@ const TIMING: Timing = {
   refractory: 420,
   rise: 24,
   inputFade: 70,
-  inputGap: 70,
   backpropFade: 200,
   flash: 220,
 };
@@ -82,11 +80,24 @@ test('less charge arrives from further out, and never enough to fire alone', () 
   assert.ok(far.charge > 0);
 });
 
-test('a cell takes one input per gap', () => {
+test('every input counts, however soon after the last', () => {
+  // Three branches crossed within a few ms: three inputs, and their charges add up at the soma.
   const membrane = restingMembrane();
-  assert.ok(takeInput(membrane, 1000, TIMING));
-  assert.ok(!takeInput(membrane, 1000 + TIMING.inputGap - 1, TIMING));
-  assert.ok(takeInput(membrane, 1000 + TIMING.inputGap, TIMING));
+  const waves = [0, 5, 10].map((at) => inputWave(0, ARBOR, pathFrom(3), at, TIMING, false));
+  assert.equal(new Set(waves.map((wave) => wave.arrives)).size, 3);
+  const fired = waves.map((wave) => deliver(membrane, wave.charge, wave.arrives, TIMING));
+  assert.deepEqual(fired, [false, true, false]);
+});
+
+test('an input that carries further delivers more charge, and lights more of its path', () => {
+  const short = inputWave(0, ARBOR, pathFrom(40), 0, TIMING, false);
+  const long = inputWave(0, ARBOR, pathFrom(40), 0, TIMING, false, 1.1);
+  assert.equal(short.length, ARBOR.farthest * SIGNAL.input.length);
+  assert.ok(Math.abs(short.charge - Math.exp(-1 / SIGNAL.input.length)) < 1e-9);
+  assert.ok(Math.abs(long.charge - Math.exp(-1 / 1.1)) < 1e-9);
+  assert.ok(long.charge > short.charge && long.length > short.length);
+  // When it arrives is the same: only how much of it does.
+  assert.equal(long.arrives, short.arrives);
 });
 
 test('the soma sums its inputs, which leak away, and fires at the threshold', () => {
@@ -105,9 +116,9 @@ test('the soma sums its inputs, which leak away, and fires at the threshold', ()
   assert.equal(deliver(slow, 0.6, 1000 + 4 * TIMING.tau, TIMING), false);
 });
 
-test('touching the soma fires the cell at once, even just after an input', () => {
+test('touching the soma fires the cell at once, whatever its charge', () => {
   const membrane = restingMembrane();
-  assert.ok(takeInput(membrane, 490, TIMING));
+  deliver(membrane, 0.3, 490, TIMING);
   assert.equal(touchSoma(membrane, 500, TIMING), true);
   assert.equal(membrane.lastSpike, 500);
   assert.equal(membrane.gain, 1);

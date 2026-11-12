@@ -50,7 +50,6 @@ const files = readCellIndex().map((cell) => `/cells/${cell.file}`);
     somaGlow,
     spike,
     spikeWave,
-    takeInput,
     touchSoma,
   } from '../lib/neuron-signal.ts';
   import type { Membrane, Timing, Wave } from '../lib/neuron-signal.ts';
@@ -113,10 +112,19 @@ const files = readCellIndex().map((cell) => `/cells/${cell.file}`);
       refractory: token('--refractory'),
       rise: token('--signal-rise'),
       inputFade: token('--signal-input-fade'),
-      inputGap: token('--signal-input-gap'),
       backpropFade: token('--signal-backprop-fade'),
       flash: token('--soma-flash'),
     };
+    // How far an input carries along a dendrite. In dev only, ?carry=0.8 in
+    // the address tries another value (CLAUDE.md, Commands).
+    let carry: number = SIGNAL.input.length;
+    if (import.meta.env.DEV) {
+      const asked = Number(new URLSearchParams(location.search).get('carry'));
+      if (asked > 0) {
+        carry = asked;
+        console.info(`Neuron layer: inputs carry ${asked} of a cell's longest path, not ${SIGNAL.input.length}.`);
+      }
+    }
     const somaShare = token('--neuron-soma');
     const appear = token('--neuron-appear');
     const idleMin = token('--neuron-idle-min');
@@ -427,9 +435,9 @@ const files = readCellIndex().map((cell) => `/cells/${cell.file}`);
         const point = cross(neuron.crossing, cell, x - placement.x - neuron.dx, y - placement.y - neuron.dy, reach);
         if (point === 0) {
           if (touchSoma(membrane, time, timing)) fire(index, time, 1);
-        } else if (point > 0 && takeInput(membrane, time, timing)) {
+        } else if (point > 0) {
           counts.inputs++;
-          waves.push(inputWave(index, cell, pathToSoma(cell, point), time, timing, reduced.matches));
+          waves.push(inputWave(index, cell, pathToSoma(cell, point), time, timing, reduced.matches, carry));
         }
       });
     }
@@ -949,6 +957,7 @@ const files = readCellIndex().map((cell) => `/cells/${cell.file}`);
           gray,
           veil,
           darkens,
+          carry,
           // A point partway along one of a cell's dendrites, in px from the canvas's corner.
           dendrite(index: number) {
             const neuron = neurons[index];
@@ -980,7 +989,9 @@ const files = readCellIndex().map((cell) => `/cells/${cell.file}`);
               spike(neuron.membrane, time, 1);
               fire(index, time, 1);
               for (let point = 5; point < neuron.cell.count; point += 40) {
-                waves.push(inputWave(index, neuron.cell, pathToSoma(neuron.cell, point), time, timing, reduced.matches));
+                waves.push(
+                  inputWave(index, neuron.cell, pathToSoma(neuron.cell, point), time, timing, reduced.matches, carry),
+                );
               }
             });
             wake();
