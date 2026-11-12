@@ -223,9 +223,9 @@ Media queries can't read custom properties, so these widths are written as numbe
 - **Spacing:** heading to the first raster `--space-l`; a raster to its entry's text `--space-s`; role to organization `--space-3xs`; organization to description `--space-xs`; the end of one entry to the next raster `--space-l`.
 
 **Skills.**
-- **Desktop.** Skills on the left flow into their nine groups in the middle, then out to the places they were used on the right. Every label is readable without hovering. Hovering a skill, group, or place traces its path. A plain list sits behind the diagram for screen readers.
+- **Desktop.** Skills on the left flow into their nine groups in the middle, then out to the places they were used on the right. Every label is readable without hovering. Hovering a skill, group, or place with a mouse or a pen traces its path. A plain list sits behind the diagram for screen readers.
 - **What keeps it from being a plexus.** Every dot is labeled, every connection is curved and carries real data, and the flow runs in one direction. Never use straight lines or unlabeled dots, and never use the diagram as background decoration.
-- **Phones.** One small diagram per group, with the group name as its heading. Each skill connects straight to its own places, with no group node, so the static figure never implies a connection that isn't true. There is no hover on phones.
+- **Phones.** One small diagram per group, with the group name as its heading. Each skill connects straight to its own places, with no group node, so the static figure never implies a connection that isn't true. These diagrams never trace.
 - **Which one shows.** The section's own content width decides, in rem (see Breakpoints): the desktop diagram at 45rem or more, one diagram per group from 17.5rem to 45rem, and the plain list below 17.5rem.
 - **The plain list.** Nine groups, each with its skills, each item written like the Site copy line: "Anthropic API (tool use, structured outputs, streaming): NotePilot". Screen readers get it at every width. It is visible, in place of the diagrams, below 17.5rem and with JavaScript off, because the script draws the diagrams. When visible, group names are `--step-text-7` muted, as on phones, and the skills are body text in the secondary color.
 
@@ -311,8 +311,18 @@ Each divider is a `--axon-band` (28px) strip with the axon through its middle. C
 - **States.**
   - At rest, wires are `--line` at `--wire-op`.
   - While tracing, the traced wires are `--wire-traced-stroke` at `--wire-traced-op`, and the others drop to `--wire-dimmed-op`.
-  - Labels and dots off the traced path dim to `--dim-text-min`.
-  - Each label's whole row is the hover target.
+  - Labels and dots off the traced path dim to `--dim-text-min`: the main text color at that opacity, so a dimmed skill label changes from the secondary color (see Color: Contrast). A dimmed group label keeps its full outline, so it still hides the wires behind it. Everything on the path looks exactly as it does at rest.
+  - Overlaps never brighten, in any state. Where wires cross or converge they are no brighter than one wire, traced or dimmed, and a traced wire is unbroken where dimmed wires cross it.
+  - The wires are two layers under the dots and labels, each with one opacity for the whole layer. The first holds every wire at `--line`. The second holds a copy of every wire at `--wire-traced-stroke`, and only the traced copies show. A traced wire lies over its own dimmed line, so its middle is about 86%, evenly along its length.
+- **What a path is.**
+  - A skill: its wire, its group, its group's wires to the places that skill was used, and those places. Never a group's wire to a place this skill wasn't used: MATLAB lights Languages → Cedars-Sinai and Languages → Mehta Lab, not Languages → NotePilot.
+  - A group: all its skills and their wires, the group, all its wires out, and all its places.
+  - A place: every skill used there, their wires and groups, and only those groups' wires to that place. No other place lights.
+- **Hover targets.**
+  - A skill's row runs from the diagram's left edge to where its wire starts. A place's row runs from where its wires end to the diagram's right edge. Each is one row tall, centered on its dot, and at least as tall as one line of its label.
+  - A group's target is one box from the top of its label to the bottom of its dot, as wide as the label.
+  - The cursor stays the default arrow, since nothing here is a link.
+- **Only the desktop diagram traces.** The per-group diagrams never do, with any pointer.
 - **Phones (the section's content narrower than 45rem).** One diagram per group:
   - Columns: skill labels end at 47.4% and skill dots sit at 49.7%; place dots sit at 70.3% and place labels start at 73.1%.
   - Column shift: where the longest labels don't fit those fractions (windows narrower than about 363px at default text), the two columns move toward each other just far enough to keep them inside the content. Skill labels end at the larger of 47.4% and the longest skill label's width; place labels start at the smaller of 73.1% and the content width less the longest place label's width. Each dot keeps its distance from its label (2.3% and 2.8% of the width), and every group uses the same columns. The script measures the labels, so a longer name adjusts itself.
@@ -493,7 +503,16 @@ A playback cursor sweeps each row once over `--sweep`, left to right. It's a `--
 
 ### Skills tracing
 
-Hovering a skill, group, or place brings its whole path to full strength and dims the rest over `--fade`. Dimmed labels stay at `--dim-text-min` or more. Tracing is for pointers only. The wires at rest already meet 3:1, so the diagram reads fully without it, and the diagram holds nothing focusable, so it can stay hidden from screen readers. **Reduced motion:** the change is instant. **Phones:** no tracing.
+- **Tracing.** In the desktop diagram, hovering a skill, group, or place with a mouse or a pen brings its whole path to full strength and dims the rest, over `--fade` with `--ease-out`. Drawings: Wiring diagram says what a path is. Dimmed labels stay at `--dim-text-min` or more.
+- **Between targets.** The trace holds while the pointer crosses blank parts of the diagram: the wires and the gaps between groups. It changes when the pointer enters another target. When the pointer leaves the diagram, it returns to rest, also over `--fade`.
+- **From one target to the next.** The old path fades down and the new one up together. A wire on both paths stays at full strength throughout, with no dip. During a fade, wires that overlap run a little ahead of a single wire, never past the traced strength.
+- **A finger never traces,** even where the desktop diagram shows on a touch screen, as on most iPads. A tap there does nothing, and nothing stays traced. That matches the hint, which shows only with a pointer that can hover.
+- **The per-group diagrams never trace** (the section's content narrower than 45rem), with any pointer.
+- **A redraw returns the diagram to rest at once:** a change of width or text size, or the desktop diagram no longer showing.
+- **No `opacity` transition runs in the diagram,** for the reason in Brain cells and nuclei. Labels and dots fade with `fill` and `fill-opacity`, traced wires with `stroke-opacity`, and the resting layer's opacity is set from a registered custom property that transitions instead.
+- **Why a mouse or a pen only.** The wires at rest already meet 3:1, so the diagram reads fully without tracing. It holds nothing focusable, so it can stay hidden from screen readers.
+
+**Reduced motion:** the change is instant.
 
 ### Contact sequence
 
@@ -537,8 +556,8 @@ Plays once when Contact scrolls in. Times are measured from the first hop:
 ## Accessibility
 
 - **Contrast.** WCAG 2.2 AA for every text pair, plus the dimmed-label floor, the line-art floor, and the canvas cap above.
-- **Keyboard.** Every link and lobe is reachable with Tab, in reading order, with a visible focus ring. On the brain, hover and keyboard focus do the same thing. Skills tracing is for pointers only, because the diagram reads fully at rest and is hidden from screen readers, so it holds nothing focusable.
-- **Touch.** Brain lobes need two taps: the first shows the label, the second goes to the section. A screen reader's activation goes straight to the section. Nothing depends on hover on phones. Tap targets are at least 44px, the brain's lobes included (see Brain navigation). A tap or a swipe over the neuron layer never blocks a scroll or a link.
+- **Keyboard.** Every link and lobe is reachable with Tab, in reading order, with a visible focus ring. On the brain, hover and keyboard focus do the same thing. Skills tracing is for a mouse or a pen only, because the diagram reads fully at rest and is hidden from screen readers, so it holds nothing focusable.
+- **Touch.** Brain lobes need two taps: the first shows the label, the second goes to the section. A screen reader's activation goes straight to the section. Nothing depends on hover on phones. Tap targets are at least 44px, the brain's lobes included (see Brain navigation). A tap or a swipe over the neuron layer never blocks a scroll or a link. A tap on the Skills diagram does nothing.
 - **Screen readers.**
   - The neuron canvas is hidden from screen readers (`aria-hidden="true"`) and takes no focus.
   - Each brain lobe is a real link with a name a screen reader can say: its section label, then its lobe line. The five sit in a nav named "Brain map."

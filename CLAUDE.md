@@ -23,7 +23,7 @@ Cal Patel's portfolio site. It reads as a nervous system: real neuron reconstruc
 ├── src/content/       one Markdown file per section and per project
 ├── src/components/    the shared layout, hero canvas, brain navigation, section layouts
 ├── src/lib/           copy.ts, which renders every content field; raster.ts, the Experience raster's pattern;
-│                      wiring.ts, the Skills wiring diagram's geometry; pixels.ts and tokens.ts, which drawings share;
+│                      wiring.ts, the Skills wiring diagram's geometry and traced paths; pixels.ts and tokens.ts, which drawings share;
 │                      cells.ts, which reads public/cells/index.json for the Credits page;
 │                      brain.ts, the hero brain's geometry; brain-nav.ts, the brain navigation's rules;
 │                      spontaneous.ts, the five-second window's clock, which the brain and the neuron layer share;

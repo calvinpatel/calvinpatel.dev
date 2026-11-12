@@ -5,10 +5,9 @@
 // one group's own diagram, each skill wired straight to its own places.
 // Skills.astro shows one layout or the other.
 //
-// Drawn at rest. Tracing comes with the motion step: every dot, label, and
-// wire is already tagged with the skill, group, or place it belongs to
-// (data-skill, data-group, data-place, and data-places for a skill's places),
-// so tracing can attach without a redraw.
+// Every dot, label, and wire is tagged with the skill, group, or place it
+// belongs to (data-skill, data-group, data-place, and data-places for a
+// skill's places).
 //
 // Two layers:
 //
@@ -20,6 +19,18 @@
 //     src/lib/wiring.ts, which keeps every dot and wire on whole pixels.
 //     Sizes, colors, and text are set in the styles below, and the script
 //     only moves things.
+//
+// The desktop diagram traces (DESIGN.md, Motion: Skills tracing): hovering a
+// skill, group, or place with a mouse or a pen lights its path and dims the
+// rest. A group's own diagram never does.
+//
+//   - Each skill, group, and place holds an unseen box, its hover target.
+//   - The script marks what is on the path (data-lit) and that a trace is
+//     showing (data-tracing). The styles below do the look and the fade.
+//   - The wires are drawn twice: every wire in the resting layer, and a copy
+//     of each in the traced layer above it, where only the lit copies show.
+//     Each layer has one opacity, so wires that cross or converge never
+//     brighten where they overlap, at rest, traced, or dimmed.
 //
 // Decorative to a screen reader: Skills.astro hides it and gives the same
 // connections as a plain list.
@@ -62,28 +73,44 @@ const reserve =
     ? `--rows: ${rows}; --gaps: ${gaps}; --first-row: ${DESKTOP.firstRow}px; --room-below: ${DESKTOP.roomBelow}px`
     : `--rows: ${groupRows(whole, group)}`;
 
+// Each wire's tags, in the order the script draws them: the desktop diagram's
+// skill wires and then its group-to-place wires, or one group's own.
+const wires =
+  group === undefined
+    ? [
+        ...drawnSkills.map((skill) => ({
+          'data-skill': skill.number,
+          'data-group': skill.group,
+          'data-places': skill.places.join(' '),
+        })),
+        ...desktopPlaceWires(whole).map((wire) => ({ 'data-group': wire.group, 'data-place': wire.place })),
+      ]
+    : groupWires(whole, group).map((wire) => ({ 'data-skill': drawnSkills[wire.skill].number, 'data-place': wire.place }));
+
 const drop = `${LABEL_DROP_EM}em`;
 ---
 
 <div class="wiring" data-wiring={group === undefined ? 'desktop' : 'group'} style={reserve}>
   <svg>
     {
-      /* One layer for the wires. Its opacity is the layer's, so wires that
-         cross or converge don't brighten where they overlap. */
+      /* The resting layer: every wire. Its opacity is the layer's, so wires
+         that cross or converge don't brighten where they overlap. */
     }
     <g class="wires">
-      {
-        group === undefined
-          ? [
-              drawnSkills.map((skill) => <path data-skill={skill.number} data-group={skill.group} data-places={skill.places.join(' ')} />),
-              desktopPlaceWires(whole).map((wire) => <path data-group={wire.group} data-place={wire.place} />),
-            ]
-          : groupWires(whole, group).map((wire) => <path data-skill={drawnSkills[wire.skill].number} data-place={wire.place} />)
-      }
+      {wires.map((tags) => <path {...tags} />)}
     </g>
     {
+      /* The desktop diagram's traced layer: a copy of every wire, over the
+         resting layer and under the dots and labels. Only the copies on the
+         traced path show. */
+      group === undefined && <g class="traced">{wires.map((tags) => <path {...tags} />)}</g>
+    }
+    {
+      /* In the desktop diagram each skill, group, and place starts with its
+         hover target, an unseen box under its dot and label. */
       drawnSkills.map((skill) => (
         <g class="skill" data-skill={skill.number} data-group={skill.group} data-places={skill.places.join(' ')}>
+          {group === undefined && <rect />}
           <circle />
           <text dy={drop}>{copyText(skill.name)}</text>
         </g>
@@ -93,6 +120,7 @@ const drop = `${LABEL_DROP_EM}em`;
       group === undefined &&
         skills.groups.map((entry, g) => (
           <g class="group" data-group={g}>
+            <rect />
             <circle />
             <text>{copyText(entry.name)}</text>
           </g>
@@ -101,6 +129,7 @@ const drop = `${LABEL_DROP_EM}em`;
     {
       drawnPlaces.map((place) => (
         <g class="place" data-place={place}>
+          {group === undefined && <rect />}
           <circle />
           <text dy={drop}>{copyText(placeLabel.get(place)!)}</text>
         </g>
@@ -111,8 +140,8 @@ const drop = `${LABEL_DROP_EM}em`;
 
 <script>
   import { tokenReader } from '../lib/tokens.ts';
-  import { desktopLayout, groupLayout, px, rowPitch, wirePath } from '../lib/wiring.ts';
-  import type { Fit, Node, Structure, Wire } from '../lib/wiring.ts';
+  import { desktopLayout, desktopTargets, groupLayout, groupTarget, px, rowPitch, tracePath, wirePath } from '../lib/wiring.ts';
+  import type { Box, Fit, Node, Structure, Target, Wire } from '../lib/wiring.ts';
 
   // The diagrams' sizes, from tokens.css.
   const token = tokenReader();
@@ -161,8 +190,18 @@ const drop = `${LABEL_DROP_EM}em`;
     });
   }
 
+  // The desktop diagram holds every wire twice, once in each layer.
   function placeWires(diagram: Element, wires: Wire[]) {
-    diagram.querySelectorAll('.wires path').forEach((path, i) => path.setAttribute('d', wirePath(wires[i])));
+    for (const layer of diagram.querySelectorAll('.wires, .traced')) {
+      layer.querySelectorAll('path').forEach((path, i) => path.setAttribute('d', wirePath(wires[i])));
+    }
+  }
+
+  // Each node's hover target, in the order the page lists them.
+  function placeTargets(diagram: Element, selector: string, boxes: Box[]) {
+    diagram.querySelectorAll(`${selector} rect`).forEach((rect, i) => {
+      for (const side of ['x', 'y', 'width', 'height'] as const) rect.setAttribute(side, px(boxes[i][side]));
+    });
   }
 
   // The widest label of one kind across every group's diagram, in px.
@@ -196,6 +235,70 @@ const drop = `${LABEL_DROP_EM}em`;
     }
   }
 
+  // The desktop diagram's tracing (DESIGN.md, Motion: Skills tracing). A mouse
+  // or a pen over a skill, group, or place lights its path; a finger never
+  // does. The trace holds while the pointer is over a blank part of the
+  // diagram, changes when it reaches another target, and ends when it leaves
+  // the diagram.
+  function tracing(diagram: HTMLElement) {
+    const structure = structures.get(diagram)!;
+    const skills = [...diagram.querySelectorAll<SVGGElement>('.skill')];
+    const groups = [...diagram.querySelectorAll<SVGGElement>('.group')];
+    const places = [...diagram.querySelectorAll<SVGGElement>('.place')];
+    // The traced layer's copies: the skill wires, then the group-to-place wires.
+    const wires = [...diagram.querySelectorAll('.traced path')];
+    let traced: SVGGElement | undefined;
+
+    function trace(node: SVGGElement) {
+      const { skill, group, place } = node.dataset;
+      let target: Target;
+      if (node.classList.contains('skill')) target = { skill: Number(skill) };
+      else if (node.classList.contains('group')) target = { group: Number(group) };
+      else target = { place: place! };
+
+      const path = tracePath(structure, target);
+      skills.forEach((each, i) => each.toggleAttribute('data-lit', path.skills.includes(i)));
+      groups.forEach((each, i) => each.toggleAttribute('data-lit', path.groups.includes(i)));
+      places.forEach((each) => each.toggleAttribute('data-lit', path.places.includes(each.dataset.place!)));
+      wires.forEach((wire, i) => {
+        const lit = i < skills.length ? path.skillWires.includes(i) : path.placeWires.includes(i - skills.length);
+        wire.toggleAttribute('data-lit', lit);
+      });
+      diagram.toggleAttribute('data-tracing', true);
+      traced = node;
+    }
+
+    function rest() {
+      if (!traced) return;
+      traced = undefined;
+      diagram.removeAttribute('data-tracing');
+      for (const each of [...skills, ...groups, ...places, ...wires]) each.removeAttribute('data-lit');
+    }
+
+    // Moving counts as well as arriving, so that a trace a redraw has cleared
+    // comes back with the pointer's next movement.
+    function over(event: PointerEvent) {
+      if (event.pointerType === 'touch') return;
+      const node = (event.target as Element).closest<SVGGElement>('.skill, .group, .place');
+      if (node && node !== traced) trace(node);
+    }
+    diagram.addEventListener('pointerover', over);
+    diagram.addEventListener('pointermove', over);
+    diagram.addEventListener('pointerleave', (event) => {
+      if (event.pointerType !== 'touch') rest();
+    });
+
+    return {
+      /** Back to rest at once, with no fade. */
+      reset() {
+        rest();
+        for (const fade of diagram.getAnimations({ subtree: true })) fade.finish();
+      },
+    };
+  }
+  const desktopDiagram = diagrams.find((diagram) => diagram.dataset.wiring === 'desktop');
+  const trace = desktopDiagram && tracing(desktopDiagram);
+
   // Draws each diagram that is showing when it is first measured, and again
   // whenever its width, its row height, or the longest labels change. Where
   // the diagram sits on the page doesn't matter: the browser paints an SVG
@@ -205,26 +308,45 @@ const drop = `${LABEL_DROP_EM}em`;
     let fit: Fit | undefined;
     for (const diagram of diagrams) {
       const { width } = diagram.getBoundingClientRect();
-      if (width === 0) continue; // the other layout is showing
+      const desktop = diagram.dataset.wiring === 'desktop';
+      if (width === 0) {
+        // The other layout is showing. A trace doesn't outlast its diagram.
+        if (desktop) trace?.reset();
+        continue;
+      }
       // A row is --wire-row, or one line of a label once text is enlarged
       // past it. The styles below reserve the diagram's height by the same rule.
       const row = rowPitch(wireRow, parseFloat(getComputedStyle(diagram).fontSize) * labelLeading);
-      const desktop = diagram.dataset.wiring === 'desktop';
       // On a small phone the columns shift to fit the longest labels, the
       // same for every group.
       if (!desktop) fit ??= { skillLabel: longest('.skill text'), placeLabel: longest('.place text') };
+      // One line of a place's label, which is larger than a skill's in the
+      // desktop diagram: its hover row is at least that tall.
+      const placeLine = desktop ? parseFloat(getComputedStyle(diagram.querySelector('.place text')!).fontSize) * labelLeading : undefined;
 
-      const state = [width, row, fit?.skillLabel, fit?.placeLabel].join(' ');
+      const state = [width, row, fit?.skillLabel, fit?.placeLabel, placeLine].join(' ');
       if (drawn.get(diagram) === state) continue;
       drawn.set(diagram, state);
 
       const structure = structures.get(diagram)!;
       if (desktop) {
+        // A redraw returns the diagram to rest.
+        trace?.reset();
         const layout = desktopLayout(structure, width, { row, ...desktopSizes });
         placeNodes(diagram, '.skill', layout.skills);
         placeNodes(diagram, '.group', layout.groups);
         placeNodes(diagram, '.place', layout.places);
         placeWires(diagram, [...layout.skillWires, ...layout.placeWires]);
+        const targets = desktopTargets(layout, width, { row, placeLine: placeLine! });
+        placeTargets(diagram, '.skill', targets.skills);
+        placeTargets(diagram, '.place', targets.places);
+        // A group's target is measured from its label, once the label is in place.
+        const labels = diagram.querySelectorAll<SVGTextElement>('.group text');
+        placeTargets(
+          diagram,
+          '.group',
+          layout.groups.map(({ dot }, i) => groupTarget(labels[i].getBBox(), dot, desktopSizes.groupDot)),
+        );
         if (import.meta.env.DEV) warnOutside(diagram, width);
       } else {
         const layout = groupLayout(structure, 0, width, { row, ...groupSizes }, fit);
@@ -248,6 +370,16 @@ const drop = `${LABEL_DROP_EM}em`;
 </script>
 
 <style>
+  /* The resting layer's opacity, registered so that it can fade as a number.
+     Fading `opacity` itself would hand the layer to the browser's compositor
+     (DESIGN.md, Motion: Brain cells and nuclei). The value here is never
+     seen: .wires sets it from the tokens. */
+  @property --rest-layer-op {
+    syntax: '<number>';
+    inherits: false;
+    initial-value: 0;
+  }
+
   .wiring {
     /* Skill to skill: --wire-row, or one line of a label once a visitor has
        enlarged text past it, so two rows' labels never overlap. The script
@@ -286,11 +418,50 @@ const drop = `${LABEL_DROP_EM}em`;
     visibility: hidden;
   }
 
-  .wires {
+  .wires,
+  .traced {
     fill: none;
     stroke: currentColor;
+  }
+
+  /* The resting layer: every wire. While a path is traced the whole layer
+     dims, the traced wires with it, under their copies in the layer above. */
+  .wires {
+    --rest-layer-op: var(--wire-op);
+
     stroke-width: var(--line);
-    opacity: var(--wire-op);
+    opacity: var(--rest-layer-op);
+  }
+
+  [data-tracing] .wires {
+    --rest-layer-op: var(--wire-dimmed-op);
+  }
+
+  /* The traced layer. The strength is the layer's, and a copy only shows or
+     hides, so traced wires that overlap don't brighten either. */
+  .traced {
+    stroke-width: var(--wire-traced-stroke);
+    opacity: var(--wire-traced-op);
+  }
+
+  .traced path {
+    stroke-opacity: 0;
+  }
+
+  .traced path[data-lit] {
+    stroke-opacity: 1;
+  }
+
+  /* A hover target: unseen, and it takes the pointer wherever it is in the
+     box. Nothing here is a link, so the cursor stays an arrow, over the
+     labels too. */
+  rect {
+    fill: none;
+    pointer-events: all;
+  }
+
+  [data-wiring='desktop'] :is(.skill, .group, .place) {
+    cursor: default;
   }
 
   circle {
@@ -339,5 +510,39 @@ const drop = `${LABEL_DROP_EM}em`;
 
   [data-wiring='desktop'] .place text {
     font-size: var(--step-text-5);
+  }
+
+  /* While a path is traced, everything off it dims: its dot and its label to
+     the main text color at --dim-text-min, whatever color the label has at
+     rest (DESIGN.md, Contrast: dimmed labels). Only fills dim, so a group
+     label's outline stays whole and still hides the wires behind it. */
+  [data-tracing] :is(.skill, .group, .place):not([data-lit]) {
+    fill-opacity: var(--dim-text-min);
+  }
+
+  [data-tracing] .skill:not([data-lit]) text {
+    fill: var(--color-text);
+  }
+
+  /* The fade, on the properties a trace changes and no others, so a redraw's
+     new positions never animate. With reduced motion the change is instant. */
+  @media (prefers-reduced-motion: no-preference) {
+    .wires {
+      transition: --rest-layer-op var(--fade) var(--ease-out);
+    }
+
+    .traced path {
+      transition: stroke-opacity var(--fade) var(--ease-out);
+    }
+
+    .skill,
+    .group,
+    .place {
+      transition: fill-opacity var(--fade) var(--ease-out);
+    }
+
+    .skill text {
+      transition: fill var(--fade) var(--ease-out);
+    }
   }
 </style>
