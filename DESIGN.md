@@ -509,7 +509,7 @@ A playback cursor sweeps each row once over `--sweep`, left to right. It's a `--
 - **A finger never traces,** even where the desktop diagram shows on a touch screen, as on most iPads. A tap there does nothing, and nothing stays traced. That matches the hint, which shows only with a pointer that can hover.
 - **The per-group diagrams never trace** (the section's content narrower than 45rem), with any pointer.
 - **A redraw returns the diagram to rest at once:** a change of width or text size, or the desktop diagram no longer showing.
-- **No `opacity` transition runs in the diagram,** for the reason in Brain cells and nuclei. Labels and dots fade with `fill` and `fill-opacity`, traced wires with `stroke-opacity`, and the resting layer's opacity is set from a registered custom property that transitions instead.
+- **No `opacity` transition runs in the diagram.** Labels and dots fade with `fill` and `fill-opacity`, traced wires with `stroke-opacity`, and the resting layer's opacity is set from a registered custom property that transitions instead, as the brain's cells do. On this one layer a plain `opacity` transition measured the same in Chrome (no layer rebuilds, the same frame times), so here it is a precaution, kept for consistency. The rule matters most for fading many elements at once, which is what made the brain's layers rebuild.
 - **Why a mouse or a pen only.** The wires at rest already meet 3:1, so the diagram reads fully without tracing. It holds nothing focusable, so it can stay hidden from screen readers.
 
 **Reduced motion:** the change is instant.

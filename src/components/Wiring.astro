@@ -370,9 +370,11 @@ const drop = `${LABEL_DROP_EM}em`;
 </script>
 
 <style>
-  /* The resting layer's opacity, registered so that it can fade as a number.
-     Fading `opacity` itself would hand the layer to the browser's compositor
-     (DESIGN.md, Motion: Brain cells and nuclei). The value here is never
+  /* The resting layer's opacity, registered so that it can fade as a number
+     and no `opacity` transition runs in the diagram. That is a precaution,
+     matching the brain's cells (DESIGN.md, Motion: Skills tracing): on this
+     one layer a plain `opacity` transition measured the same in Chrome, with
+     no layer rebuilds and the same frame times. The value here is never
      seen: .wires sets it from the tokens. */
   @property --rest-layer-op {
     syntax: '<number>';
