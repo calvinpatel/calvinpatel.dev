@@ -1,4 +1,5 @@
-// Tests for the Skills wiring diagram's geometry. Run from the repo root:
+// Tests for the Skills wiring diagram's geometry and its traced paths. Run
+// from the repo root:
 //   node --test tests/wiring.test.ts
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
@@ -9,16 +10,19 @@ import {
   desktopLayout,
   desktopPlaceWires,
   desktopRows,
+  desktopTargets,
   groupLayout,
   groupPlaces,
   groupRows,
+  groupTarget,
   groupWires,
   phoneColumns,
   rowPitch,
+  tracePath,
   wireControls,
   wirePath,
 } from '../src/lib/wiring.ts';
-import type { DesktopSizes, Fit, GroupSizes, Structure } from '../src/lib/wiring.ts';
+import type { DesktopSizes, Fit, GroupSizes, Structure, Target } from '../src/lib/wiring.ts';
 
 // skills.md's shape: the seven places, and each skill's places, group by group.
 const np = 'notepilot';
@@ -421,4 +425,150 @@ test('every wire end is on a pixel center, and each row moves at most half a pix
       }
     }
   }
+});
+
+// --- Tracing -------------------------------------------------------------------
+
+// Skills are numbered down the whole diagram: Languages is 0 to 5, AI / LLM
+// 6 to 9, and Clinical 33 to 36. A place wire is its position in
+// desktopPlaceWires: Languages' three are 0 to 2, AI / LLM's two are 3 and 4,
+// and Clinical's four are 13 to 16.
+const SKILLS = STRUCTURE.groups.flatMap((entry, g) => entry.skills.map((skill) => ({ group: g, places: skill.places })));
+
+test('a skill lights its wire, its group, and only the wires to the places it was used', () => {
+  // MATLAB: Cedars-Sinai and the Mehta Lab, never Languages → NotePilot.
+  assert.deepEqual(tracePath(STRUCTURE, { skill: 1 }), {
+    skills: [1],
+    groups: [0],
+    places: [cs, ml],
+    skillWires: [1],
+    placeWires: [1, 2],
+  });
+});
+
+test('a group lights all its skills, all its wires out, and all its places', () => {
+  assert.deepEqual(tracePath(STRUCTURE, { group: 8 }), {
+    skills: [33, 34, 35, 36],
+    groups: [8],
+    places: [np, cp, ms, at],
+    skillWires: [33, 34, 35, 36],
+    placeWires: [13, 14, 15, 16],
+  });
+});
+
+test("a place lights every skill used there, their groups, and only those groups' wires to it", () => {
+  // Coastal Pain: Prompt engineering, Clinical documentation, Clinical
+  // knowledge, and PHI handling; AI / LLM and Clinical; their two wires to it.
+  assert.deepEqual(tracePath(STRUCTURE, { place: cp }), {
+    skills: [7, 33, 35, 36],
+    groups: [1, 8],
+    places: [cp],
+    skillWires: [7, 33, 35, 36],
+    placeWires: [4, 14],
+  });
+});
+
+test('every traced path is made of real connections', () => {
+  const targets: Target[] = [
+    ...SKILLS.map((_, skill) => ({ skill })),
+    ...GROUPS.map((g) => ({ group: g })),
+    ...STRUCTURE.places.map((place) => ({ place })),
+  ];
+  assert.equal(targets.length, 53);
+  const placeWires = desktopPlaceWires(STRUCTURE);
+
+  for (const target of targets) {
+    const path = tracePath(STRUCTURE, target);
+    const name = JSON.stringify(target);
+
+    // Every target lights itself.
+    if ('skill' in target) assert.ok(path.skills.includes(target.skill), name);
+    else if ('group' in target) assert.ok(path.groups.includes(target.group), name);
+    else assert.ok(path.places.includes(target.place), name);
+
+    // A lit skill brings its wire and its group, and every lit group has a lit skill.
+    assert.deepEqual(path.skillWires, path.skills, name);
+    for (const skill of path.skills) assert.ok(path.groups.includes(SKILLS[skill].group), name);
+    for (const g of path.groups) assert.ok(path.skills.some((skill) => SKILLS[skill].group === g), name);
+
+    // Every lit group-to-place wire joins a lit group to a lit place, and a
+    // lit skill of that group was used at that place.
+    for (const i of path.placeWires) {
+      const wire = placeWires[i];
+      assert.ok(path.groups.includes(wire.group), name);
+      assert.ok(path.places.includes(wire.place), name);
+      assert.ok(
+        path.skills.some((skill) => SKILLS[skill].group === wire.group && SKILLS[skill].places.includes(wire.place)),
+        `${name}: no lit skill runs through wire ${i}`,
+      );
+    }
+    // And every lit place is reached by a lit wire.
+    for (const place of path.places) assert.ok(path.placeWires.some((i) => placeWires[i].place === place), name);
+
+    if ('place' in target) {
+      // A place lights no other place, though its skills may be used elsewhere.
+      assert.deepEqual(path.places, [target.place], name);
+    } else {
+      // From a skill or a group, every lit skill's places are lit.
+      for (const skill of path.skills) {
+        for (const place of SKILLS[skill].places) assert.ok(path.places.includes(place), name);
+      }
+    }
+  }
+});
+
+test("a skill's hover row runs from the left edge to its wire's start, one row tall", () => {
+  const layout = desktopLayout(STRUCTURE, 1192, DESKTOP_SIZES);
+  const { skills } = desktopTargets(layout, 1192, { row: 22, placeLine: 21 });
+  assert.equal(skills.length, 37);
+  skills.forEach((box, i) => {
+    assert.equal(box.x, 0);
+    assert.equal(box.width, layout.skillWires[i].from.x);
+    assert.equal(box.height, 22);
+    assert.equal(box.y + box.height / 2, layout.skills[i].dot.y);
+  });
+  assert.deepEqual(skills[0], { x: 0, y: 19, width: 266, height: 22 });
+  // Rows in a group meet with no overlap, and the gap between groups is blank.
+  assert.equal(skills[1].y, skills[0].y + 22);
+  assert.equal(skills[6].y - (skills[5].y + 22), 12);
+});
+
+test("a place's hover row runs from its wires' end to the right edge, as tall as a row or its label's line", () => {
+  for (const width of DESKTOP_WIDTHS) {
+    const layout = desktopLayout(STRUCTURE, width, DESKTOP_SIZES);
+    const { places } = desktopTargets(layout, width, { row: 22, placeLine: 21 });
+    desktopPlaceWires(STRUCTURE).forEach(({ place }, i) => {
+      assert.equal(places[STRUCTURE.places.indexOf(place)].x, layout.placeWires[i].to.x);
+    });
+    places.forEach((box, i) => {
+      assert.ok(near(box.x + box.width, width));
+      assert.equal(box.height, 22);
+      assert.equal(box.y + box.height / 2, layout.places[i].dot.y);
+    });
+  }
+  // Text at 200%: a place label's line is taller than a row.
+  const layout = desktopLayout(STRUCTURE, 1192, { ...DESKTOP_SIZES, row: 36.4 });
+  const { skills, places } = desktopTargets(layout, 1192, { row: 36.4, placeLine: 42 });
+  assert.equal(skills[0].height, 36.4);
+  places.forEach((box, i) => {
+    assert.equal(box.height, 42);
+    assert.ok(near(box.y + 21, layout.places[i].dot.y));
+  });
+});
+
+test("a group's hover target runs from the top of its label to the bottom of its dot", () => {
+  // A label 60px wide and 18px tall, centered over a 10px dot at (560, 85).
+  assert.deepEqual(groupTarget({ x: 530, y: 59, width: 60, height: 18 }, { x: 560, y: 85 }, 10), {
+    x: 530,
+    y: 59,
+    width: 60,
+    height: 31,
+  });
+  // A label narrower than its dot: as wide as the dot.
+  assert.deepEqual(groupTarget({ x: 557, y: 59, width: 6, height: 18 }, { x: 560, y: 85 }, 10), {
+    x: 555,
+    y: 59,
+    width: 10,
+    height: 31,
+  });
 });

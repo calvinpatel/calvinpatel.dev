@@ -21,6 +21,9 @@
 //     Every row then looks the same, at device scale 1, 2, and 3. Two ends on
 //     the same row are exactly level, so the wire between them is flat.
 //
+// Tracing is worked out here too: what a path lights when a pointer hovers a
+// skill, group, or place (tracePath), and the hover targets' boxes.
+//
 // The numbers below are DESIGN.md's and the chosen artboards'. They are the
 // drawing's own measurements, like an axon divider's path data, so they live
 // here rather than in tokens.css. Sizes that are tokens come in through
@@ -127,6 +130,26 @@ export interface GroupLayout {
   wires: Wire[]; // in groupWires' order
 }
 
+/** A hover target's box. */
+export interface Box {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
+/** What a trace starts from. A skill is counted across the groups, as the diagram numbers them. */
+export type Target = { skill: number } | { group: number } | { place: string };
+
+/** A traced path: everything that stays lit, each list in the diagram's order. */
+export interface Path {
+  skills: number[]; // counted across the groups
+  groups: number[];
+  places: string[]; // place ids
+  skillWires: number[]; // one per lit skill, numbered as the skills are
+  placeWires: number[]; // positions in desktopPlaceWires' order
+}
+
 const NO_FIT: Fit = { skillLabel: 0, placeLabel: 0 };
 
 /**
@@ -164,6 +187,42 @@ export function desktopPlaceWires(structure: Structure): { group: number; place:
 /** One group diagram's wires: one per skill and place, skill by skill. `skill` counts within the group. */
 export function groupWires(structure: Structure, group: number): { skill: number; place: string }[] {
   return structure.groups[group].skills.flatMap((skill, i) => skill.places.map((place) => ({ skill: i, place })));
+}
+
+/**
+ * The path a trace lights in the desktop diagram (DESIGN.md, Drawings: Wiring
+ * diagram). A path follows skill-to-place connections: a skill's own, those
+ * of every skill in a group, or every skill's connection to one place. It
+ * lights the skills, groups, and places those connections touch. A group's
+ * wire to a place is lit only when one of them runs through it, so MATLAB
+ * lights Languages → Cedars-Sinai and never Languages → NotePilot.
+ */
+export function tracePath(structure: Structure, target: Target): Path {
+  // Every connection, skill by skill.
+  const connections: { skill: number; group: number; place: string }[] = [];
+  let skill = 0;
+  structure.groups.forEach((group, g) => {
+    for (const { places } of group.skills) {
+      for (const place of places) connections.push({ skill, group: g, place });
+      skill += 1;
+    }
+  });
+  const followed = connections.filter((connection) => {
+    if ('skill' in target) return connection.skill === target.skill;
+    if ('group' in target) return connection.group === target.group;
+    return connection.place === target.place;
+  });
+
+  const skills = [...new Set(followed.map((connection) => connection.skill))];
+  return {
+    skills,
+    groups: [...new Set(followed.map((connection) => connection.group))],
+    places: structure.places.filter((place) => followed.some((connection) => connection.place === place)),
+    skillWires: skills,
+    placeWires: desktopPlaceWires(structure).flatMap((wire, i) =>
+      followed.some((connection) => connection.group === wire.group && connection.place === wire.place) ? [i] : [],
+    ),
+  };
 }
 
 /** A row, moved to the nearest whole pixel. Labels sit here. */
@@ -244,6 +303,43 @@ export function desktopLayout(structure: Structure, width: number, sizes: Deskto
   });
 
   return { height: lastRow + DESKTOP.roomBelow, skills, groups, places, skillWires, placeWires };
+}
+
+/**
+ * The desktop diagram's hover rows. A skill's row runs from the diagram's left
+ * edge to where its wire starts, and a place's from where its wires end to
+ * the right edge. Each is one row tall and centered on its dot. `row` is
+ * never less than a skill label's line (rowPitch); a place's label is larger,
+ * so its row is as tall as `placeLine`, one line of that label, once enlarged
+ * text makes that the taller.
+ */
+export function desktopTargets(
+  layout: DesktopLayout,
+  width: number,
+  sizes: { row: number; placeLine: number },
+): { skills: Box[]; places: Box[] } {
+  const placeRow = Math.max(sizes.row, sizes.placeLine);
+  return {
+    skills: layout.skills.map(({ dot }) => {
+      const end = dot.x + DESKTOP.skillWire.leave;
+      return { x: 0, y: dot.y - sizes.row / 2, width: end, height: sizes.row };
+    }),
+    places: layout.places.map(({ dot }) => {
+      const start = dot.x - DESKTOP.placeWire.arrive;
+      return { x: start, y: dot.y - placeRow / 2, width: width - start, height: placeRow };
+    }),
+  };
+}
+
+/**
+ * A group's hover target: one box from the top of its label to the bottom of
+ * its dot, as wide as the wider of the two. `label` is the label's own box,
+ * which the script measures.
+ */
+export function groupTarget(label: Box, dot: Point, diameter: number): Box {
+  const left = Math.min(label.x, dot.x - diameter / 2);
+  const right = Math.max(label.x + label.width, dot.x + diameter / 2);
+  return { x: left, y: label.y, width: right - left, height: dot.y + diameter / 2 - label.y };
 }
 
 /**
