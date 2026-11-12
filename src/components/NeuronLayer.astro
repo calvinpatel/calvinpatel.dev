@@ -52,7 +52,7 @@ const files = readCellIndex().map((cell) => `/cells/${cell.file}`);
     touchSoma,
   } from '../lib/neuron-signal.ts';
   import type { Membrane, Timing, Wave } from '../lib/neuron-signal.ts';
-  import { ZONE, capGray, coverageMask, sameZones, veils } from '../lib/neuron-zones.ts';
+  import { ZONE, capGray, coverageMask, sameZones, somaShows, veils } from '../lib/neuron-zones.ts';
   import { spontaneousWindow } from '../lib/spontaneous.ts';
   import { tokenReader } from '../lib/tokens.ts';
 
@@ -164,6 +164,7 @@ const files = readCellIndex().map((cell) => `/cells/${cell.file}`);
     // --- The cap's zones -----------------------------------------------------
 
     let zones: Box[] = [];
+    let brainBox: Box | null = null; // the brain's silhouette, which hides the layer behind it
     // The coverage mask twice over: in black, to dim, and in the cap's gray, to clamp.
     const veilMask = document.createElement('canvas');
     const clampMask = document.createElement('canvas');
@@ -183,6 +184,15 @@ const files = readCellIndex().map((cell) => `/cells/${cell.file}`);
           bottom: box.bottom - origin.top,
         });
       };
+      const silhouette = brain?.querySelector('[data-brain-silhouette]')?.getBoundingClientRect();
+      brainBox = silhouette
+        ? {
+            left: silhouette.left - origin.left,
+            top: silhouette.top - origin.top,
+            right: silhouette.right - origin.left,
+            bottom: silhouette.bottom - origin.top,
+          }
+        : null;
       if (heroText) inkOf(heroText).forEach(add);
       for (const part of hero.querySelectorAll('[data-brain-label], [data-brain-hint]')) {
         add(part.getBoundingClientRect());
@@ -411,12 +421,26 @@ const files = readCellIndex().map((cell) => `/cells/${cell.file}`);
       for (const sample of samples.splice(0, POINTER.perFrame)) touch(sample.x, sample.y, sample.reach);
       samples.length = 0;
 
-      // On its own a cell fires only inside the window, and only if it can finish there.
-      if (moving && neurons.length > 0 && time >= nextOwn) {
-        const index = Math.floor(Math.random() * neurons.length);
-        const { cell, membrane } = neurons[index];
-        if (isQuiet(membrane, time, quiet) && clock.remaining() >= firingLength(cell, timing)) {
-          spike(membrane, time, SIGNAL.own);
+      // On its own a cell fires only inside the window, and only if it can
+      // finish there. One is picked from the cells whose soma shows (clear of
+      // the text and the brain) and that have been quiet long enough.
+      if (moving && time >= nextOwn) {
+        const left = clock.remaining();
+        const able = neurons.flatMap((neuron, index) => {
+          const shows = somaShows(
+            zones,
+            brainBox,
+            width,
+            height,
+            neuron.placement.x + neuron.dx,
+            neuron.placement.y + neuron.dy,
+          );
+          const can = shows && isQuiet(neuron.membrane, time, quiet) && left >= firingLength(neuron.cell, timing);
+          return can ? [index] : [];
+        });
+        if (able.length > 0) {
+          const index = able[Math.floor(Math.random() * able.length)];
+          spike(neurons[index].membrane, time, SIGNAL.own);
           fire(index, time, SIGNAL.own);
           counts.own++;
         }
@@ -861,6 +885,9 @@ const files = readCellIndex().map((cell) => `/cells/${cell.file}`);
           get zones() {
             return zones;
           },
+          get brainBox() {
+            return brainBox;
+          },
           get cells() {
             return neurons.map((neuron) => ({
               ...neuron.placement,
@@ -868,6 +895,15 @@ const files = readCellIndex().map((cell) => `/cells/${cell.file}`);
               y: neuron.placement.y + neuron.dy,
               somaRadius: neuron.cell.somaRadius,
               points: neuron.cell.count,
+              firingLength: firingLength(neuron.cell, timing),
+              shows: somaShows(
+                zones,
+                brainBox,
+                width,
+                height,
+                neuron.placement.x + neuron.dx,
+                neuron.placement.y + neuron.dy,
+              ),
             }));
           },
           gray,

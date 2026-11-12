@@ -26,6 +26,7 @@ export const ZONE = {
   scale: 4, // CSS px per mask pixel
   margin: 2, // mask pixels past each edge of the canvas, so smoothing never meets the mask's own edge
   rounding: 1, // gray levels held back, so one rounding step in a browser's blending can't break the cap
+  brain: 24, // how far past the brain's box its halo still hides the layer
 } as const;
 
 /** One sRGB channel, 0 to 255, as linear light. */
@@ -113,6 +114,24 @@ export function coverageMask(zones: readonly Box[], width: number, height: numbe
     }
   }
   return { columns, rows, alpha };
+}
+
+/**
+ * Whether a soma at (x, y) shows: on the canvas, clear of every text zone's
+ * dimming, and not behind the brain. A cell fires on its own only if its soma
+ * shows, so the firing can be seen. `brain` is the brain's box, if there is one.
+ */
+export function somaShows(
+  zones: readonly Box[],
+  brain: Box | null,
+  width: number,
+  height: number,
+  x: number,
+  y: number,
+): boolean {
+  if (x < 0 || x > width || y < 0 || y > height) return false;
+  if (brain && distanceTo(brain, x, y) < ZONE.brain) return false;
+  return coverage(zones, x, y) === 0;
 }
 
 /** Whether two lists of zones are the same boxes, to the pixel. */

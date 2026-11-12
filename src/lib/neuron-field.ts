@@ -20,7 +20,10 @@ import { mulberry32 } from './raster.ts';
 export const FIELD = {
   seed: 2026,
   count: { area: 100_000, min: 6, max: 16 }, // one cell per this many px² of hero, within these limits
-  size: { min: 0.2, vary: 0.18 }, // of the hero's shorter side: min to min + vary
+  // A cell's size is min to min + vary of the hero's shorter side, which
+  // counts as at least `floor` px. On a phone that makes the cells about as
+  // large against the screen as the phone artboard's, which crops the desktop's.
+  size: { min: 0.2, vary: 0.18, floor: 800 },
   past: 0.05, // a soma may sit this share of the hero past any edge
   apart: 0.42, // two somas keep this share of their sizes' sum apart,
   tries: 40, // if that many tries can find the room
@@ -50,6 +53,11 @@ export const FIELD = {
 
 /** The brightest a resting cell's line can be: the opacity of the nearest. */
 export const REST_MAX = FIELD.rest.base + FIELD.rest.depth;
+
+/** The length the cells are sized from: the hero's shorter side, or FIELD.size.floor if that is longer. */
+export function sizeBasis(width: number, height: number): number {
+  return Math.max(FIELD.size.floor, Math.min(width, height));
+}
 
 /** How many cells a hero of this size holds. */
 export function cellCount(width: number, height: number): number {
@@ -103,14 +111,14 @@ export function placeCells(
 ): Placement[] {
   if (pyramidal.length === 0) return [];
   const random = mulberry32(seed);
-  const shorter = Math.min(width, height);
+  const basis = sizeBasis(width, height);
   const order = cellOrder(pyramidal);
   const somewhere = (extent: number) => (random() * (1 + 2 * FIELD.past) - FIELD.past) * extent;
 
   const placed: Placement[] = [];
   for (let i = 0, count = cellCount(width, height); i < count; i++) {
     const cell = order[i % order.length];
-    const size = shorter * (FIELD.size.min + random() * FIELD.size.vary);
+    const size = basis * (FIELD.size.min + random() * FIELD.size.vary);
     let x = 0;
     let y = 0;
     let tries = 0;

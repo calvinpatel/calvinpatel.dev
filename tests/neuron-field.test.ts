@@ -14,6 +14,7 @@ import {
   placeCells,
   placeNuclei,
   restAlpha,
+  sizeBasis,
 } from '../src/lib/neuron-field.ts';
 
 // The ten cells in index.json's order: seven medium spiny, then three pyramidal.
@@ -51,7 +52,22 @@ test('the same window always gets the same field', () => {
   assert.deepEqual(placeCells(1440, 900, [], DRIFT), []);
 });
 
-test("cells are sized by the hero's shorter side and drawn farthest first", () => {
+test("cells are sized by the hero's shorter side, which counts as at least the floor", () => {
+  // A desktop 900px tall or more is sized by its own shorter side.
+  assert.equal(sizeBasis(1440, 900), 900);
+  assert.equal(sizeBasis(1920, 1080), 1080);
+  // A phone, and a short desktop, by the floor.
+  assert.equal(sizeBasis(375, 812), FIELD.size.floor);
+  assert.equal(sizeBasis(1280, 720), FIELD.size.floor);
+  assert.equal(sizeBasis(1366, 768), FIELD.size.floor);
+
+  // On a phone that is about the phone artboard's scale: 160 to 300px or so from soma to tip.
+  for (const cell of place(375, 812)) assert.ok(cell.size >= 160 && cell.size <= 304);
+  // At 1440 x 900 nothing changes: 180 to 342px.
+  for (const cell of place(1440, 900)) assert.ok(cell.size >= 180 && cell.size <= 342);
+});
+
+test('cells are placed inside the hero or just past its edges, and drawn farthest first', () => {
   for (const [width, height] of [
     [1440, 900],
     [375, 667],
@@ -59,10 +75,10 @@ test("cells are sized by the hero's shorter side and drawn farthest first", () =
     [800, 1100],
   ]) {
     const cells = place(width, height);
-    const shorter = Math.min(width, height);
+    const basis = sizeBasis(width, height);
     assert.equal(cells.length, cellCount(width, height));
     cells.forEach((cell, i) => {
-      assert.ok(cell.size >= shorter * FIELD.size.min && cell.size <= shorter * (FIELD.size.min + FIELD.size.vary));
+      assert.ok(cell.size >= basis * FIELD.size.min && cell.size <= basis * (FIELD.size.min + FIELD.size.vary));
       assert.ok(cell.depth >= FIELD.depth.min && cell.depth <= 1);
       assert.ok(cell.x >= -FIELD.past * width && cell.x <= (1 + FIELD.past) * width);
       assert.ok(cell.y >= -FIELD.past * height && cell.y <= (1 + FIELD.past) * height);

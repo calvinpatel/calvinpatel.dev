@@ -5,7 +5,16 @@ import { test } from 'node:test';
 
 import type { Box } from '../src/lib/brain-nav.ts';
 import { REST_MAX } from '../src/lib/neuron-field.ts';
-import { ZONE, capGray, coverage, coverageMask, luminance, sameZones, veils } from '../src/lib/neuron-zones.ts';
+import {
+  ZONE,
+  capGray,
+  coverage,
+  coverageMask,
+  luminance,
+  sameZones,
+  somaShows,
+  veils,
+} from '../src/lib/neuron-zones.ts';
 
 // --canvas-cap-luminance and --canvas-cap-brain, as NeuronLayer.astro's script reads them.
 const CAP = 0.053;
@@ -134,6 +143,25 @@ test('the mask is clear away from every zone, and partial only in the feather', 
   const feathered = at(NAME.right + ZONE.pad + ZONE.feather / 2, 430);
   assert.ok(feathered > 0 && feathered < 255);
   assert.equal(coverageMask([], 1440, 900).alpha.some((alpha) => alpha > 0), false);
+});
+
+test('a soma shows only on the canvas, clear of the text and of the brain', () => {
+  const brain: Box = { left: 700, top: 290, right: 1210, bottom: 690 };
+  const shows = (x: number, y: number) => somaShows([NAME, LABEL], brain, 1440, 900, x, y);
+  assert.ok(shows(300, 700));
+  // Behind the name, and in the dimming around it.
+  assert.ok(!shows(300, 430));
+  assert.ok(!shows(NAME.right + ZONE.pad + ZONE.feather - 1, 430));
+  assert.ok(shows(NAME.right + ZONE.pad + ZONE.feather, 430));
+  // Behind the brain, and under its halo.
+  assert.ok(!shows(900, 500));
+  assert.ok(!shows(brain.left - ZONE.brain + 1, 500));
+  assert.ok(shows(brain.left - ZONE.brain, 500));
+  // Past the canvas's edge.
+  assert.ok(!shows(-10, 700));
+  assert.ok(!shows(300, 905));
+  // A page with no brain.
+  assert.ok(somaShows([NAME], null, 1440, 900, 900, 500));
 });
 
 test('zones are compared to the pixel', () => {

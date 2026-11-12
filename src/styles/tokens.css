@@ -257,8 +257,8 @@
   --signal-backprop-fade: 200ms;    /* a spike fading in the dendrites */
   --soma-flash:           220ms;    /* the soma's glow fading, and rippling outward as it does */
   --neuron-appear:        600ms;    /* the layer fading in once its cells have loaded */
-  --neuron-idle-min:      1600ms;   /* between cells firing on their own */
-  --neuron-idle-max:      4200ms;
+  --neuron-idle-min:      800ms;    /* between cells firing on their own: two or three in the window */
+  --neuron-idle-max:      1300ms;
   --neuron-quiet:         1500ms;   /* a cell fires on its own only this long after its last spike */
   --neuron-drift-min:     19000ms;  /* one full drift, side to side: each cell's own, between these */
   --neuron-drift-max:     33000ms;

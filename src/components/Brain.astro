@@ -212,8 +212,9 @@ const look = Object.entries({
               <use href="#brain-stem"></use>
             </g>
             {/* A dark halo over the backlight's inner part. It hides the neuron
-                layer just around the brain, so the brain reads as in front. */}
-            <g class="halo" filter="url(#brain-halo)">
+                layer just around the brain, so the brain reads as in front.
+                The layer reads the brain's box from it (NeuronLayer.astro). */}
+            <g class="halo" filter="url(#brain-halo)" data-brain-silhouette>
               <use href="#brain-outline"></use>
               <use href="#brain-cerebellum"></use>
               <use href="#brain-stem"></use>
