@@ -1,11 +1,12 @@
-// Tests for reading a token's number. Run from the repo root:
+// Tests for reading a token's number and a color token's channels. Run from
+// the repo root:
 //   node --test tests/tokens.test.ts
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { readFileSync, readdirSync } from 'node:fs';
 import { test } from 'node:test';
 import { fileURLToPath } from 'node:url';
 
-import { tokenNumber } from '../src/lib/tokens.ts';
+import { tokenNumber, tokenRgb } from '../src/lib/tokens.ts';
 
 const TOKENS = new URL('../src/styles/tokens.css', import.meta.url);
 
@@ -82,5 +83,54 @@ test("every token reads the same number before and after the build's minifier", 
     const after = built.get(name);
     assert.ok(after !== undefined, `${name} is missing from the minified stylesheet`);
     assert.equal(tokenNumber(after), tokenNumber(value), `${name}: ${value} is ${after} once minified`);
+  }
+});
+
+test('a color reads the same with six hex digits or the three the build shortens them to', () => {
+  assert.deepEqual(tokenRgb('#44e07c'), [68, 224, 124]);
+  assert.deepEqual(tokenRgb(' #4f6dff'), [79, 109, 255]);
+  assert.deepEqual(tokenRgb('#000000'), [0, 0, 0]);
+  assert.deepEqual(tokenRgb('#000'), [0, 0, 0]);
+  assert.deepEqual(tokenRgb('#fff'), [255, 255, 255]);
+  assert.deepEqual(tokenRgb('#1a2'), tokenRgb('#11aa22'));
+  assert.deepEqual(tokenRgb('#FF5A4A'), tokenRgb('#ff5a4a'));
+});
+
+test("a color in a form the reader doesn't know is an error, not a wrong color", () => {
+  for (const value of ['', 'black', 'rgb(0 0 0)', '#0000', '#00000000', 'var(--color-text)']) {
+    assert.throws(() => tokenRgb(value), /Can't read the color/, value);
+  }
+});
+
+/** The color tokens the site's scripts read: every name a script hands to rgbOf. */
+function colorsScriptsRead(): string[] {
+  const names = new Set<string>();
+  for (const folder of ['../src/components/', '../src/lib/', '../src/pages/']) {
+    for (const file of readdirSync(new URL(folder, import.meta.url), { recursive: true, encoding: 'utf8' })) {
+      if (!/\.(astro|ts)$/.test(file)) continue;
+      const source = readFileSync(new URL(folder + file, import.meta.url), 'utf8');
+      for (const match of source.matchAll(/rgbOf\('(--[\w-]+)'\)/g)) names.add(match[1]);
+    }
+  }
+  return [...names];
+}
+
+// The same guard for colors: the build shortens #000000 to #000, which the
+// neuron layer once read right only because both are zero.
+test("every color a script reads comes out the same before and after the build's minifier", async () => {
+  const written = tokensOf(readFileSync(TOKENS, 'utf8'));
+  const built = tokensOf(await minified());
+  const read = colorsScriptsRead();
+  // The neuron layer's three fluorescence colors and the page's black.
+  assert.ok(read.length >= 4, `found only ${read.length} colors read by scripts`);
+  for (const name of read) {
+    const before = written.get(name);
+    const after = built.get(name);
+    assert.ok(before !== undefined && after !== undefined, `${name} isn't in tokens.css`);
+    assert.deepEqual(tokenRgb(after), tokenRgb(before), `${name}: ${before} is ${after} once minified`);
+  }
+  // And every other token written as a hex color, for the next one a script reads.
+  for (const [name, before] of written) {
+    if (/^#([0-9a-f]{3}|[0-9a-f]{6})$/i.test(before)) assert.deepEqual(tokenRgb(built.get(name)!), tokenRgb(before), `${name}: ${before} is ${built.get(name)} once minified`);
   }
 });

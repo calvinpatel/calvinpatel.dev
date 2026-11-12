@@ -94,3 +94,5 @@ Deploys happen through Workers Builds. Don't run `wrangler deploy` unless Cal as
 **Checking**
 
 16. Run every check against the production build (`npx astro build`, then `npx astro preview`), not the dev server: screenshots, timing, behavior, and frame times. The build rewrites what scripts read. Its minifier turned every time token from `130ms` into `.13s`, and until 7b14cce the built site ran all its timing a thousand times too short while dev looked right. The dev server is for working, and for comparing against when the build behaves differently.
+    - A check of what the page does launches a headless Chrome of its own (`browserType().launch({ channel: 'chrome', headless: true })`). The Playwright MCP's own browser is a real window, and the real mouse passing over it sends the page real input: neurons fire that nothing in the check touched.
+    - A frame-time check keeps a real window, so the canvas draws on the GPU. It counts the pointer events it didn't send and reports them with its numbers.

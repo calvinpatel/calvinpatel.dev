@@ -65,9 +65,8 @@ const files = readCellIndex().map((cell) => `/cells/${cell.file}`);
     veils,
   } from '../lib/neuron-zones.ts';
   import { spontaneousWindow } from '../lib/spontaneous.ts';
-  import { tokenReader } from '../lib/tokens.ts';
-
-  type Rgb = readonly [number, number, number];
+  import { tokenReader, tokenRgb } from '../lib/tokens.ts';
+  import type { Rgb } from '../lib/tokens.ts';
 
   /** One placed cell and its state. */
   interface Neuron {
@@ -133,10 +132,7 @@ const files = readCellIndex().map((cell) => `/cells/${cell.file}`);
     const drift = { min: token('--neuron-drift-min'), max: token('--neuron-drift-max') };
 
     const styles = getComputedStyle(document.documentElement);
-    const rgbOf = (name: string): Rgb => {
-      const hex = parseInt(styles.getPropertyValue(name).trim().slice(1), 16);
-      return [(hex >> 16) & 255, (hex >> 8) & 255, hex & 255];
-    };
+    const rgbOf = (name: string): Rgb => tokenRgb(styles.getPropertyValue(name));
     const paint = (rgb: Rgb, alpha = 1) => `rgba(${rgb[0]},${rgb[1]},${rgb[2]},${alpha})`;
     const colors = { gfp: rgbOf('--fluor-gfp'), tdtomato: rgbOf('--fluor-tdtomato') };
     const dapi = rgbOf('--fluor-dapi');
