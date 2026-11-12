@@ -9,11 +9,12 @@ import {
   SHAPE,
   blurAlpha,
   blurWeights,
-  hitCell,
   lineWidth,
+  nearBranches,
   pathToSoma,
   prepareCell,
   readCell,
+  somaGap,
   somaRadius,
 } from '../src/lib/neuron-cell.ts';
 import type { CellFile, Shape } from '../src/lib/neuron-cell.ts';
@@ -187,25 +188,56 @@ test('axon points are left out', () => {
   assert.ok(near(cell.bounds.right, 60));
 });
 
-test('a pointer finds the soma, the nearest dendrite, or nothing', () => {
+test('a branch is a stretch of dendrite between branch points', () => {
+  const cell = prepareCell(SMALL, shape());
+  // The trunk, its two forks, and the side branch.
+  assert.equal(cell.branches, 4);
+  assert.equal(cell.branch[0], -1);
+  const at = (x: number, y: number) => {
+    const [only, ...others] = nearBranches(cell, x, y, 2);
+    assert.equal(others.length, 0);
+    return only.branch;
+  };
+  const [trunk, left, right, side] = [at(0, -50), at(-30, -140), at(30, -140), at(50, 0)];
+  assert.equal(new Set([trunk, left, right, side]).size, 4);
+  // Every stretch of a branch has the same number, however finely it was cut.
+  assert.equal(at(0, -20), trunk);
+  assert.equal(at(0, -95), trunk);
+  assert.equal(at(-55, -173), left);
+  // A point's parent is on its branch, or is where its branch starts.
+  for (let i = 1; i < cell.count; i++) {
+    const p = cell.parent[i];
+    assert.ok(cell.branch[i] >= 0 && cell.branch[i] < cell.branches);
+    if (cell.branch[p] !== cell.branch[i]) assert.ok(p === 0 || cell.branch[p] < cell.branch[i]);
+  }
+});
+
+test('a pointer finds every branch within its reach, each with its nearest stretch', () => {
   const cell = prepareCell(SMALL, shape());
   const reach = 14;
-  assert.equal(hitCell(cell, 0, 0, reach), 0);
-  assert.equal(hitCell(cell, cell.somaRadius + SHAPE.soma.reach - 1, 0, reach), 0);
+  // Beside the trunk, halfway up: the trunk alone, 6px away.
+  const [trunk, ...others] = nearBranches(cell, 6, -50, reach);
+  assert.equal(others.length, 0);
+  assert.ok(near(trunk.distance, 6));
+  assert.ok(near(cell.x[trunk.point], 0) && cell.y[trunk.point] <= -44 && cell.y[trunk.point] >= -58);
 
-  // Beside the trunk, halfway up: a point on the trunk.
-  const onTrunk = hitCell(cell, 6, -50, reach);
-  assert.ok(onTrunk > 0);
-  assert.ok(near(cell.x[onTrunk], 0) && cell.y[onTrunk] <= -44 && cell.y[onTrunk] >= -58);
-
+  // At the fork: the trunk and both forks.
+  assert.equal(nearBranches(cell, 0, -100, reach).length, 3);
   // Between the trunk and the side branch, out of reach of both.
-  assert.equal(hitCell(cell, 40, -40, reach), -1);
-  assert.equal(hitCell(cell, 40, -40, 24) > 0, false);
-  // A finger's wider reach finds what a mouse's doesn't.
-  assert.equal(hitCell(cell, 60, -20, reach), -1);
-  assert.ok(hitCell(cell, 60, -20, 24) > 0);
+  assert.equal(nearBranches(cell, 40, -40, reach).length, 0);
+  // A finger's wider reach, and the wider reach a branch is left at, find more.
+  assert.equal(nearBranches(cell, 20, -50, reach).length, 0);
+  assert.equal(nearBranches(cell, 20, -50, 24).length, 1);
+  assert.equal(nearBranches(cell, 34, -50, 36).length, 1);
   // Outside the cell altogether.
-  assert.equal(hitCell(cell, 300, 300, reach), -1);
+  assert.equal(nearBranches(cell, 300, 300, 36).length, 0);
+});
+
+test("a pointer touches the soma within a few px of its edge", () => {
+  const cell = prepareCell(SMALL, shape());
+  assert.ok(somaGap(cell, 0, 0) < 0);
+  assert.ok(somaGap(cell, cell.somaRadius + SHAPE.soma.reach - 1, 0) < 0);
+  assert.ok(near(somaGap(cell, cell.somaRadius + SHAPE.soma.reach + 5, 0), 5));
 });
 
 test('the path from a point runs back to the soma', () => {
@@ -223,6 +255,9 @@ test('the path from a point runs back to the soma', () => {
 
 test('every real cell prepares: no axon, one soma, spines by length, a hit on every stretch', () => {
   assert.equal(files.length, 10);
+  // The first medium spiny cell has 28 stretches between branch points, and the second pyramidal cell 142.
+  assert.equal(prepareCell(files[0].file, shape()).branches, 28);
+  assert.equal(prepareCell(files[8].file, shape()).branches, 142);
   for (const { id, file } of files) {
     assert.ok(!file.kind.includes(2), `${id} has an axon now: the layer leaves axons out`);
     const size = 260;
@@ -236,8 +271,14 @@ test('every real cell prepares: no axon, one soma, spines by length, a hit on ev
     const perSpine = length / (cell.spines.length / 4);
     assert.ok(perSpine > 10 && perSpine < 16, `${id}: a spine every ${perSpine.toFixed(1)}px`);
 
-    // A pointer on any point of the cell finds the cell.
-    for (let i = 1; i < cell.count; i += 7) assert.ok(hitCell(cell, cell.x[i], cell.y[i], 14) >= 0, id);
+    // A pointer on any point of the cell finds that point's branch.
+    for (let i = 1; i < cell.count; i += 7) {
+      const found = nearBranches(cell, cell.x[i], cell.y[i], 14);
+      assert.ok(
+        found.some((one) => one.branch === cell.branch[i] && one.distance < 1e-3),
+        id,
+      );
+    }
   }
 });
 

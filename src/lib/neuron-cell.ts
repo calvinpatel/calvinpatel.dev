@@ -41,7 +41,8 @@ export const SHAPE = {
 /** How a pointer reaches the layer. Lengths are px and times ms. */
 export const POINTER = {
   mouse: 14, // how near a dendrite a mouse has to pass to touch it
-  finger: 24, // and a finger or a pen; no more than one grid square
+  finger: 24, // and a finger or a pen
+  leave: 1.5, // a branch or a soma is left only this many reaches away, so a pointer at the reach's edge can't flicker
   every: 10, // a fast pointer's path is filled in with a touch this often,
   most: 24, // up to this many between two of its events
   gap: 100, // two events further apart than this aren't one path
@@ -93,12 +94,16 @@ export interface DrawnCell {
   parent: Int32Array;
   dist: Float32Array; // from the soma along the branches
   width: Float32Array; // of the stretch from a point's parent to it
+  branch: Int32Array; // which branch a point's stretch is part of; -1 for the soma
+  branches: number; // how many branches: stretches of dendrite between branch points
+  branchFrom: Int32Array; // for each branch, the point it starts from: the soma or a branch point
+  branchTo: Int32Array; // and its last point: a branch point or a tip
   farthest: number; // the longest path from the soma
   meanWidth: number;
   somaRadius: number;
   spines: Float32Array; // four numbers each: from x, y to x, y
   bounds: Box; // of its points, around the soma
-  grid: Map<number, number[]>; // each grid square's points, for hitCell
+  grid: Map<number, number[]>; // each grid square's points, for nearBranches
 }
 
 /**
@@ -130,10 +135,24 @@ export function prepareCell(file: CellFile, shape: Shape): DrawnCell {
     if (i === 0 || (file.kind[i] !== AXON && kept[p] >= 0)) kept[i] = keptCount++;
   }
 
-  // The tips each point carries.
+  // The tips each point carries, and the branch each point is on. A branch
+  // starts at the soma or at a branch point and runs to the next branch
+  // point or to a tip.
   const tips = new Int32Array(total);
   const hasChild = new Uint8Array(total);
-  for (let i = 1; i < total; i++) if (kept[i] >= 0) hasChild[file.parent[i]] = 1;
+  const children = new Int32Array(total);
+  for (let i = 1; i < total; i++) {
+    if (kept[i] < 0) continue;
+    hasChild[file.parent[i]] = 1;
+    children[file.parent[i]]++;
+  }
+  const branchOf = new Int32Array(total).fill(-1);
+  let branches = 0;
+  for (let i = 1; i < total; i++) {
+    if (kept[i] < 0) continue;
+    const p = file.parent[i];
+    branchOf[i] = p === 0 || children[p] > 1 ? branches++ : branchOf[p];
+  }
   for (let i = total - 1; i >= 1; i--) {
     if (kept[i] < 0) continue;
     if (!hasChild[i]) tips[i] = 1;
@@ -159,8 +178,11 @@ export function prepareCell(file: CellFile, shape: Shape): DrawnCell {
   const parents: number[] = [-1];
   const dists: number[] = [0];
   const widths: number[] = [0];
+  const branchIds: number[] = [-1];
   const last = new Int32Array(total).fill(-1); // a file point's number among the drawn points
   last[0] = 0;
+  const branchFrom = new Int32Array(branches).fill(-1);
+  const branchTo = new Int32Array(branches);
   let farthest = 0;
   let widthSum = 0;
   for (let i = 1; i < total; i++) {
@@ -177,10 +199,13 @@ export function prepareCell(file: CellFile, shape: Shape): DrawnCell {
       parents.push(from);
       dists.push(dists[last[p]] + length * t);
       widths.push(width);
+      branchIds.push(branchOf[i]);
       widthSum += width;
       from = xs.length - 1;
     }
     last[i] = from;
+    if (branchFrom[branchOf[i]] < 0) branchFrom[branchOf[i]] = last[p];
+    branchTo[branchOf[i]] = from;
     farthest = Math.max(farthest, dists[from]);
   }
   const count = xs.length;
@@ -250,6 +275,10 @@ export function prepareCell(file: CellFile, shape: Shape): DrawnCell {
     parent,
     dist: Float32Array.from(dists),
     width: Float32Array.from(widths),
+    branch: Int32Array.from(branchIds),
+    branches,
+    branchFrom,
+    branchTo,
     farthest,
     meanWidth: count > 1 ? widthSum / (count - 1) : 1,
     somaRadius: somaRadius(shape.size, shape.somaShare),
@@ -259,24 +288,41 @@ export function prepareCell(file: CellFile, shape: Shape): DrawnCell {
   };
 }
 
-/**
- * What a pointer at (x, y), in px from the cell's soma, touches: 0 for the
- * soma, the end point of the nearest stretch of dendrite within `reach`, or
- * -1 for nothing. `reach` can't be more than one grid square.
- */
-export function hitCell(cell: DrawnCell, x: number, y: number, reach: number): number {
-  const { bounds } = cell;
-  if (x < bounds.left - reach || x > bounds.right + reach || y < bounds.top - reach || y > bounds.bottom + reach) {
-    return -1;
-  }
-  if (Math.hypot(x, y) < cell.somaRadius + SHAPE.soma.reach) return 0;
+/** How far (x, y), in px from the cell's soma, is from touching the soma: 0 or less when it touches. */
+export function somaGap(cell: DrawnCell, x: number, y: number): number {
+  return Math.hypot(x, y) - cell.somaRadius - SHAPE.soma.reach;
+}
 
+/** A branch near a pointer. */
+export interface Near {
+  branch: number;
+  point: number; // the end point of the branch's nearest stretch
+  distance: number; // px, to the branch's nearest spot,
+  x: number; // which is here
+  y: number;
+}
+
+/** Whether two branches meet: at a branch point, or at the soma. */
+export function branchesMeet(cell: DrawnCell, a: number, b: number): boolean {
+  const { branchFrom, branchTo } = cell;
+  return branchFrom[a] === branchFrom[b] || branchTo[a] === branchFrom[b] || branchFrom[a] === branchTo[b];
+}
+
+/**
+ * Every branch within `within` px of (x, y), in px from the cell's soma: each
+ * with its nearest stretch and how far away that is.
+ */
+export function nearBranches(cell: DrawnCell, x: number, y: number, within: number): Near[] {
+  const { bounds } = cell;
+  if (x < bounds.left - within || x > bounds.right + within || y < bounds.top - within || y > bounds.bottom + within) {
+    return [];
+  }
   const column = Math.floor(x / SHAPE.grid);
   const row = Math.floor(y / SHAPE.grid);
-  let best = -1;
-  let nearest = reach * reach;
-  for (let c = -1; c <= 1; c++) {
-    for (let r = -1; r <= 1; r++) {
+  const squares = Math.ceil(within / SHAPE.grid);
+  const nearest = new Map<number, Near>();
+  for (let c = -squares; c <= squares; c++) {
+    for (let r = -squares; r <= squares; r++) {
       const points = cell.grid.get(gridKey(column + c, row + r));
       if (!points) continue;
       for (const i of points) {
@@ -285,15 +331,17 @@ export function hitCell(cell: DrawnCell, x: number, y: number, reach: number): n
         const ey = cell.y[i] - cell.y[p];
         const along = ((x - cell.x[p]) * ex + (y - cell.y[p]) * ey) / (ex * ex + ey * ey || 1);
         const t = Math.min(1, Math.max(0, along));
-        const d = (cell.x[p] + ex * t - x) ** 2 + (cell.y[p] + ey * t - y) ** 2;
-        if (d < nearest) {
-          nearest = d;
-          best = i;
-        }
+        const spotX = cell.x[p] + ex * t;
+        const spotY = cell.y[p] + ey * t;
+        const distance = Math.hypot(spotX - x, spotY - y);
+        if (distance > within) continue;
+        const branch = cell.branch[i];
+        const known = nearest.get(branch);
+        if (!known || distance < known.distance) nearest.set(branch, { branch, point: i, distance, x: spotX, y: spotY });
       }
     }
   }
-  return best;
+  return [...nearest.values()];
 }
 
 /** The points from `point` back to the soma, the soma last. */

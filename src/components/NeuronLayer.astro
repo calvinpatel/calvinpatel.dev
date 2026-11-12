@@ -23,8 +23,10 @@ const files = readCellIndex().map((cell) => `/cells/${cell.file}`);
 <script>
   import type { Box } from '../lib/brain-nav.ts';
   import { inkOf } from '../lib/ink.ts';
-  import { POINTER, SHAPE, hitCell, pathToSoma, prepareCell, readCell } from '../lib/neuron-cell.ts';
+  import { POINTER, SHAPE, pathToSoma, prepareCell, readCell } from '../lib/neuron-cell.ts';
   import type { CellFile, DrawnCell } from '../lib/neuron-cell.ts';
+  import { cross, noCrossing } from '../lib/neuron-crossing.ts';
+  import type { Crossing } from '../lib/neuron-crossing.ts';
   import {
     FIELD,
     REST_MAX,
@@ -74,6 +76,7 @@ const files = readCellIndex().map((cell) => `/cells/${cell.file}`);
     cell: DrawnCell;
     rgb: Rgb;
     membrane: Membrane;
+    crossing: Crossing; // what the pointer is on in this cell
     bright: Float32Array; // each point's brightness this frame
     lit: number; // the frame `bright` was last filled in
     sprite: HTMLCanvasElement | null; // the resting cell, blurred; freed once the rest is baked
@@ -346,6 +349,7 @@ const files = readCellIndex().map((cell) => `/cells/${cell.file}`);
           cell,
           rgb: colors[placement.color],
           membrane: restingMembrane(),
+          crossing: noCrossing(),
           bright: new Float32Array(cell.count),
           lit: -1,
           sprite: null,
@@ -414,11 +418,13 @@ const files = readCellIndex().map((cell) => `/cells/${cell.file}`);
       waves.push(spikeWave(index, neurons[index].cell, at, gain, timing, reduced.matches));
     }
 
-    // What a pointer at (x, y) touches: on a dendrite, input; on a soma, a spike.
+    // What a pointer newly touches as it moves to (x, y). A crossing sends one
+    // pulse (neuron-crossing.ts): a dendrite it has just come within reach
+    // of takes one input, and a soma it has just touched fires.
     function touch(x: number, y: number, reach: number) {
       neurons.forEach((neuron, index) => {
         const { cell, membrane, placement } = neuron;
-        const point = hitCell(cell, x - placement.x - neuron.dx, y - placement.y - neuron.dy, reach);
+        const point = cross(neuron.crossing, cell, x - placement.x - neuron.dx, y - placement.y - neuron.dy, reach);
         if (point === 0) {
           if (touchSoma(membrane, time, timing)) fire(index, time, 1);
         } else if (point > 0 && takeInput(membrane, time, timing)) {
@@ -763,6 +769,13 @@ const files = readCellIndex().map((cell) => `/cells/${cell.file}`);
     const samples: { x: number; y: number; reach: number }[] = [];
     let trail: { x: number; y: number; at: number } | null = null;
 
+    // The pointer is gone, or the page has moved under it: it is on nothing,
+    // so whatever it touches next is a new crossing.
+    function forget() {
+      trail = null;
+      for (const neuron of neurons) neuron.crossing = noCrossing();
+    }
+
     function pointOf(event: PointerEvent) {
       const origin = canvas.getBoundingClientRect();
       const x = event.clientX - origin.left;
@@ -774,7 +787,7 @@ const files = readCellIndex().map((cell) => `/cells/${cell.file}`);
     function follow(event: PointerEvent) {
       const to = pointOf(event);
       if (!to || !ready) {
-        trail = null;
+        forget();
         return;
       }
       const reach = event.pointerType === 'mouse' ? POINTER.mouse : POINTER.finger;
@@ -790,9 +803,12 @@ const files = readCellIndex().map((cell) => `/cells/${cell.file}`);
       wake();
     }
 
+    // Each new touch of a finger starts afresh. A mouse's press changes nothing:
+    // it is still on whatever it was on.
     function pressed(event: PointerEvent) {
       if (!event.isPrimary) return;
-      trail = null;
+      if (event.pointerType === 'mouse') trail = null;
+      else forget();
       follow(event);
     }
     // A mouse sends input wherever it moves. A finger or a pen does while it
@@ -801,9 +817,12 @@ const files = readCellIndex().map((cell) => `/cells/${cell.file}`);
       if (!event.isPrimary || (event.pointerType !== 'mouse' && event.buttons === 0)) return;
       follow(event);
     }
-    const lifted = () => {
-      trail = null;
-    };
+    // A finger lifts, or the browser takes its swipe over as a scroll.
+    function lifted(event: PointerEvent) {
+      if (!event.isPrimary) return;
+      if (event.pointerType === 'mouse') trail = null;
+      else forget();
+    }
 
     const heard: [string, (event: PointerEvent) => void][] = [
       ['pointerdown', pressed],
@@ -811,8 +830,8 @@ const files = readCellIndex().map((cell) => `/cells/${cell.file}`);
       ['pointerup', lifted],
       ['pointercancel', lifted],
       // A scroll moves the page under a still pointer, and a pointer can come back anywhere.
-      ['scroll', lifted],
-      ['blur', lifted],
+      ['scroll', forget],
+      ['blur', forget],
     ];
     function listen(on: boolean) {
       for (const [type, listener] of heard) {

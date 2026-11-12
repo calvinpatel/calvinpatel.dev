@@ -28,15 +28,17 @@ Cal Patel's portfolio site. It reads as a nervous system: real neuron reconstruc
 │                      brain.ts, the hero brain's geometry; brain-nav.ts, the brain navigation's rules;
 │                      spontaneous.ts, the five-second window's clock, which the brain and the neuron layer share;
 │                      the neuron layer's rules: neuron-field.ts (where cells and nuclei go), neuron-cell.ts (one cell),
-│                      neuron-signal.ts (input and firing), neuron-zones.ts (the brightness cap behind text),
-│                      neuron-sprite.ts (a cell's blur, drawn on the canvas);
+│                      neuron-crossing.ts (when a pointer sends input), neuron-signal.ts (input and firing),
+│                      neuron-zones.ts (the brightness cap behind text), neuron-sprite.ts (a cell's blur, drawn on
+│                      the canvas);
 │                      ink.ts, which measures text for the brain and the neuron layer
 ├── src/styles/        tokens.css and global styles
 ├── public/cells/      neuron files the hero loads (generated; don't edit by hand)
 ├── data/swc/          raw downloaded reconstructions + sources.csv
 ├── scripts/           swc_to_web.py
 ├── tests/             test_swc_to_web.py, and one .test.ts per src/lib/ module: copy, raster, wiring, pixels, cells,
-│                      brain, brain-nav, spontaneous, neuron-field, neuron-cell, neuron-signal, neuron-zones
+│                      brain, brain-nav, spontaneous, neuron-field, neuron-cell, neuron-crossing, neuron-signal,
+│                      neuron-zones
 └── docs/              cell-web-v1.md (the neuron file format), design/ (chosen artboards, 1x PNG),
                        spikes/ (approved spikes; brain-navigation.html is the source for the hero's brain and neuron layer)
 ```
