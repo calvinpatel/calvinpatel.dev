@@ -28,7 +28,8 @@ Cal Patel's portfolio site. It reads as a nervous system: real neuron reconstruc
 │                      brain.ts, the hero brain's geometry; brain-nav.ts, the brain navigation's rules;
 │                      spontaneous.ts, the five-second window's clock, which the brain and the neuron layer share;
 │                      the neuron layer's rules: neuron-field.ts (where cells and nuclei go), neuron-cell.ts (one cell),
-│                      neuron-signal.ts (input and firing), neuron-zones.ts (the brightness cap behind text);
+│                      neuron-signal.ts (input and firing), neuron-zones.ts (the brightness cap behind text),
+│                      neuron-sprite.ts (a cell's blur, drawn on the canvas);
 │                      ink.ts, which measures text for the brain and the neuron layer
 ├── src/styles/        tokens.css and global styles
 ├── public/cells/      neuron files the hero loads (generated; don't edit by hand)

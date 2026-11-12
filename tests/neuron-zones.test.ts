@@ -11,7 +11,9 @@ import {
   coverage,
   coverageMask,
   luminance,
+  pickToFire,
   sameZones,
+  somaDimming,
   somaShows,
   veils,
 } from '../src/lib/neuron-zones.ts';
@@ -134,6 +136,18 @@ test("the mask is fully opaque over every px of a zone, however it's smoothed", 
   }
 });
 
+test("the mask is every pixel's coverage, with zones that overlap", () => {
+  // The name, a label that overlaps its dimming, and one inside another's feather.
+  const zones: Box[] = [NAME, { left: 480, top: 420, right: 640, bottom: 460 }, { left: 530, top: 480, right: 600, bottom: 500 }];
+  const mask = coverageMask(zones, 800, 600);
+  for (let row = 0; row < mask.rows; row++) {
+    for (let column = 0; column < mask.columns; column++) {
+      const c = coverage(zones, (column - ZONE.margin + 0.5) * ZONE.scale, (row - ZONE.margin + 0.5) * ZONE.scale);
+      assert.equal(mask.alpha[row * mask.columns + column], c >= 1 ? 255 : Math.floor(c * 255));
+    }
+  }
+});
+
 test('the mask is clear away from every zone, and partial only in the feather', () => {
   const mask = coverageMask([NAME], 1440, 900);
   const at = (x: number, y: number) =>
@@ -162,6 +176,35 @@ test('a soma shows only on the canvas, clear of the text and of the brain', () =
   assert.ok(!shows(300, 905));
   // A page with no brain.
   assert.ok(somaShows([NAME], null, 1440, 900, 900, 500));
+});
+
+test("a soma's dimming is the text's coverage, or nothing where it can't be seen", () => {
+  const brain: Box = { left: 700, top: 290, right: 1210, bottom: 690 };
+  const dimming = (x: number, y: number) => somaDimming([NAME], brain, 1440, 900, x, y);
+  assert.equal(dimming(300, 700), 0);
+  assert.equal(dimming(300, 430), 1);
+  assert.ok(Math.abs(dimming(NAME.right + ZONE.pad + ZONE.feather / 2, 430)! - 0.5) < 1e-9);
+  assert.equal(dimming(900, 500), null);
+  assert.equal(dimming(-10, 700), null);
+});
+
+test('a cell whose soma shows fires on its own; where none shows, the least dimmed', () => {
+  // Cells 1 and 3 show. Each is picked, and no other.
+  const some = [0.4, 0, null, 0, 1];
+  assert.equal(pickToFire(some, () => 0), 1);
+  assert.equal(pickToFire(some, () => 0.99), 3);
+  for (let i = 0; i < 20; i++) assert.ok([1, 3].includes(pickToFire(some, Math.random)));
+
+  // A narrow phone: none shows, so the least dimmed, whatever the draw.
+  const none = [null, 0.78, 0.95, null, 1];
+  assert.equal(pickToFire(none, () => 0), 1);
+  assert.equal(pickToFire(none, () => 0.99), 1);
+  // Once that one has fired and can't again yet, the next least dimmed.
+  assert.equal(pickToFire([null, null, 0.95, null, 1], Math.random), 2);
+
+  // No cell can fire.
+  assert.equal(pickToFire([null, null], Math.random), -1);
+  assert.equal(pickToFire([], Math.random), -1);
 });
 
 test('zones are compared to the pixel', () => {

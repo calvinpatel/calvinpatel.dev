@@ -69,12 +69,17 @@ function distanceTo(box: Box, x: number, y: number): number {
   return Math.hypot(dx, dy);
 }
 
+/** How fully a point `distance` px from a zone is dimmed by it, 0 to 1. */
+function dimmedAt(distance: number, pad: number, feather: number): number {
+  const t = Math.min(1, Math.max(0, 1 - (distance - pad) / feather));
+  return t * t * (3 - 2 * t);
+}
+
 /** How fully a point is dimmed, 0 to 1: 1 within `pad` of any zone, easing to 0 over `feather`. */
 export function coverage(zones: readonly Box[], x: number, y: number, pad = ZONE.pad, feather = ZONE.feather): number {
   let nearest = Infinity;
   for (const zone of zones) nearest = Math.min(nearest, distanceTo(zone, x, y));
-  const t = Math.min(1, Math.max(0, 1 - (nearest - pad) / feather));
-  return t * t * (3 - 2 * t);
+  return dimmedAt(nearest, pad, feather);
 }
 
 /** The coverage of a whole canvas as a small mask: one alpha per mask pixel, row by row. */
@@ -95,7 +100,9 @@ export function coverageMask(zones: readonly Box[], width: number, height: numbe
   const columns = Math.ceil(width / scale) + 2 * margin;
   const rows = Math.ceil(height / scale) + 2 * margin;
   const alpha = new Uint8ClampedArray(columns * rows);
-  // Only the mask pixels near a zone are worked out; the rest stay 0.
+  // Only the mask pixels near a zone are worked out; the rest stay 0. A
+  // pixel's coverage is the most any one zone dims it, so each zone only
+  // needs its own distance.
   const reach = ZONE.pad + ZONE.feather;
   for (const zone of zones) {
     const c0 = Math.max(0, Math.floor((zone.left - reach) / scale) + margin);
@@ -108,8 +115,8 @@ export function coverageMask(zones: readonly Box[], width: number, height: numbe
         if (alpha[i] === 255) continue;
         const x = (column - margin + 0.5) * scale;
         const y = (row - margin + 0.5) * scale;
-        const c = coverage(zones, x, y);
-        alpha[i] = c >= 1 ? 255 : Math.floor(c * 255);
+        const c = dimmedAt(distanceTo(zone, x, y), ZONE.pad, ZONE.feather);
+        alpha[i] = Math.max(alpha[i], c >= 1 ? 255 : Math.floor(c * 255));
       }
     }
   }
@@ -117,9 +124,26 @@ export function coverageMask(zones: readonly Box[], width: number, height: numbe
 }
 
 /**
+ * How dimmed a soma at (x, y) is, 0 to 1: the text zones' coverage there.
+ * Null when it can't be seen at all: off the canvas, or behind the brain.
+ * `brain` is the brain's box, if there is one.
+ */
+export function somaDimming(
+  zones: readonly Box[],
+  brain: Box | null,
+  width: number,
+  height: number,
+  x: number,
+  y: number,
+): number | null {
+  if (x < 0 || x > width || y < 0 || y > height) return null;
+  if (brain && distanceTo(brain, x, y) < ZONE.brain) return null;
+  return coverage(zones, x, y);
+}
+
+/**
  * Whether a soma at (x, y) shows: on the canvas, clear of every text zone's
- * dimming, and not behind the brain. A cell fires on its own only if its soma
- * shows, so the firing can be seen. `brain` is the brain's box, if there is one.
+ * dimming, and not behind the brain.
  */
 export function somaShows(
   zones: readonly Box[],
@@ -129,9 +153,25 @@ export function somaShows(
   x: number,
   y: number,
 ): boolean {
-  if (x < 0 || x > width || y < 0 || y > height) return false;
-  if (brain && distanceTo(brain, x, y) < ZONE.brain) return false;
-  return coverage(zones, x, y) === 0;
+  return somaDimming(zones, brain, width, height, x, y) === 0;
+}
+
+/**
+ * Which cell fires on its own, so the firing can be seen. `dimming` holds
+ * each cell's somaDimming, or null for a cell that can't fire now.
+ *
+ *   - Where any soma shows undimmed, one of those, picked by `random`.
+ *   - Where none does, as on a narrow phone, the least dimmed soma.
+ *   - -1 when no cell can fire.
+ */
+export function pickToFire(dimming: readonly (number | null)[], random: () => number): number {
+  const clear = dimming.flatMap((value, index) => (value === 0 ? [index] : []));
+  if (clear.length > 0) return clear[Math.floor(random() * clear.length)];
+  let best = -1;
+  dimming.forEach((value, index) => {
+    if (value !== null && (best < 0 || value < dimming[best]!)) best = index;
+  });
+  return best;
 }
 
 /** Whether two lists of zones are the same boxes, to the pixel. */

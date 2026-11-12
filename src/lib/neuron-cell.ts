@@ -304,21 +304,32 @@ export function pathToSoma(cell: DrawnCell, point: number): Int32Array {
 }
 
 /**
- * A sprite's alpha, blurred: a Gaussian of standard deviation `sigma`, in the
- * sprite's own pixels. Canvas has a blur filter, but Safari doesn't run it,
- * so each cell's out-of-focus look is worked out here, the same everywhere.
- * `alpha` holds `width` × `height` values, row by row.
+ * A Gaussian blur's weights at whole pixels, for a standard deviation of
+ * `sigma` pixels: weights[k] is the share a pixel takes from the one k away,
+ * on either side. Together they sum to 1. No blur is the one weight, 1.
  */
-export function blurAlpha(alpha: Uint8ClampedArray, width: number, height: number, sigma: number): Uint8ClampedArray {
-  if (!(sigma > 0)) return alpha.slice();
+export function blurWeights(sigma: number): number[] {
+  if (!(sigma > 0)) return [1];
   const radius = Math.max(1, Math.ceil(sigma * 3));
-  const weights = new Float32Array(radius + 1);
+  const weights: number[] = [];
   let sum = 0;
   for (let k = 0; k <= radius; k++) {
-    weights[k] = Math.exp(-(k * k) / (2 * sigma * sigma));
+    weights.push(Math.exp(-(k * k) / (2 * sigma * sigma)));
     sum += k === 0 ? weights[k] : 2 * weights[k];
   }
-  for (let k = 0; k <= radius; k++) weights[k] /= sum;
+  return weights.map((weight) => weight / sum);
+}
+
+/**
+ * A sprite's alpha, blurred by blurWeights, worked out pixel by pixel. The
+ * page blurs its sprites on the canvas instead (neuron-sprite.ts), which
+ * reads no pixels back; this is the same blur done exactly, to check that
+ * one against. `alpha` holds `width` × `height` values, row by row.
+ */
+export function blurAlpha(alpha: Uint8ClampedArray, width: number, height: number, sigma: number): Uint8ClampedArray {
+  const weights = blurWeights(sigma);
+  if (weights.length === 1) return alpha.slice();
+  const radius = weights.length - 1;
 
   // Across each row, then down each column. A sprite is mostly empty, so each
   // pass spreads only the pixels that hold something. What would land past

@@ -23,7 +23,7 @@ const files = readCellIndex().map((cell) => `/cells/${cell.file}`);
 <script>
   import type { Box } from '../lib/brain-nav.ts';
   import { inkOf } from '../lib/ink.ts';
-  import { POINTER, SHAPE, blurAlpha, hitCell, pathToSoma, prepareCell, readCell } from '../lib/neuron-cell.ts';
+  import { POINTER, SHAPE, hitCell, pathToSoma, prepareCell, readCell } from '../lib/neuron-cell.ts';
   import type { CellFile, DrawnCell } from '../lib/neuron-cell.ts';
   import {
     FIELD,
@@ -52,7 +52,17 @@ const files = readCellIndex().map((cell) => `/cells/${cell.file}`);
     touchSoma,
   } from '../lib/neuron-signal.ts';
   import type { Membrane, Timing, Wave } from '../lib/neuron-signal.ts';
-  import { ZONE, capGray, coverageMask, sameZones, somaShows, veils } from '../lib/neuron-zones.ts';
+  import { blurSprite } from '../lib/neuron-sprite.ts';
+  import {
+    ZONE,
+    capGray,
+    coverageMask,
+    pickToFire,
+    sameZones,
+    somaDimming,
+    somaShows,
+    veils,
+  } from '../lib/neuron-zones.ts';
   import { spontaneousWindow } from '../lib/spontaneous.ts';
   import { tokenReader } from '../lib/tokens.ts';
 
@@ -72,8 +82,11 @@ const files = readCellIndex().map((cell) => `/cells/${cell.file}`);
     dy: number;
   }
 
+  // The layer starts after the page's first paint, so the hero's text and the
+  // brain never wait for it. Its first step reads the tokens, which before
+  // then would make the browser lay the whole page out inside this script.
   const canvas = document.querySelector<HTMLCanvasElement>('[data-neurons]');
-  if (canvas) start(canvas);
+  if (canvas) requestAnimationFrame(() => requestAnimationFrame(() => start(canvas)));
 
   function start(canvas: HTMLCanvasElement) {
     const hero = canvas.closest('section') ?? canvas;
@@ -215,6 +228,7 @@ const files = readCellIndex().map((cell) => `/cells/${cell.file}`);
     // Measures the zones again and, if they moved, redraws. The masks are
     // written pixel by pixel, so a zone's alpha is exactly full.
     function refreshZones(always = false) {
+      if (!ready) return;
       const measured = measureZones();
       if (!always && sameZones(measured, zones)) return;
       zones = measured;
@@ -247,7 +261,8 @@ const files = readCellIndex().map((cell) => `/cells/${cell.file}`);
     let building = 0;
 
     // A cell's resting look: its dendrites, spines, and soma in its color,
-    // out of focus by its depth. Drawn once.
+    // out of focus by its depth. Drawn once, with no pixels read back.
+    const scratch = document.createElement('canvas');
     function buildSprite(neuron: Neuron) {
       const { cell, placement, rgb } = neuron;
       const { left, top, right, bottom } = neuron.spriteBox;
@@ -257,7 +272,7 @@ const files = readCellIndex().map((cell) => `/cells/${cell.file}`);
       const g = sprite.getContext('2d')!;
       g.scale(scale, scale);
       g.translate(-left, -top);
-      g.strokeStyle = g.fillStyle = '#fff';
+      g.strokeStyle = g.fillStyle = paint(rgb);
       g.lineCap = g.lineJoin = 'round';
       for (let i = 1; i < cell.count; i++) {
         const p = cell.parent[i];
@@ -278,18 +293,7 @@ const files = readCellIndex().map((cell) => `/cells/${cell.file}`);
       g.arc(0, 0, cell.somaRadius, 0, 2 * Math.PI);
       g.fill();
 
-      // Blur what was drawn, and color it.
-      const image = g.getImageData(0, 0, sprite.width, sprite.height);
-      const alpha = new Uint8ClampedArray(sprite.width * sprite.height);
-      for (let i = 0; i < alpha.length; i++) alpha[i] = image.data[4 * i + 3];
-      const blurred = blurAlpha(alpha, sprite.width, sprite.height, blurOf(placement.depth) * scale);
-      for (let i = 0; i < alpha.length; i++) {
-        image.data[4 * i] = rgb[0];
-        image.data[4 * i + 1] = rgb[1];
-        image.data[4 * i + 2] = rgb[2];
-        image.data[4 * i + 3] = blurred[i];
-      }
-      g.putImageData(image, 0, 0);
+      blurSprite(sprite, blurOf(placement.depth) * scale, scratch);
       neuron.sprite = sprite;
     }
 
@@ -310,9 +314,10 @@ const files = readCellIndex().map((cell) => `/cells/${cell.file}`);
 
     const nextTask = () => new Promise((resolve) => setTimeout(resolve));
 
-    // Places the cells if the width changed, then draws every cell's sprite,
-    // one per task so the page stays responsive. A height change keeps every
-    // cell where it was: a phone's browser bars change the height on scroll.
+    // Places the cells if the width changed, then prepares each cell and
+    // draws its sprite, one cell per task, so no task runs long and the page
+    // stays responsive. A height change keeps every cell where it was: a
+    // phone's browser bars change the height on scroll.
     async function build() {
       if (!ready) return;
       const mine = ++building;
@@ -326,7 +331,8 @@ const files = readCellIndex().map((cell) => `/cells/${cell.file}`);
         );
         placedWidth = width;
       }
-      const built = placements.map((placement, i): Neuron => {
+      const built: Neuron[] = [];
+      for (const [i, placement] of placements.entries()) {
         const cell = prepareCell(files[placement.cell], {
           size: placement.size,
           reach: placement.reach,
@@ -335,7 +341,7 @@ const files = readCellIndex().map((cell) => `/cells/${cell.file}`);
           somaShare,
           seed: i + 1,
         });
-        return {
+        const neuron: Neuron = {
           placement,
           cell,
           rgb: colors[placement.color],
@@ -352,12 +358,16 @@ const files = readCellIndex().map((cell) => `/cells/${cell.file}`);
           dx: 0,
           dy: 0,
         };
-      });
-      for (const neuron of built) {
         buildSprite(neuron);
+        built.push(neuron);
         await nextTask();
-        if (mine !== building) return; // a newer build has started
+        if (mine !== building) {
+          // A newer build has started.
+          for (const spent of built) free(spent.sprite);
+          return;
+        }
       }
+      free(scratch);
       fit();
       for (const neuron of neurons) free(neuron.sprite);
       free(nuclei);
@@ -367,6 +377,8 @@ const files = readCellIndex().map((cell) => `/cells/${cell.file}`);
       waves = [];
       buildNuclei();
       setDrift();
+      await nextTask();
+      if (mine !== building) return;
       refreshZones(true);
       if (!shown) {
         shown = true;
@@ -421,13 +433,16 @@ const files = readCellIndex().map((cell) => `/cells/${cell.file}`);
       for (const sample of samples.splice(0, POINTER.perFrame)) touch(sample.x, sample.y, sample.reach);
       samples.length = 0;
 
-      // On its own a cell fires only inside the window, and only if it can
-      // finish there. One is picked from the cells whose soma shows (clear of
-      // the text and the brain) and that have been quiet long enough.
+      // On its own a cell fires only inside the window, and only if it has
+      // been quiet long enough and can finish there. One is picked whose soma
+      // shows, clear of the text and the brain; where none does, the least
+      // dimmed (neuron-zones.ts).
       if (moving && time >= nextOwn) {
         const left = clock.remaining();
-        const able = neurons.flatMap((neuron, index) => {
-          const shows = somaShows(
+        const dimming = neurons.map((neuron) => {
+          const can = isQuiet(neuron.membrane, time, quiet) && left >= firingLength(neuron.cell, timing);
+          if (!can) return null;
+          return somaDimming(
             zones,
             brainBox,
             width,
@@ -435,11 +450,9 @@ const files = readCellIndex().map((cell) => `/cells/${cell.file}`);
             neuron.placement.x + neuron.dx,
             neuron.placement.y + neuron.dy,
           );
-          const can = shows && isQuiet(neuron.membrane, time, quiet) && left >= firingLength(neuron.cell, timing);
-          return can ? [index] : [];
         });
-        if (able.length > 0) {
-          const index = able[Math.floor(Math.random() * able.length)];
+        const index = pickToFire(dimming, Math.random);
+        if (index >= 0) {
           spike(neurons[index].membrane, time, SIGNAL.own);
           fire(index, time, SIGNAL.own);
           counts.own++;
@@ -814,6 +827,7 @@ const files = readCellIndex().map((cell) => `/cells/${cell.file}`);
     // The cells themselves are rebuilt once the size has settled.
     let settle: ReturnType<typeof setTimeout> | undefined;
     function resized() {
+      if (!ready) return; // nothing to show yet; the first build measures everything
       if (!fit()) {
         refreshZones();
         return;
@@ -846,8 +860,7 @@ const files = readCellIndex().map((cell) => `/cells/${cell.file}`);
     clock.whenClosed(wake);
     reduced.addEventListener('change', build);
 
-    // The cells load after the first paint, so the hero's text and the brain
-    // never wait for them. Then the layer fades in, all at once.
+    // The cells load now, after the first paint. Then the layer fades in, all at once.
     async function load() {
       const paths: string[] = JSON.parse(canvas.dataset.cells ?? '[]');
       const loaded = await Promise.all(
@@ -866,7 +879,7 @@ const files = readCellIndex().map((cell) => `/cells/${cell.file}`);
       ready = true;
       build();
     }
-    requestAnimationFrame(() => requestAnimationFrame(load));
+    load();
 
     // For checks in dev: what the layer holds and a way to fire it. Not in the build.
     if (import.meta.env.DEV) {
@@ -896,6 +909,14 @@ const files = readCellIndex().map((cell) => `/cells/${cell.file}`);
               somaRadius: neuron.cell.somaRadius,
               points: neuron.cell.count,
               firingLength: firingLength(neuron.cell, timing),
+              dimming: somaDimming(
+                zones,
+                brainBox,
+                width,
+                height,
+                neuron.placement.x + neuron.dx,
+                neuron.placement.y + neuron.dy,
+              ),
               shows: somaShows(
                 zones,
                 brainBox,

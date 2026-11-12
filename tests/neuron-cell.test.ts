@@ -8,6 +8,7 @@ import { readCellIndex } from '../src/lib/cells.ts';
 import {
   SHAPE,
   blurAlpha,
+  blurWeights,
   hitCell,
   lineWidth,
   pathToSoma,
@@ -245,6 +246,23 @@ test('the pyramidal cells point up, and their trunk is their widest line', () =>
     const cell = prepareCell(file, shape({ size: 260, reach: 351 }));
     assert.ok(-cell.bounds.top > 2 * cell.bounds.bottom, id);
     assert.ok(near(Math.max(...cell.width), SHAPE.line.max), id);  }
+});
+
+test("a blur's weights fall away from the middle and sum to one", () => {
+  // The nearest and the farthest cell at device scale 2, and one between.
+  for (const sigma of [0.4, 1.2, 2.2]) {
+    const weights = blurWeights(sigma);
+    assert.equal(weights.length, Math.ceil(3 * sigma) + 1);
+    const sum = weights[0] + 2 * weights.slice(1).reduce((total, weight) => total + weight, 0);
+    assert.ok(Math.abs(sum - 1) < 1e-12);
+    for (let k = 1; k < weights.length; k++) assert.ok(weights[k] < weights[k - 1] && weights[k] > 0);
+    // A Gaussian: one standard deviation out, e^-1/2 of the middle.
+    if (Number.isInteger(sigma)) assert.ok(Math.abs(weights[sigma] / weights[0] - Math.exp(-0.5)) < 1e-12);
+  }
+  assert.ok(Math.abs(blurWeights(2)[2] / blurWeights(2)[0] - Math.exp(-0.5)) < 1e-12);
+  // A sharper blur keeps more in the middle.
+  assert.ok(blurWeights(0.4)[0] > blurWeights(2.2)[0]);
+  assert.deepEqual(blurWeights(0), [1]);
 });
 
 test('blurring spreads a sprite without adding or losing light', () => {

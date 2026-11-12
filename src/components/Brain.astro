@@ -855,9 +855,14 @@ const look = Object.entries({
     fill-opacity: calc(var(--cell-nucleus-rest) + var(--lit) * var(--cell-nucleus-lit));
   }
 
+  /* The glow and the two pulses show only while a cell fires. They are shown
+     and faded with fill-opacity and visibility, never with opacity: a browser
+     hands an opacity animation to its compositor, which then splits the
+     brain's picture into layers for every cell that fires, and that drops
+     frames on a slow CPU. These look the same and are simply painted. */
   .lobe :global(.cell .glow) {
     fill: var(--cell-color);
-    opacity: 0;
+    fill-opacity: 0;
   }
 
   /* A short dash that travels the path; hidden until the cell fires. */
@@ -865,7 +870,7 @@ const look = Object.entries({
   .lobe :global(.cell .pulse-out) {
     stroke-width: var(--cell-pulse);
     stroke-dasharray: var(--cell-pulse-dash) 2;
-    opacity: 0;
+    visibility: hidden;
   }
 
   /* --- Callouts ------------------------------------------------------------- */
@@ -1289,35 +1294,35 @@ const look = Object.entries({
      travel smoothly between a number and a calc() here. */
   @keyframes brain-pulse-in {
     from {
-      opacity: 1;
+      visibility: visible;
       stroke-dashoffset: var(--cell-pulse-far);
     }
 
     to {
-      opacity: 1;
+      visibility: visible;
       stroke-dashoffset: var(--cell-pulse-dash);
     }
   }
 
   @keyframes brain-pulse-out {
     from {
-      opacity: 1;
+      visibility: visible;
       stroke-dashoffset: var(--cell-pulse-dash);
     }
 
     to {
-      opacity: 1;
+      visibility: visible;
       stroke-dashoffset: -1;
     }
   }
 
   @keyframes brain-flash {
     from {
-      opacity: var(--cell-glow);
+      fill-opacity: var(--cell-glow);
     }
 
     to {
-      opacity: 0;
+      fill-opacity: 0;
     }
   }
 
