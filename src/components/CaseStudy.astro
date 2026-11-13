@@ -204,7 +204,8 @@ const links = project.links.filter((link) => link.href !== `/projects/${study.pr
   h2,
   .part p,
   .list,
-  .figure {
+  .figure,
+  .results {
     max-width: var(--reading-max);
   }
 
@@ -226,7 +227,8 @@ const links = project.links.filter((link) => link.href !== `/projects/${study.pr
     margin-top: var(--space-2xs);
   }
 
-  /* The results run wider than the reading column (Results.astro). */
+  /* The results match the reading column until the figure moves into the
+     margin (see the end). */
   .results {
     margin-block: var(--space-2xs) var(--space-xs);
   }
@@ -321,9 +323,11 @@ const links = project.links.filter((link) => link.href !== `/projects/${study.pr
       grid-column: 1;
     }
 
-    /* Four across, the results end level with the figure's right edge. */
+    /* Only here do the results run wider than the reading column: four
+       across, they end level with the figure's right edge. */
     .results {
       grid-column: 1 / -1;
+      max-width: none;
     }
 
     /* The figure follows its paragraph in the source, so it lands on that
