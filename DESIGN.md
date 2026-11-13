@@ -524,7 +524,17 @@ Growing, drawing, and appearing all use `--ease-out`. **Reduced motion:** fully 
 
 ### Experience raster
 
-A playback cursor sweeps each row once over `--sweep`, left to right. It's a `--line` vertical line as tall as `--raster-band`, at `--sweep-cursor` opacity. It fades in over `--flash-in` as it starts and out over `--flash-in` at the end, and is absent at rest. Each spike starts to rise the moment the cursor reaches it, with the same rise and fall as an axon node. The marker and year marks don't flash. **Reduced motion:** no cursor, spikes at rest.
+A playback cursor sweeps each row once, left to right, and each spike flashes as the cursor reaches it.
+
+- **The cursor.** A `--line` vertical line as tall as `--raster-band`, at `--sweep-cursor` opacity. Its center travels from the row's left end to its right end over `--sweep` (2.7s), at a steady rate (`--ease-travel`). It fades in over `--flash-in` as it starts moving, and fades out over `--flash-in` once it reaches the right end, where it stays while it fades. Both fades use `--ease-out`.
+- **The spikes.** A spike's flash starts the moment the cursor's center reaches the spike's center: (its position ÷ the row's width) × `--sweep` after the sweep starts. It has the same rise and fall as an axon node (see The language). The year marks and the marker don't change.
+- **Each row plays on its own,** the first time it is fully in view (rule 1). Rows that come fully into view together sweep together, in step, as on the artboard.
+- **A row sweeps only what is drawn.** It never starts before its spikes are drawn at its current width. A change of width redraws the spikes, so mid-sweep it leaves the row at rest with no cursor, and the row counts as played (rule 1).
+- **It doesn't wait for the fonts.** A row's box is the content width by a fixed height, so the font swap can't resize it, unlike the dendrite's paragraphs.
+- **The cursor is absent at rest:** before the sweep and after it. The script makes it as the sweep starts and removes it as it ends, so it never exists without JavaScript or with reduced motion on.
+- **The sweep is painted.** The spikes rest and flash with `fill-opacity`, and the cursor fades with it and moves with its `x`, not a transform (see Brain cells and nuclei). The cursor and the flashes are then drawn in the same frames, so a slow frame can't put the cursor ahead of the spikes it lights.
+
+**Reduced motion:** no cursor, spikes at rest.
 
 ### Skills tracing
 

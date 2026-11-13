@@ -4,9 +4,14 @@
 // a marker at the "now" end for the ongoing role, and a label under each end.
 // Experience puts one above each entry, all on the same time axis.
 //
-// Drawn at rest: the resting state and the reduced-motion state. The playback
-// cursor and the spike flashes come with the motion step; the spikes are
-// separate elements, left to right, ready for it.
+// The markup and styles draw it at rest: the resting state, the
+// reduced-motion state, and, less what the script adds, the state without
+// JavaScript. The script sweeps each row once, the first time it is fully in
+// view (DESIGN.md, Motion: Experience raster): a playback cursor crosses the
+// row, and each spike flashes as the cursor reaches it. The spikes are
+// separate elements, left to right, and they rest with fill-opacity, which is
+// what the flash changes. The cursor is the script's alone: it is made as a
+// sweep starts and removed as it ends, so at rest there is none.
 //
 // Two layers:
 //
@@ -54,8 +59,12 @@ const { start, end, schedule, axisStart, now } = Astro.props;
 </div>
 
 <script>
+  import { flasher } from '../lib/flash.ts';
+  import { animated, playOnce } from '../lib/play-once.ts';
   import { rasterRow } from '../lib/raster.ts';
   import type { Pattern, Schedule } from '../lib/raster.ts';
+  import { arrivals, cursor } from '../lib/sweep.ts';
+  import type { SweepTokens } from '../lib/sweep.ts';
   import { tokenReader } from '../lib/tokens.ts';
 
   // The pattern's numbers, from tokens.css.
@@ -72,19 +81,33 @@ const { start, end, schedule, axisStart, now } = Astro.props;
     },
   };
 
+  // The sweep's times and easings, from tokens.css.
+  const root = getComputedStyle(document.documentElement);
+  const times: SweepTokens = {
+    sweep: token('--sweep'),
+    fade: token('--flash-in'),
+    strength: token('--sweep-cursor'),
+    rate: root.getPropertyValue('--ease-travel').trim(),
+    ease: root.getPropertyValue('--ease-out').trim(),
+  };
+  const flash = flasher();
+
+  const rect = () => document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+
   // One mark per position, each a <rect> the styles size and center on its
   // own origin.
   function place(group: Element, positions: number[]) {
     group.replaceChildren(
       ...positions.map((x) => {
-        const mark = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+        const mark = rect();
         mark.setAttribute('transform', `translate(${x})`);
         return mark;
       }),
     );
   }
 
-  function draw(row: HTMLElement, width: number) {
+  /** Draws a row `width` px wide, and returns where its spikes are. */
+  function draw(row: HTMLElement, width: number): number[] {
     const { start = '', end = '', schedule, axisStart, now = '' } = row.dataset;
     const { ticks, spikes, marker } = rasterRow(
       { start, end, schedule: schedule as Schedule },
@@ -95,23 +118,63 @@ const { start, end, schedule, axisStart, now } = Astro.props;
     place(row.querySelector('.ticks')!, ticks);
     place(row.querySelector('.spikes')!, spikes);
     place(row.querySelector('.marker')!, marker === null ? [] : [marker]);
+    return spikes;
+  }
+
+  // What each row holds: the width it was last drawn at, and its spikes there.
+  const drawn = new WeakMap<Element, { width: number; spikes: number[] }>();
+
+  /**
+   * Draws a row at the width it has now, unless that is how it is drawn
+   * already, and returns what it holds. Where the row sits on the page doesn't
+   * matter: the browser paints an SVG from the screen pixel nearest its
+   * corner, so the row's own pixels are the screen's.
+   */
+  function upToDate(row: HTMLElement) {
+    const { width } = row.getBoundingClientRect();
+    let holds = drawn.get(row);
+    if (holds?.width !== width) {
+      holds = { width, spikes: draw(row, width) };
+      drawn.set(row, holds);
+    }
+    return holds;
+  }
+
+  /** Starts one row's sweep, and returns its animations. */
+  function start(row: HTMLElement): Animation[] {
+    // A sweep draws its row first if need be, so it never crosses an empty
+    // row or one drawn at another width, whichever observer reports first.
+    const { width, spikes } = upToDate(row);
+
+    // The cursor is there only while it sweeps. It goes when its animations
+    // end, and when a rest cancels them.
+    const line = rect();
+    line.classList.add('cursor');
+    row.querySelector('svg')!.append(line);
+    const { travel, fade } = cursor(times, width);
+    const moves = [line.animate(travel.keyframes, travel.timing), line.animate(fade.keyframes, fade.timing)];
+    const gone = () => line.remove();
+    Promise.all(moves.map((move) => move.finished)).then(gone, gone);
+
+    // Each spike flashes as the cursor's center reaches its own. A redraw
+    // mid-sweep replaces the spikes, and the rest that follows it cancels
+    // these with the cursor's.
+    const marks = [...row.querySelectorAll('.spikes rect')];
+    const starts = arrivals(spikes, width, times.sweep);
+    return [...moves, ...marks.map((mark, i) => flash(mark, 0, starts[i]))];
   }
 
   // Draws each row when it is first measured, and again whenever its width
-  // changes. Where the row sits on the page doesn't matter: the browser
-  // paints an SVG from the screen pixel nearest its corner, so the row's own
-  // pixels are the screen's.
+  // changes. Each row sweeps on its own, once.
   const rows = document.querySelectorAll<HTMLElement>('[data-raster]');
-  const drawn = new WeakMap<Element, number>();
-  const sizes = new ResizeObserver(() => {
-    for (const row of rows) {
-      const { width } = row.getBoundingClientRect();
-      if (drawn.get(row) === width) continue;
-      drawn.set(row, width);
-      draw(row, width);
-    }
-  });
-  rows.forEach((row) => sizes.observe(row));
+  const sizes = new ResizeObserver(() => rows.forEach(upToDate));
+  for (const row of rows) {
+    sizes.observe(row);
+    playOnce(
+      row,
+      animated(() => start(row)),
+    );
+  }
 </script>
 
 <style>
@@ -163,13 +226,15 @@ const { start, end, schedule, axisStart, now } = Astro.props;
     shape-rendering: crispEdges;
   }
 
+  /* A spike rests with fill-opacity, a painted property, because that is what
+     its flash animates (DESIGN.md, Motion: Brain cells and nuclei). */
   .spikes :global(rect) {
     x: calc(var(--raster-spike-stroke) / -2);
     y: calc((var(--raster-band) - var(--raster-spike)) / 2);
     width: var(--raster-spike-stroke);
     height: var(--raster-spike);
     rx: calc(var(--raster-spike-stroke) / 2);
-    opacity: var(--ink-rest);
+    fill-opacity: var(--ink-rest);
   }
 
   .marker :global(rect) {
@@ -178,6 +243,30 @@ const { start, end, schedule, axisStart, now } = Astro.props;
     width: var(--raster-marker-stroke);
     height: var(--raster-marker);
     rx: calc(var(--raster-marker-stroke) / 2);
+  }
+
+  /* The playback cursor, which the script adds for one sweep, over the other
+     marks. Its x is its center, which the sweep moves along the row, and it
+     shows only as far as the sweep fades it in. */
+  svg :global(.cursor) {
+    width: var(--line);
+    height: var(--raster-band);
+    transform: translateX(calc(var(--line) / -2));
+    fill-opacity: 0;
+  }
+
+  /* Reduced motion switched on mid-sweep leaves the row at rest. The script
+     ends the sweep when it hears of the switch, but Chrome tells it a frame
+     late, as for the dendrite (Dendrite.astro). For that frame these hold the
+     row at rest: an important declaration outranks an animation. */
+  @media (prefers-reduced-motion: reduce) {
+    svg :global(.cursor) {
+      display: none;
+    }
+
+    .spikes :global(rect) {
+      fill-opacity: var(--ink-rest) !important;
+    }
   }
 
   /* The axis start year at the left end and "now" at the right. */
