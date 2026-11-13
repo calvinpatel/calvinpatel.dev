@@ -144,6 +144,7 @@
   --page-max:          1320px;  /* includes gutters: 1192px of content at full width */
   --reading-max:       680px;   /* case study column, About story */
   --measure:           66ch;    /* descriptions */
+  --lede-measure:      22ch;    /* About lede, from the desktop artboard */
   --figure-width:      320px;   /* a figure box in the case study's margin */
   --figure-padding:    20px;    /* inside a figure box */
   --dendrite-margin:   40px;    /* About's dendrite column beside the story (20px edge on phones) */

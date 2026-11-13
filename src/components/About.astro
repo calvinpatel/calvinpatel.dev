@@ -75,11 +75,13 @@ const sizes = `(width < 900px) ${PHOTO.phone}px, ${PHOTO.desktop}px`;
 
   .lede {
     grid-column: 1 / -1;
+    max-width: var(--lede-measure);
     font-size: var(--step-lede);
     line-height: var(--leading-lede);
   }
 
-  /* Each sentence starts its own line. */
+  /* Each sentence starts its own line, and one too long for the lede's
+     measure breaks into even lines. */
   .lede span {
     display: block;
     text-wrap: balance;

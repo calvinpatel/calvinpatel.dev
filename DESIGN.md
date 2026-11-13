@@ -152,7 +152,7 @@ Spacing inside sections follows the artboards, using the nearest token from this
 ### Page
 
 - **Width.** Content sits in one centered column at most `--page-max` (1320px) wide including the gutters, which leaves 1192px of content at full width.
-- **Reading widths.** Long reading text sits in `--reading-max` (680px): the case study column and the About story. Descriptions stop at `--measure` (66 characters per line).
+- **Reading widths.** Long reading text sits in `--reading-max` (680px): the case study column and the About story. Descriptions stop at `--measure` (66 characters per line). The About lede stops at `--lede-measure` (22ch) and is balanced, so it sets three lines at every width, as on both artboards.
 - **Tap targets.** Every standalone link and control is at least `--tap-min` (44px) in both directions on touch screens. Links inside a sentence are exempt, as WCAG allows. Don't enlarge their tap area, because it would overlap the lines around them.
 
 ### Section grids
