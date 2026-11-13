@@ -183,7 +183,7 @@ Media queries can't read custom properties, so these widths are written as numbe
 
 **Buttons.** The designs have none: every control is a link or a brain lobe, and the lobes are links too. If a real action ever needs a `<button>`, style it like a link. No filled or outlined pills.
 
-**Top bar.** It holds the CP mark (Fraunces, `--size-mark`) and the five section links (About, Projects, Experience, Skills, Contact) in Plex at `--step-text-5`, all in the main text color. On phones the links move into a full-width second row under the mark, each with a 44px tap target. The case study page uses the same bar.
+**Top bar.** It holds the CP mark (Fraunces, `--size-mark`) and the five section links (About, Projects, Experience, Skills, Contact) in Plex at `--step-text-5`, all in the main text color. It spans the window with `--gutter` padding, not the `--page-max` column, as on the hero artboard, so on windows wider than 1320px the CP mark sits left of the content's edge. On phones the links move into a full-width second row under the mark, each with a 44px tap target. The case study page uses the same bar.
 
 **Figure box.** Used for the case study's comma diagram. A `--color-surface` box with a 1px `--color-border` edge, `--radius` (12px) corners, and `--figure-padding` (20px) of padding. In the margin it is `--figure-width` (320px) wide.
 
