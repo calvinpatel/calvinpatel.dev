@@ -3,6 +3,14 @@
 // GitHub and LinkedIn under it. On desktop the figure sits on the left with
 // its receptor band against the contact block. Below 900px it turns to flow
 // down onto the email (Synapse.astro).
+//
+// The markup and styles draw it at rest: the resting state, the
+// reduced-motion state, and the state without JavaScript. The script plays
+// the Contact sequence once (DESIGN.md, Motion: Contact sequence): the signal
+// hops the figure's nodes, vesicles cross the gap, the receptor band
+// brightens, and then the email's underline does. The sequence ends at the
+// email, so it starts the first time the figure and the email's line are both
+// fully in view.
 import { getEntry } from 'astro:content';
 
 import Copy from './Copy.astro';
@@ -17,7 +25,7 @@ const name = contact.email.slice(0, at);
 const domain = contact.email.slice(at);
 ---
 
-<div class="contact">
+<div class="contact" data-contact>
   <div class="figure">
     <Synapse />
   </div>
@@ -38,6 +46,89 @@ const domain = contact.email.slice(at);
     </ul>
   </div>
 </div>
+
+<script>
+  import { band, inView, underline, vesicle } from '../lib/contact.ts';
+  import type { ContactTokens, Motion } from '../lib/contact.ts';
+  import { flasher } from '../lib/flash.ts';
+  import { animated, playOnce } from '../lib/play-once.ts';
+  import type { Watch } from '../lib/play-once.ts';
+  import { tokenReader } from '../lib/tokens.ts';
+
+  // Fully in view means within this many px of it, as play-once has it.
+  const SLACK = 1;
+
+  // The sequence's times, easing, and the underline's two colors, from
+  // tokens.css.
+  const token = tokenReader();
+  const root = getComputedStyle(document.documentElement);
+  const tokens: ContactTokens = {
+    hop: token('--hop'),
+    release: token('--contact-release'),
+    receptor: token('--contact-receptor'),
+    underline: token('--contact-underline'),
+    rise: token('--flash-in'),
+    settle: token('--contact-settle'),
+    ease: root.getPropertyValue('--ease-out').trim(),
+    link: root.getPropertyValue('--color-link-underline').trim(),
+    text: root.getPropertyValue('--color-text').trim(),
+  };
+  const flash = flasher();
+
+  const block = document.querySelector<HTMLElement>('[data-contact]');
+  if (block) {
+    const figures = [...block.querySelectorAll<SVGSVGElement>('.synapse')];
+    const email = block.querySelector<HTMLElement>('.email a')!;
+
+    // The level figure or the turned one, whichever the width shows.
+    const showing = () => figures.find((figure) => figure.getClientRects().length > 0);
+
+    /** Starts the sequence on the figure that is showing, and returns its animations. */
+    function start(): Animation[] {
+      const figure = showing();
+      if (!figure) return [];
+      const run = (part: Element, { keyframes, timing }: Motion) => part.animate(keyframes, timing);
+
+      // The nodes are in hop order, and the released vesicles in theirs. A
+      // vesicle drifts from where the figure puts it, and the band rises from
+      // the strength the figure gives it.
+      const hops = [...figure.querySelectorAll('.node')].map((node, k) => flash(node, k));
+      const releases = [...figure.querySelectorAll<SVGCircleElement>('.release')].flatMap((release, k) => {
+        const { drift, fade } = vesicle(tokens, release.cx.baseVal.value, k);
+        return [run(release, drift), run(release, fade)];
+      });
+      const receptor = figure.querySelector('.receptor')!;
+      const rest = parseFloat(getComputedStyle(receptor).strokeOpacity);
+      return [...hops, ...releases, run(receptor, band(tokens, rest)), run(email, underline(tokens))];
+    }
+
+    // The sequence's own rule for when it is in view (inView in
+    // src/lib/contact.ts): the showing figure and the email's line, which is
+    // its link's box. It is asked again whenever either crosses a screen
+    // edge, and whenever the window changes size, which can change whether
+    // the screen is tall enough for both.
+    const watch: Watch = (_block, tell) => {
+      const ask = () => {
+        const figure = showing()?.getBoundingClientRect();
+        tell(figure !== undefined && inView(figure, email.getBoundingClientRect(), innerHeight, SLACK));
+      };
+      const observer = new IntersectionObserver(ask, { rootMargin: `${SLACK}px`, threshold: [0, 1] });
+      for (const part of [...figures, email]) observer.observe(part);
+      addEventListener('resize', ask);
+      return () => {
+        observer.disconnect();
+        removeEventListener('resize', ask);
+      };
+    };
+
+    // It starts once the fonts have loaded, as the dendrite does. Until then
+    // the email is set in a fallback font, and the swap can wrap it
+    // differently below 900px. That changes the block's height, which
+    // play-once counts as a resize: it would send the sequence straight to
+    // rest.
+    document.fonts.ready.then(() => playOnce(block, animated(start), { inView: watch }));
+  }
+</script>
 
 <style>
   /* The figure | the contact block, which is centered on the figure's height
@@ -72,6 +163,22 @@ const domain = contact.email.slice(at);
     max-width: 100%;
     padding-block: var(--email-reach);
     margin-block: calc(-1 * var(--email-reach));
+  }
+
+  /* Hover wins over the sequence: hovering the email while its underline is
+     animating shows the hover underline at once, and leaving shows what the
+     sequence or rest would. An important declaration outranks an animation. */
+  .email a:hover {
+    text-decoration-color: var(--color-text) !important;
+  }
+
+  /* Reduced motion switched on mid-sequence leaves the underline at rest, for
+     the one frame before the script hears of it (Synapse.astro). Hover still
+     wins. */
+  @media (prefers-reduced-motion: reduce) {
+    .email a:not(:hover) {
+      text-decoration-color: var(--color-link-underline) !important;
+    }
   }
 
   /* A tap-height box keeps its text where a plain line of text would sit, so

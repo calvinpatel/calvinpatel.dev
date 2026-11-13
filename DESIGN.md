@@ -344,7 +344,7 @@ A fixed figure: copy it as written, with `color: var(--ink)` on the SVG. On desk
   <path d="M0 148 C 100 158, 150 99, 262 100" fill="none" style="stroke: var(--color-bg)"
         stroke-width="6" stroke-linecap="round" stroke-dasharray="62 18 62 18 62 2018"/>
   <path d="M0 148 C 100 158, 150 99, 262 100" fill="none" stroke="currentColor" stroke-opacity="0.5"/>
-  <!-- nodes, in hop order; rest at --ink-rest -->
+  <!-- nodes, in hop order; rest with fill-opacity at --ink-rest -->
   <circle class="node" cx="70.7" cy="143.9" r="1.9" fill="currentColor"/>
   <circle class="node" cx="147.1" cy="120.4" r="1.9" fill="currentColor"/>
   <circle class="node" cx="224.8" cy="101.9" r="1.9" fill="currentColor"/>
@@ -359,16 +359,18 @@ A fixed figure: copy it as written, with `color: var(--ink)` on the SVG. On desk
       <circle cx="455" cy="113" r="3.6"/><circle cx="444" cy="100" r="3.6"/>
     </g>
     <!-- released vesicles: hidden at rest, shown only during the sequence -->
-    <circle class="release" cx="478" cy="88" r="2.2" fill="currentColor" opacity="0"/>
-    <circle class="release" cx="478" cy="100" r="2.2" fill="currentColor" opacity="0"/>
-    <circle class="release" cx="478" cy="112" r="2.2" fill="currentColor" opacity="0"/>
+    <circle class="release" cx="478" cy="88" r="2.2" fill="currentColor" fill-opacity="0"/>
+    <circle class="release" cx="478" cy="100" r="2.2" fill="currentColor" fill-opacity="0"/>
+    <circle class="release" cx="478" cy="112" r="2.2" fill="currentColor" fill-opacity="0"/>
     <!-- receiving membrane and its receptor band (band rests at 0.55) -->
     <path d="M504 24 C 498 70, 498 130, 504 176" fill="none" stroke="currentColor" stroke-opacity="0.5"/>
     <path class="receptor" d="M503 70 C 500.5 88, 500.5 112, 503 130" fill="none" stroke="currentColor"
-          stroke-width="3.2" stroke-linecap="round" opacity="0.55"/>
+          stroke-width="3.2" stroke-linecap="round" stroke-opacity="0.55"/>
   </g>
 </svg>
 ```
+
+The parts the Contact sequence changes rest with painted properties, not `opacity` (see Motion: Brain cells and nuclei): the nodes and the released vesicles with `fill-opacity`, and the receptor band with `stroke-opacity`.
 
 - **Phones (below 900px).** The same figure turned to flow down onto the email: `viewBox="0 0 200 430"`, 130px wide, with its contents wrapped in `<g transform="translate(200 0) rotate(90)">`, sitting 4px above the email. That draws it at 0.65 of its coordinates, so its shapes scale: the sheaths, the nodes, the released vesicles, and the receptor band. Its 1px lines don't. The axon, the terminal's outline, the vesicles, and the membrane keep `--line` with `vector-effect: non-scaling-stroke`. The sheath's black core is thinned from 6 to about 4.92 units (8 − 2 ÷ 0.65), so the sheath's two edges stay 1px. The two sheath strokes never take the vector effect: it would measure their dashes in screen px and move the sheaths off the nodes.
 
@@ -551,16 +553,27 @@ A playback cursor sweeps each row once, left to right, and each spike flashes as
 
 ### Contact sequence
 
-Plays once when Contact scrolls in. Times are measured from the first hop:
+Plays once. Times are measured from the first hop:
 
 | Time | What happens |
 | --- | --- |
 | 0, 130, 260ms | The signal hops the three nodes (`--hop`), each flashing like an axon node. |
-| 350ms | Three vesicles release, `--hop` apart. Each appears at 90% opacity, drifts 20px across the gap by 800ms, and fades out by 1s (`--contact-release`). |
-| 800ms | The receptor band rises from 55% to full over `--flash-in`, then settles back over `--contact-settle` (`--contact-receptor`). |
-| 1s | The email's underline rises from the underline color to the main text color over `--flash-in`, then settles back over `--contact-settle` (`--contact-underline`). |
+| 350ms | The first vesicle releases (`--contact-release`). It appears at 90% opacity and drifts 20px across the gap. |
+| 800ms | It reaches the far side, and the receptor band rises from 55% to full over `--flash-in`, then settles back over `--contact-settle` (`--contact-receptor`). |
+| 1s | It is gone, and the email's underline rises from the underline color to the main text color over `--flash-in`, then settles back over `--contact-settle` (`--contact-underline`). |
 
-**Reduced motion:** still, at rest.
+- **Each vesicle runs on its own clock.** The table's times are the first vesicle's. The second and third run the same way, one and two `--hop` later. The band and the underline each brighten once, on the first vesicle's clock.
+- **The drift eases out** (`--ease-out`): it is a release slowing as it crosses, not a signal at a set speed. A vesicle appears over `--flash-in` as it starts to drift, and fades out once it has arrived, where it stays while it fades. Those, and the band's and the underline's rise and settle, use `--ease-out`.
+- **Only these change:** the three nodes, the three released vesicles, the receptor band, and the email's underline. The nodes flash with the shared flash (see The language).
+- **The figure's own numbers** (the 20px drift, the 90%, the 55%) belong to the fixed figure, like its coordinates. They aren't tokens. The drift is in the figure's coordinates, so on the turned figure a vesicle drifts down toward the email, 13px on screen.
+- **When it starts.** The sequence ends at the email's underline, so it plays the first time the figure and the email's line are both fully in view, not the figure alone. On a phone the figure can be fully in view while the email is still below the screen. Where the screen is too short to show both, the email's line decides: it plays the first time that line is fully in view with any of the figure on screen.
+- **One drawing.** The figure that is showing plays, with the underline. It holds while the whole contact block is off screen (rule 4). A change of the block's size mid-sequence, which crossing 900px always is, sends it straight to rest (rule 1).
+- **It waits for the fonts,** as the dendrite does: the swap can re-wrap the email and change the block's height.
+- **Hover wins.** Hovering the email mid-sequence shows its hover underline at once. Leaving shows what the sequence, or rest, would show. Keyboard focus keeps its ring.
+- **The sequence is painted.** The nodes and vesicles change `fill-opacity`, the band `stroke-opacity`, and a vesicle moves with its `cx`, not a transform (see Brain cells and nuclei). The underline changes `text-decoration-color`.
+- **Without JavaScript** it is at rest.
+
+**Reduced motion:** still, at rest. No animation starts.
 
 ### Reduced motion, all in one place
 

@@ -7,8 +7,12 @@
 // receptor classes are DESIGN.md's, unchanged. The other class names are added
 // here for the styles below.
 //
-// Drawn at rest: the resting state and the reduced-motion state. The Contact
-// sequence comes with the motion step, which uses the three classes above.
+// Drawn at rest: the resting state, the reduced-motion state, and the state
+// without JavaScript. Contact.astro's script plays the Contact sequence on the
+// figure that is showing, through the three classes above (DESIGN.md, Motion:
+// Contact sequence). The parts it changes rest with painted properties, which
+// are what it animates: the nodes and the released vesicles with fill-opacity,
+// and the receptor band with stroke-opacity.
 //
 // Drawn twice, like the dendrite's turning points: level for desktop, where it
 // fills the --contact-figure column, and turned to flow down for below 900px.
@@ -59,7 +63,7 @@ const turnedScale = TURNED_WIDTH / TURNED_UNITS;
           stroke="currentColor"
           stroke-opacity="0.5"
         />
-        {/* nodes, in hop order; rest at --ink-rest */}
+        {/* nodes, in hop order; rest with fill-opacity at --ink-rest */}
         <circle class="node" cx="70.7" cy="143.9" r="1.9" fill="currentColor" />
         <circle class="node" cx="147.1" cy="120.4" r="1.9" fill="currentColor" />
         <circle class="node" cx="224.8" cy="101.9" r="1.9" fill="currentColor" />
@@ -85,9 +89,9 @@ const turnedScale = TURNED_WIDTH / TURNED_UNITS;
             <circle cx="444" cy="100" r="3.6" />
           </g>
           {/* released vesicles: hidden at rest, shown only during the sequence */}
-          <circle class="release" cx="478" cy="88" r="2.2" fill="currentColor" opacity="0" />
-          <circle class="release" cx="478" cy="100" r="2.2" fill="currentColor" opacity="0" />
-          <circle class="release" cx="478" cy="112" r="2.2" fill="currentColor" opacity="0" />
+          <circle class="release" cx="478" cy="88" r="2.2" fill="currentColor" fill-opacity="0" />
+          <circle class="release" cx="478" cy="100" r="2.2" fill="currentColor" fill-opacity="0" />
+          <circle class="release" cx="478" cy="112" r="2.2" fill="currentColor" fill-opacity="0" />
           {/* receiving membrane and its receptor band (band rests at 0.55) */}
           <path
             class="membrane"
@@ -103,7 +107,7 @@ const turnedScale = TURNED_WIDTH / TURNED_UNITS;
             stroke="currentColor"
             stroke-width="3.2"
             stroke-linecap="round"
-            opacity="0.55"
+            stroke-opacity="0.55"
           />
         </g>
       </g>
@@ -147,8 +151,29 @@ const turnedScale = TURNED_WIDTH / TURNED_UNITS;
     stroke-width: calc(8px - 2 * var(--line) / var(--turned-scale));
   }
 
+  /* A node rests with fill-opacity, a painted property, because that is what
+     its flash animates (DESIGN.md, Motion: Brain cells and nuclei). */
   .node {
-    opacity: var(--ink-rest);
+    fill-opacity: var(--ink-rest);
+  }
+
+  /* Reduced motion switched on mid-sequence leaves the figure at rest. The
+     script ends the sequence when it hears of the switch, but Chrome tells it
+     a frame late, as for the dendrite (Dendrite.astro). For that frame these
+     hold the figure at rest: an important declaration outranks an animation.
+     The band's rest is the figure's own 0.55. */
+  @media (prefers-reduced-motion: reduce) {
+    .node {
+      fill-opacity: var(--ink-rest) !important;
+    }
+
+    .release {
+      fill-opacity: 0 !important;
+    }
+
+    .receptor {
+      stroke-opacity: 0.55 !important;
+    }
   }
 
   @media (width < 900px) {
