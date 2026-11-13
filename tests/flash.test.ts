@@ -22,3 +22,14 @@ test('a flash rises from rest to full over --flash-in and falls back over --flas
   // It never fills, so the part is at its stylesheet's rest before and after.
   assert.equal(timing.fill, undefined);
 });
+
+test('a flash can start a number of ms from now, as a raster spike does when the cursor reaches it', () => {
+  // The delay alone, and after any hops.
+  assert.equal(flash(TOKENS, 0, 1234.5).timing.delay, 1234.5);
+  assert.equal(flash(TOKENS, 2, 40).timing.delay, 300);
+  // The flash itself is the same one, whenever it starts.
+  assert.deepEqual(flash(TOKENS, 0, 1234.5).keyframes, flash(TOKENS).keyframes);
+  assert.equal(flash(TOKENS, 0, 1234.5).timing.duration, 520);
+  // Without a delay, hops count exactly as before.
+  assert.equal(flash(TOKENS, 3).timing.delay, 390);
+});

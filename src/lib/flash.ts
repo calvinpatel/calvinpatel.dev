@@ -28,10 +28,11 @@ export interface Flash {
 
 /**
  * One flash, as `element.animate(keyframes, timing)` takes it, starting
- * `hops` × --hop from now. It doesn't fill, so the part is at its stylesheet's
- * rest before the flash and after it.
+ * `hops` × --hop from now, and `delay` ms after that: an axon's parts start
+ * in hops, and a raster's spikes in ms. It doesn't fill, so the part is at its
+ * stylesheet's rest before the flash and after it.
  */
-export function flash(tokens: FlashTokens, hops = 0): Flash {
+export function flash(tokens: FlashTokens, hops = 0, delay = 0): Flash {
   const duration = tokens.rise + tokens.fall;
   return {
     keyframes: [
@@ -39,12 +40,12 @@ export function flash(tokens: FlashTokens, hops = 0): Flash {
       { fillOpacity: 1, offset: tokens.rise / duration },
       { fillOpacity: tokens.rest },
     ],
-    timing: { duration, delay: hops * tokens.hop, easing: tokens.rate },
+    timing: { duration, delay: hops * tokens.hop + delay, easing: tokens.rate },
   };
 }
 
 /** Reads the flash's tokens, and returns what starts a flash on an element. Browser only. */
-export function flasher(): (element: Element, hops?: number) => Animation {
+export function flasher(): (element: Element, hops?: number, delay?: number) => Animation {
   const token = tokenReader();
   const tokens: FlashTokens = {
     rest: token('--ink-rest'),
@@ -53,8 +54,8 @@ export function flasher(): (element: Element, hops?: number) => Animation {
     hop: token('--hop'),
     rate: getComputedStyle(document.documentElement).getPropertyValue('--ease-travel').trim(),
   };
-  return (element, hops = 0) => {
-    const { keyframes, timing } = flash(tokens, hops);
+  return (element, hops = 0, delay = 0) => {
+    const { keyframes, timing } = flash(tokens, hops, delay);
     return element.animate(keyframes, timing);
   };
 }

@@ -22,7 +22,8 @@ Cal Patel's portfolio site. It reads as a nervous system: real neuron reconstruc
 ├── DESIGN.md
 ├── src/content/       one Markdown file per section and per project
 ├── src/components/    the shared layout, hero canvas, brain navigation, section layouts
-├── src/lib/           copy.ts, which renders every content field; raster.ts, the Experience raster's pattern;
+├── src/lib/           copy.ts, which renders every content field; raster.ts, the Experience raster's pattern,
+│                      and sweep.ts, its sweep: the cursor's travel and fades, and when it reaches each spike;
 │                      wiring.ts, the Skills wiring diagram's geometry and traced paths; pixels.ts and tokens.ts, which drawings share;
 │                      cells.ts, which reads public/cells/index.json for the Credits page;
 │                      brain.ts, the hero brain's geometry; brain-nav.ts, the brain navigation's rules;
@@ -39,7 +40,7 @@ Cal Patel's portfolio site. It reads as a nervous system: real neuron reconstruc
 ├── public/cells/      neuron files the hero loads (generated; don't edit by hand)
 ├── data/swc/          raw downloaded reconstructions + sources.csv
 ├── scripts/           swc_to_web.py
-├── tests/             test_swc_to_web.py, and one .test.ts per src/lib/ module: copy, raster, wiring, pixels, tokens, cells,
+├── tests/             test_swc_to_web.py, and one .test.ts per src/lib/ module: copy, raster, sweep, wiring, pixels, tokens, cells,
 │                      brain, brain-nav, spontaneous, play-once, flash, axon, dendrite, neuron-field, neuron-cell,
 │                      neuron-crossing, neuron-signal, neuron-zones
 └── docs/              cell-web-v1.md (the neuron file format), design/ (chosen artboards, 1x PNG),
