@@ -112,6 +112,7 @@ const px = (pair: readonly [number, number]) => `${pair[0]}px ${pair[1]}px`;
 const look = Object.entries({
   'phone-ratio': `${close.width} / ${close.height}`,
   'phone-fit': phoneFit,
+  'phone-zoom': zoom.toFixed(4),
   'phone-rise': phoneRise.toFixed(4),
   'phone-floor': phoneFloor,
   'drift-a-from': px(DRIFT.a.from),
@@ -1181,6 +1182,14 @@ const look = Object.entries({
 
     .scene {
       transform: var(--phone-fit);
+    }
+
+    /* The focus ring's gap is drawn inside a mask, and there a stroke that
+       keeps its px width is measured without the scene's zoom. It came out
+       that much too wide, which left a hairline of ring 5px from the lobe.
+       Dividing by the zoom gives the gap its --focus-offset again. */
+    .ring-gap {
+      stroke-width: calc(2 * var(--focus-offset) / var(--phone-zoom));
     }
 
     /* No callouts or labels on phones: the first tap swaps the hint for the
