@@ -16,8 +16,10 @@
    One switch is a container query on the case study's content width, so it
    doesn't depend on the scrollbar's width:
      1048px the comma figure sits in the margin at this content width or
-            more: --reading-max + --space-l at its widest (48px) +
-            --figure-width. Below it, the figure follows its paragraph.
+            more, and the results span all 1048px: --reading-max +
+            --space-l at its widest (48px) + --figure-width. Below it, the
+            figure follows its paragraph and the results match the reading
+            column.
 
    Skills switches on its own content width, in rem, so its labels fit at any
    text size:
