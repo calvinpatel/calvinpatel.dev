@@ -56,6 +56,13 @@ const licenseStart = (credit: string) => credit.lastIndexOf(', ') + 2;
     color: var(--color-text-secondary);
   }
 
+  /* The intro's one link is the license, "CC BY 4.0", which never splits
+     either. Copy.astro prints it, so it carries no style scope, hence
+     :global. */
+  .intro :global(a) {
+    white-space: nowrap;
+  }
+
   .cells {
     /* A credit's box: its lines of text, or at least a tap-height box on
        touch screens. */
