@@ -6,8 +6,11 @@
 // from the paragraphs themselves, so the drawing stays with the text when it
 // wraps or is enlarged.
 //
-// Drawn fully grown: the resting state and the reduced-motion state. The
-// growing animation comes with the motion step.
+// The markup and styles draw it fully grown: the resting state, the
+// reduced-motion state, and the state without JavaScript. Where the script
+// will run and motion is allowed, the styles hide whatever hasn't grown yet,
+// from the first paint, and the script grows it one turning point at a time
+// (DESIGN.md, Motion: About dendrite).
 //
 // The trunk is a single piece on purpose. Built as one stretch per paragraph,
 // it showed a brighter pixel row where two stretches met, at 1x and 3x.
@@ -15,6 +18,11 @@
 // Each turning point is drawn twice at its real pixel size: in a 40px box for
 // the desktop margin, and in a 16px box for the phone's left edge. The path
 // data and circle positions below are DESIGN.md's, unchanged.
+//
+// Beside each turning point is its reach, an empty box over its paragraph
+// and the gap below: the length of its stretch of trunk. The script watches
+// it to know whether any of the stretch is on screen and whether it has
+// changed size.
 
 interface Props {
   /** `'trunk'`, or a paragraph's place in the story, counting from 0. */
@@ -32,10 +40,10 @@ const part = piece === 'trunk' ? undefined : PARTS[piece];
 const trunkRows = `1 / span ${PARTS.length - 1}`;
 ---
 
-{piece === 'trunk' && <span class="trunk" style={`grid-row: ${trunkRows}`} aria-hidden="true" />}
+{piece === 'trunk' && <span class="trunk" data-dendrite="trunk" style={`grid-row: ${trunkRows}`} aria-hidden="true" />}
 {
   part && (
-    <span class="turn" data-part={part} aria-hidden="true">
+    <span class="turn" data-dendrite="turn" data-part={part} aria-hidden="true">
       {part === 'soma' && (
         <>
           <svg class="wide" width="40" height="48">
@@ -96,6 +104,265 @@ const trunkRows = `1 / span ${PARTS.length - 1}`;
     </span>
   )
 }
+{part && <span class="reach" data-dendrite="reach" data-part={part} aria-hidden="true" />}
+
+<script>
+  import { callAbove, growth, longestStroke, stageEnds } from '../lib/dendrite.ts';
+  import type { Span } from '../lib/dendrite.ts';
+  import { animated, playOnce } from '../lib/play-once.ts';
+  import type { Drawing } from '../lib/play-once.ts';
+  import { tokenReader } from '../lib/tokens.ts';
+
+  const reduced = matchMedia('(prefers-reduced-motion: reduce)');
+
+  // The growth's times and its easing, from tokens.css.
+  const token = tokenReader();
+  const plan = growth({
+    grow: token('--grow'),
+    draw: token('--draw'),
+    stagger: token('--grow-stagger'),
+    fade: token('--fade'),
+  });
+  const easing = getComputedStyle(document.documentElement).getPropertyValue('--ease-out').trim();
+  // Each part holds its starting look until its turn comes, and leaves the
+  // part at rest when it ends.
+  const timing = ({ delay, duration }: Span): KeyframeAnimationOptions => ({ delay, duration, easing, fill: 'backwards' });
+
+  // In view means within this many px of it, as in play-once.ts.
+  const SLACK = 1;
+
+  /** Marks a turning point, or the trunk, fully grown: the styles stop hiding it. */
+  const grown = (part: Element) => part.toggleAttribute('data-grown', true);
+
+  /** A branch drawing from the trunk outward: one dash slid along every stroke. */
+  function draw(path: SVGPathElement): Animation {
+    const length = longestStroke(path.getAttribute('d')!);
+    // The dash's round ends reach half the line's width past it. The dash
+    // starts a whole line's width short of its stroke, and the gap after it
+    // is as much longer than the stroke, so no end shows before its time.
+    const cap = parseFloat(getComputedStyle(path).strokeWidth);
+    const dash = `${length} ${length + 2 * cap}`;
+    return path.animate(
+      [
+        { strokeDasharray: dash, strokeDashoffset: length + cap },
+        { strokeDasharray: dash, strokeDashoffset: 0 },
+      ],
+      timing(plan.branch),
+    );
+  }
+
+  /** A dot appearing, from nothing to its resting strength. */
+  function appear(dot: SVGCircleElement): Animation {
+    const rest = getComputedStyle(dot).fillOpacity;
+    return dot.animate([{ fillOpacity: 0 }, { fillOpacity: rest }], timing(dot.matches('.cell') ? plan.soma : plan.dots));
+  }
+
+  function dendrite(trunk: HTMLElement) {
+    const turns = [...trunk.parentElement!.querySelectorAll<HTMLElement>('[data-dendrite="turn"]')];
+    const paragraphs = turns.map((turn) => turn.parentElement!);
+    const reaches = paragraphs.map((paragraph) => paragraph.querySelector<HTMLElement>('[data-dendrite="reach"]')!);
+    const last = turns.length - 1;
+
+    // Each turning point: whether its box is fully in view, whether any of
+    // its stretch is on screen, and whether its gate's time has passed, which
+    // lets the one below start.
+    const state = turns.map(() => ({
+      inView: false,
+      onScreen: false,
+      started: false,
+      finished: false,
+      passed: false,
+    }));
+
+    // How many stretches of the trunk show, grown or growing. Where each ends
+    // is measured from the paragraphs, so it is measured again when they move.
+    let stretches = 0;
+    const ends = () =>
+      stageEnds(
+        trunk.getBoundingClientRect(),
+        paragraphs.map((paragraph) => paragraph.getBoundingClientRect().top),
+      );
+    const showTrunk = (count = stretches) => {
+      stretches = Math.max(stretches, count);
+      if (stretches > 0) trunk.style.setProperty('--trunk-grown', `${ends()[stretches - 1]}px`);
+    };
+    const sizes = new ResizeObserver(() => showTrunk());
+
+    /** Leaves a turning point fully grown. False if it already was. */
+    const finish = (k: number): boolean => {
+      if (state[k].finished) return false;
+      state[k].finished = true;
+      grown(turns[k]);
+      if (k < last) {
+        showTrunk(k + 1);
+      } else {
+        // The whole dendrite is grown, and nothing needs watching any more.
+        grown(trunk);
+        trunk.style.removeProperty('--trunk-grown');
+        watcher?.disconnect();
+        sizes.disconnect();
+        reduced.removeEventListener('change', still);
+      }
+      return true;
+    };
+
+    // With reduced motion on, now or later, the whole dendrite is grown for
+    // good. Switched off again, nothing that was showing may vanish.
+    const still = () => {
+      if (!reduced.matches) return;
+      turns.forEach((_, k) => finish(k));
+      settle();
+    };
+
+    // The moment a gate's time ran out, on the document's timeline, while the
+    // turning point below is told. One that starts then starts from that
+    // moment, not from the frame that noticed it, so turning points on screen
+    // together start exactly one gate apart.
+    let opened: number | null = null;
+
+    /** Starts turning point k growing, and returns its animations. */
+    const start = (k: number): Animation[] => {
+      // Finished out of sight before it could play: nothing to show.
+      if (state[k].finished) return [];
+      state[k].started = true;
+
+      // Underneath its animations it is fully grown from now on, so it is
+      // left that way when they end or are cancelled.
+      const stops = ends();
+      const from = k === 0 ? 0 : stops[k - 1];
+      grown(turns[k]);
+      showTrunk(k + 1);
+      const parts = [
+        trunk.animate({ '--trunk-grown': [`${from}px`, `${stops[k]}px`] }, timing(plan.stretch)),
+        ...[...turns[k].querySelectorAll('path')].map(draw),
+        ...[...turns[k].querySelectorAll('circle')].map(appear),
+      ];
+
+      // The gate for the one below: a clock with nothing to show. It holds
+      // and resumes with the rest, so it counts this one's own play time.
+      if (k < last) {
+        const clock = turns[k].animate(null, { duration: plan.gate });
+        parts.push(clock);
+        clock.finished.then(
+          () => {
+            state[k].passed = true;
+            opened = Number(clock.startTime) + plan.gate;
+            settle();
+            opened = null;
+          },
+          () => {}, // cancelled: it went straight to rest, which `over` handles
+        );
+      }
+      if (opened !== null) for (const part of parts) part.startTime = opened;
+
+      // Played to the end, or cancelled by a rest. Either way it is grown,
+      // and the one below may start. That waits for the next frame: a rest
+      // comes from a resize, in the middle of the frame that reports it, when
+      // what is in view is not yet known at the new size, and when play-once
+      // has yet to hear of the resize for the one below, which it would then
+      // send straight to rest too.
+      const over = () => {
+        if (finish(k)) requestAnimationFrame(settle);
+      };
+      Promise.all(parts.map((part) => part.finished)).then(over, over);
+      return parts;
+    };
+
+    // One turning point's drawing, for play-once. `atOnce` is the dendrite's
+    // own: it finishes a turning point that is out of sight, which play-once
+    // knows nothing of. If play-once was holding it, it learns the drawing is
+    // over when it next resumes it.
+    const drawings = turns.map((_, k) => {
+      const inner = animated(() => start(k));
+      let done = () => {};
+      const drawing: Drawing & { atOnce(): void } = {
+        play(finished) {
+          done = finished;
+          inner.play(finished);
+        },
+        hold: inner.hold,
+        resume: () => (state[k].finished ? done() : inner.resume()),
+        rest: inner.rest,
+        atOnce() {
+          inner.rest();
+          done();
+        },
+      };
+      return drawing;
+    });
+
+    // What tells play-once whether each turning point is in view, by the
+    // dendrite's rule below.
+    const tells: (((inView: boolean) => void) | undefined)[] = [];
+
+    /**
+     * Applies the dendrite's rule to the page as it is now. A turning point
+     * may grow while its box is fully in view, or one below that is has
+     * called on it, once the one above has finished or had its gate's time.
+     * Those above that haven't finished come first (callAbove in
+     * src/lib/dendrite.ts).
+     */
+    const settle = () => {
+      const call = callAbove(state);
+      for (const k of call.finish) if (finish(k)) drawings[k].atOnce();
+      state.forEach((turn, k) => {
+        const open = k === 0 || state[k - 1].finished || state[k - 1].passed;
+        // A finished one only has play-once to tell, so it stops watching.
+        tells[k]?.(turn.finished || ((turn.inView || call.grow.includes(k)) && open));
+      });
+    };
+
+    // One observer for every box and every reach, so each report describes
+    // the same moment for all of them. It is made after play-once's own, so
+    // by the time it reports, play-once has already held whatever left the
+    // screen in the same frame.
+    let watcher: IntersectionObserver | undefined;
+    const watch = () =>
+      new IntersectionObserver(
+        (entries) => {
+          for (const { target, isIntersecting, intersectionRatio } of entries) {
+            const turn = turns.indexOf(target as HTMLElement);
+            if (turn !== -1) state[turn].inView = intersectionRatio >= 1;
+            else state[reaches.indexOf(target as HTMLElement)].onScreen = isIntersecting;
+          }
+          settle();
+        },
+        { rootMargin: `${SLACK}px`, threshold: [0, 1] },
+      );
+
+    reduced.addEventListener('change', still);
+    still();
+    if (state[last].finished) return;
+
+    // The turning points start once the fonts have loaded. Until then the
+    // story is set in fallback fonts, and the swap can change the paragraphs'
+    // heights, which play-once counts as a resize: it would send a growing
+    // turning point straight to fully grown.
+    document.fonts.ready.then(() => {
+      if (state[last].finished) return;
+      turns.forEach((_, k) => {
+        // A turning point's box, for play-once, is its reach: it holds while
+        // no part of its stretch is on screen, and rests when that changes
+        // size.
+        playOnce(reaches[k], drawings[k], {
+          inView: (_reach, tell) => {
+            tells[k] = tell;
+            return () => (tells[k] = undefined);
+          },
+        });
+        sizes.observe(reaches[k]);
+      });
+      watcher = watch();
+      for (const part of [...turns, ...reaches]) watcher.observe(part);
+    });
+  }
+
+  // The styles hide the dendrite only where the browser knows the script will
+  // run. One that doesn't know shows it fully grown, and it stays that way.
+  if (matchMedia('(scripting: enabled)').matches) {
+    for (const trunk of document.querySelectorAll<HTMLElement>('[data-dendrite="trunk"]')) dendrite(trunk);
+  }
+</script>
 
 <style>
   /* The drawing's geometry, from DESIGN.md's Dendrite section. These belong
@@ -169,8 +436,10 @@ const trunkRows = `1 / span ${PARTS.length - 1}`;
     opacity: var(--dendrite-cone-op);
   }
 
+  /* The dots appear with fill-opacity, a painted property (DESIGN.md, Motion:
+     Brain cells and nuclei), so the bouton rests with it too. */
   .bouton {
-    opacity: var(--ink-rest);
+    fill-opacity: var(--ink-rest);
   }
 
   .cell {
@@ -179,6 +448,68 @@ const trunkRows = `1 / span ${PARTS.length - 1}`;
 
   .narrow .cell {
     r: calc(var(--dendrite-soma-phone) / 2);
+  }
+
+  /* A turning point's stretch of trunk runs through its paragraph and the gap
+     below it. The cone's ends inside the last paragraph. Never seen. */
+  .reach {
+    position: absolute;
+    inset: 0 0 calc(-1 * var(--story-gap));
+    visibility: hidden;
+    pointer-events: none;
+  }
+
+  .reach[data-part='cone'] {
+    bottom: 0;
+  }
+
+  /* How far down the trunk shows, from its top, until it is fully grown. The
+     script sets it and grows it; registered so it can be animated as a
+     length. */
+  @property --trunk-grown {
+    syntax: '<length>';
+    inherits: false;
+    initial-value: 0px;
+  }
+
+  /* Before it grows, nothing of the dendrite shows. This holds from the first
+     paint, before the script runs, so a page opened at About never shows a
+     grown part that then vanishes. Without JavaScript, and with reduced
+     motion on, none of it applies and the dendrite is drawn fully grown. */
+  @media (scripting: enabled) and (prefers-reduced-motion: no-preference) {
+    .turn:not([data-grown]) {
+      visibility: hidden;
+    }
+
+    /* The trunk is one piece, shown through a clip that only its lower edge
+       cuts. The other edges stand clear of it: the browser paints a 1px line
+       on whole pixels, and a clip at the box's own edges would shave it. Once
+       it is fully grown there is no clip at all. */
+    .trunk:not([data-grown]) {
+      --clear: calc(-1 * var(--line));
+
+      clip-path: inset(var(--clear) var(--clear) calc(100% - var(--trunk-grown)) var(--clear));
+    }
+  }
+
+  /* Reduced motion switched on mid-growth shows everything fully grown at
+     once. The script ends its animations when it hears of the switch, but
+     Chrome tells it one frame after the styles above stop applying. For that
+     frame these hold every part at rest: an important declaration outranks
+     an animation. */
+  @media (prefers-reduced-motion: reduce) {
+    path {
+      stroke-dasharray: none !important;
+      stroke-dashoffset: 0 !important;
+    }
+
+    circle {
+      fill-opacity: 1 !important;
+    }
+
+    .bouton {
+      fill-opacity: var(--ink-rest) !important;
+    }
   }
 
   @media (width < 760px) {

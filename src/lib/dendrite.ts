@@ -118,8 +118,8 @@ export function longestStroke(d: string): number {
 
 /** One turning point, as the page has it now. */
 export interface Turn {
-  /** Its box is fully in view, or it has been called on to grow. */
-  wanted: boolean;
+  /** Its box, at the top of its paragraph, is fully in view. */
+  inView: boolean;
   /** Any part of its stretch, its paragraph and the gap below, is on screen. */
   onScreen: boolean;
   started: boolean;
@@ -127,7 +127,7 @@ export interface Turn {
   finished: boolean;
 }
 
-/** What the turning points above a wanted one must do first, by their place in the story. */
+/** What the turning points above one in view must do first, by their place in the story. */
 export interface Call {
   /** Fully off screen: these finish at once, with no motion. */
   finish: number[];
@@ -136,14 +136,16 @@ export interface Call {
 }
 
 /**
- * The turning points to bring up to date so the lowest wanted one can grow.
+ * The turning points to bring up to date so the lowest one in view can grow.
  * Each unfinished one above it finishes at once if no part of its stretch is
  * on screen, even one held mid-growth, and is called on to grow otherwise.
- * With none wanted, or nothing unfinished above, there is nothing to do.
+ * With none in view and waiting, or nothing unfinished above, there is
+ * nothing to do. A call lasts only while the box that made it is in view: one
+ * held off screen with no box in view stays held.
  */
 export function callAbove(turns: Turn[]): Call {
   const call: Call = { finish: [], grow: [] };
-  const lowest = turns.findLastIndex((turn) => turn.wanted && !turn.started && !turn.finished);
+  const lowest = turns.findLastIndex((turn) => turn.inView && !turn.started && !turn.finished);
   turns.slice(0, Math.max(lowest, 0)).forEach((turn, i) => {
     if (turn.finished) return;
     if (!turn.onScreen) call.finish.push(i);

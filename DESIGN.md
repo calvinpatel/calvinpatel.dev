@@ -503,7 +503,24 @@ A signal hops along each divider, one node every `--hop` (130ms).
 
 ### About dendrite
 
-The dendrite grows down the margin once as About scrolls in. Each segment grows over `--grow`, each branch draws over `--draw`, and successive parts start `--grow-stagger` apart, ending with the growth cone at the last paragraph. **Reduced motion:** drawn fully grown.
+The dendrite grows from the soma down the margin, one turning point at a time. Before it grows, nothing of it shows, not even the soma.
+
+- **One turning point.** The trunk grows over `--grow` from the top of the turning point's paragraph down to the next turning point. The first stretch starts at the soma and the last ends at the cone's tip. Its branch draws over `--draw`, starting `--grow-stagger` after the stretch starts, from the trunk outward. A twig starts with its branch, from where it leaves it.
+- **The dots.** The soma appears as the first stretch starts. The pruned branch's bouton and the cone's three tips appear as their branches finish. Each appears over `--fade`, from nothing to its resting strength.
+- **Each turning point grows on its own,** the first time its box, at the top of its paragraph, is fully in view (rule 1), and never before the turning point above it has played 2 × `--grow-stagger` of its own time. The story is taller than most windows, so growing it all at once would grow its lower part out of sight. Where several are on screen at once, they start 0, 0.8, 1.6, 2.4, and 3.2s in, as on the artboards. On a phone, each grows as the reader reaches it.
+- **Always in order, and never held up by what's out of sight.** When a turning point's box comes fully into view while turning points above it haven't finished, they come first:
+  - each one above whose stretch (its paragraph and the gap below it) is fully off screen finishes at once, fully grown with no motion, even if it was held mid-growth, since no one can see it;
+  - each one above whose stretch is partly on screen grows first, in order, at the usual spacing, even though its own box isn't in view. That is usually only the one directly above, whose stretch ends at this one's box;
+  - then this one grows, after the usual gate.
+
+  So a reader who arrives in the middle of the story, by a reload or by scrolling up from Projects, sees the dendrite grow where they are, with the trunk above already grown.
+- **Holding and resizing go by turning point.** A turning point's stretch runs through its paragraph and the gap below it, so it holds while that is fully off screen (rule 4), and its time stops counting for the one below. It stays held until it is back on screen, unless a box below it comes fully into view first, which finishes it at once as above. A change of the stretch's size mid-growth sends it straight to fully grown, and the one below may then start. Turning points not yet reached stay hidden, in the right place at the new layout.
+- **It waits for the fonts.** No turning point starts until the page's fonts have loaded. Until then the story is set in fallback fonts, and the swap can change the paragraphs' heights, which would count as a resize and send a growing turning point straight to fully grown.
+- **The trunk is one piece,** revealed in stages by a clip that comes off once it is fully grown, so no row is brighter where two stages meet.
+- **Growing is painted.** Dots fade with `fill-opacity`, not `opacity` (see Brain cells and nuclei). Branches draw with their stroke's dashes, and the trunk with its clip.
+- **Without JavaScript** it is drawn fully grown.
+
+Growing, drawing, and appearing all use `--ease-out`. **Reduced motion:** fully grown from the first paint and never hidden. Switching it on shows the whole dendrite fully grown at once, and it stays grown.
 
 ### Experience raster
 

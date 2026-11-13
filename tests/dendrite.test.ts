@@ -75,14 +75,14 @@ test('path data it can’t read is an error', () => {
   assert.throws(() => longestStroke('M0 0 L3'), /Can't read the path/);
 });
 
-// The five turning points, none yet wanted, on screen, started, or finished.
+// The five turning points, none yet in view, on screen, started, or finished.
 function story(change: Record<number, Partial<Turn>> = {}): Turn[] {
-  return [0, 1, 2, 3, 4].map((i) => ({ wanted: false, onScreen: false, started: false, finished: false, ...change[i] }));
+  return [0, 1, 2, 3, 4].map((i) => ({ inView: false, onScreen: false, started: false, finished: false, ...change[i] }));
 }
 const DONE = { finished: true, started: true };
-const SEEN = { wanted: true, onScreen: true };
+const SEEN = { inView: true, onScreen: true };
 
-test('with none wanted there is nothing to do', () => {
+test('with no box in view there is nothing to do', () => {
   assert.deepEqual(callAbove(story()), { finish: [], grow: [] });
   assert.deepEqual(callAbove(story({ 1: { onScreen: true } })), { finish: [], grow: [] });
 });
@@ -114,7 +114,7 @@ test('one above that is growing on screen is left to grow', () => {
   assert.deepEqual(call, { finish: [], grow: [] });
 });
 
-test('the lowest wanted one decides', () => {
+test('the lowest one in view decides', () => {
   // Scrolling up from Projects: the last box comes into view first.
   const call = callAbove(story({ 3: { onScreen: true }, 4: SEEN }));
   assert.deepEqual(call, { finish: [0, 1, 2], grow: [3] });
@@ -125,9 +125,10 @@ test('one that has started or finished calls on nothing', () => {
   assert.deepEqual(callAbove(story({ 2: { ...SEEN, ...DONE } })), { finish: [], grow: [] });
 });
 
-test('one called on to grow calls on those above it in turn', () => {
-  // The second was called while on screen and still waits; the first has
-  // since left the screen, and no box is in view any more.
-  const call = callAbove(story({ 1: SEEN }));
-  assert.deepEqual(call, { finish: [0], grow: [] });
+test('one held off screen stays held while no box is in view', () => {
+  // The soma was growing and the second box was waiting on it when the whole
+  // story left the screen.
+  assert.deepEqual(callAbove(story({ 0: { started: true } })), { finish: [], grow: [] });
+  // Back, with the second box in view again, the soma is on screen and grows on.
+  assert.deepEqual(callAbove(story({ 0: { started: true, onScreen: true }, 1: SEEN })), { finish: [], grow: [] });
 });
