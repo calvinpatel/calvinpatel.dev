@@ -24,7 +24,9 @@
 //
 // One Crossing holds what one pointer is on in one cell. NeuronLayer.astro's
 // script keeps one per cell and starts them afresh with each new touch of a
-// finger. No DOM and no Astro imports, so Node can run
+// finger. It also keeps the pointer's touches in a queue until a frame works
+// them out; working them out, and forgetting what the pointer is on, are
+// here too (workOut, forget). No DOM and no Astro imports, so Node can run
 // tests/neuron-crossing.test.ts against it directly.
 
 import { POINTER, SHAPE, branchesMeet, nearBranches, somaGap } from './neuron-cell.ts';
@@ -80,4 +82,38 @@ export function cross(crossing: Crossing, cell: DrawnCell, x: number, y: number,
   if (fresh.length === 0) return -1;
   for (const one of fresh) on.add(one.branch);
   return fresh.reduce((best, one) => (one.distance < best.distance ? one : best)).point;
+}
+
+/**
+ * A touch of the layer that no frame has worked out yet: where the pointer
+ * was, in px from the canvas's corner, and how near it has to come to a
+ * dendrite. The layer keeps them in a queue, oldest first, and each frame
+ * works them out. (Not the browser's Touch, which is one finger on a screen.)
+ */
+export interface Pending {
+  x: number;
+  y: number;
+  reach: number;
+}
+
+/**
+ * One frame's share of the waiting touches, oldest first: `touch` works each
+ * one out against what the pointer is on. At most `most` in one frame
+ * (POINTER.perFrame); any beyond that are dropped, not kept for the next.
+ */
+export function workOut(waiting: Pending[], most: number, touch: (one: Pending) => void): void {
+  for (const one of waiting.splice(0, most)) touch(one);
+  waiting.length = 0;
+}
+
+/**
+ * The pointer is gone, or the page has moved under it: it is on nothing in
+ * any of `cells`, so whatever it touches next is a new crossing. What it
+ * touched on its way here is worked out first, by what it was on then. Left
+ * for the next frame, a finger's last move before its swipe became a scroll
+ * counted against nothing, and sent the dendrite it started on a second input.
+ */
+export function forget(waiting: Pending[], cells: { crossing: Crossing }[], touch: (one: Pending) => void): void {
+  for (const one of waiting.splice(0)) touch(one);
+  for (const cell of cells) cell.crossing = noCrossing();
 }

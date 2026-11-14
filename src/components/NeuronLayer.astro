@@ -25,8 +25,8 @@ const files = readCellIndex().map((cell) => `/cells/${cell.file}`);
   import { inkOf } from '../lib/ink.ts';
   import { POINTER, SHAPE, pathToSoma, prepareCell, readCell } from '../lib/neuron-cell.ts';
   import type { CellFile, DrawnCell } from '../lib/neuron-cell.ts';
-  import { cross, noCrossing } from '../lib/neuron-crossing.ts';
-  import type { Crossing } from '../lib/neuron-crossing.ts';
+  import { cross, forget as forgetCrossings, noCrossing, workOut } from '../lib/neuron-crossing.ts';
+  import type { Crossing, Pending } from '../lib/neuron-crossing.ts';
   import {
     FIELD,
     REST_MAX,
@@ -425,7 +425,7 @@ const files = readCellIndex().map((cell) => `/cells/${cell.file}`);
     // What a pointer newly touches as it moves to (x, y). A crossing sends one
     // pulse (neuron-crossing.ts): a dendrite it has just come within reach
     // of takes one input, and a soma it has just touched fires.
-    function touch(x: number, y: number, reach: number) {
+    function touch({ x, y, reach }: Pending) {
       neurons.forEach((neuron, index) => {
         const { cell, membrane, placement } = neuron;
         const point = cross(neuron.crossing, cell, x - placement.x - neuron.dx, y - placement.y - neuron.dy, reach);
@@ -440,8 +440,7 @@ const files = readCellIndex().map((cell) => `/cells/${cell.file}`);
 
     // One step of the cells' state, to the layer's time.
     function advance(moving: boolean) {
-      for (const sample of samples.splice(0, POINTER.perFrame)) touch(sample.x, sample.y, sample.reach);
-      samples.length = 0;
+      workOut(samples, POINTER.perFrame, touch);
 
       // On its own a cell fires only inside the window, and only if it has
       // been quiet long enough and can finish there. One is picked whose soma
@@ -770,18 +769,16 @@ const files = readCellIndex().map((cell) => `/cells/${cell.file}`);
 
     // Nothing here stops a scroll or a tap: every listener is passive, on the
     // window, and the canvas itself takes no pointer events.
-    const samples: { x: number; y: number; reach: number }[] = [];
+    const samples: Pending[] = [];
     let trail: { x: number; y: number; at: number } | null = null;
 
     // The pointer is gone, or the page has moved under it: it is on nothing,
-    // so whatever it touches next is a new crossing. What it touched on its
-    // way here is worked out first, by what it was on then. Left for the next
-    // frame, a finger's last move before its swipe became a scroll counted
-    // against nothing, and sent the dendrite it started on a second input.
+    // so whatever it touches next is a new crossing, with no path leading up
+    // to it. The touches still waiting are worked out first, by what it was
+    // on then (neuron-crossing.ts).
     function forget() {
-      for (const sample of samples.splice(0)) touch(sample.x, sample.y, sample.reach);
+      forgetCrossings(samples, neurons, touch);
       trail = null;
-      for (const neuron of neurons) neuron.crossing = noCrossing();
     }
 
     function pointOf(event: PointerEvent) {

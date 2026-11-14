@@ -8,7 +8,8 @@ import { test } from 'node:test';
 import { readCellIndex } from '../src/lib/cells.ts';
 import { POINTER, SHAPE, nearBranches, prepareCell, readCell, somaGap } from '../src/lib/neuron-cell.ts';
 import type { CellFile, DrawnCell } from '../src/lib/neuron-cell.ts';
-import { cross, noCrossing } from '../src/lib/neuron-crossing.ts';
+import { cross, forget, noCrossing, workOut } from '../src/lib/neuron-crossing.ts';
+import type { Pending } from '../src/lib/neuron-crossing.ts';
 import { mulberry32 } from '../src/lib/raster.ts';
 
 // A trunk straight up from the soma that forks into two tips, and one branch
@@ -153,6 +154,50 @@ test('each new touch of a finger starts afresh: a second tap on a branch is a se
   assert.deepEqual(follow(cell, [[5, -50]], POINTER.finger, noCrossing()), [TRUNK]);
   // The same pointer, not lifted, sends nothing for the second.
   assert.deepEqual(follow(cell, [[5, -50], [5, -50]], POINTER.finger), [TRUNK]);
+});
+
+/** One pointer over the small cell: what it is on, and the branch each input went to, in order. */
+function pointer() {
+  const on = { crossing: noCrossing() };
+  const sent: number[] = [];
+  const touch = (one: Pending) => {
+    const point = cross(on.crossing, cell, one.x, one.y, one.reach);
+    if (point > 0) sent.push(cell.branch[point]);
+  };
+  return { on, sent, touch };
+}
+const finger = (x: number, y: number): Pending => ({ x, y, reach: POINTER.finger });
+
+test('a touch still waiting when the pointer is forgotten counts by what the pointer was on', () => {
+  // A finger lands on the trunk, and a frame works that out: one input.
+  const { on, sent, touch } = pointer();
+  const waiting: Pending[] = [finger(0, -50)];
+  workOut(waiting, POINTER.perFrame, touch);
+  assert.deepEqual(sent, [TRUNK]);
+
+  // It moves 20px along the trunk, and before the next frame the browser
+  // takes the swipe over as a scroll: the pointer is forgotten with that move
+  // still waiting. It was on the trunk then, so it sends nothing more.
+  waiting.push(finger(0, -70));
+  forget(waiting, [on], touch);
+  workOut(waiting, POINTER.perFrame, touch); // the next frame
+  assert.deepEqual(sent, [TRUNK]);
+
+  // The pointer is then on nothing: touching the trunk again is a new crossing.
+  waiting.push(finger(0, -70));
+  workOut(waiting, POINTER.perFrame, touch);
+  assert.deepEqual(sent, [TRUNK, TRUNK]);
+});
+
+test('a frame works out the oldest waiting touches, up to its share, and drops the rest', () => {
+  // Three touches wait: the trunk, the side branch, and the trunk again after leaving it.
+  const { sent, touch } = pointer();
+  const waiting: Pending[] = [finger(0, -50), finger(50, 0), finger(-80, -50)];
+  workOut(waiting, 2, touch);
+  assert.deepEqual(sent, [TRUNK, SIDE]);
+  assert.equal(waiting.length, 0);
+  workOut(waiting, 2, touch);
+  assert.deepEqual(sent, [TRUNK, SIDE]);
 });
 
 test('on the real cells, a branch never sends twice without being left in between', () => {
