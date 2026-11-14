@@ -202,6 +202,18 @@ const units = Array.from({ length: Math.ceil(CONTENT_MAX / NODE_SPACING) });
     r: var(--bouton-radius);
   }
 
+  /* Reduced motion switched on mid-flash leaves the divider at rest. The
+     script ends the flashes when it hears of the switch, but Chrome tells it
+     a frame late, as for the dendrite (Dendrite.astro). For that frame these
+     hold every part at rest: an important declaration outranks an animation. */
+  @media (prefers-reduced-motion: reduce) {
+    .soma,
+    .node,
+    .bouton {
+      fill-opacity: var(--ink-rest) !important;
+    }
+  }
+
   /* The leading node, then the units, from --lead to the right end. The row
      doesn't wrap, so the right end cuts the last sheath off. */
   .sheaths {
