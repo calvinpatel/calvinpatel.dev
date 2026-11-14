@@ -87,13 +87,14 @@ const site = defineCollection({
               label: text, // top bar link, section heading, brain label's first line
               lobe: z.enum(['frontal', 'occipital', 'temporal', 'cerebellum', 'parietal']),
               lobeLine: text, // brain label's second line
-              phoneLine: text, // shown under the brain on the first tap
+              phoneLine: text, // takes the hint's place under the brain on phones, while the lobe is active
             })
             .strict(),
         )
         .length(5),
       brainLabel: text, // the brain nav's name for screen readers
-      brainHint: z.object({ pointer: text, touch: text }).strict(),
+      // tapAgain follows a phoneLine that a tap put up
+      brainHint: z.object({ pointer: text, touch: text, tapAgain: text }).strict(),
       footer: z.object({ credit: text, creditsLabel: text, copyright: text }).strict(),
     })
     .strict()

@@ -348,6 +348,10 @@ const look = Object.entries({
       lobes.map(({ id, copy }) => (
         <span class="phone" data-for={id}>
           <Copy text={copy.phoneLine} />
+          <span class="again">
+            {' '}
+            <Copy text={site.brainHint.tapAgain} />
+          </span>
         </span>
       ))
     }
@@ -579,15 +583,21 @@ const look = Object.entries({
       clearTimeout(leaving);
       if (!active) return;
       setActive(active, false);
+      root.classList.remove('by-tap');
       active = null;
       stopCascade();
     }
-    function activate(lobe: SVGAElement) {
-      if (active === lobe) return;
-      deactivate();
-      active = lobe;
-      setActive(lobe, true);
-      startCascade(lobe);
+    // `byTap` is for the phone line, which says to tap again only when a tap
+    // put it up. Keyboard focus and hover show it without: Enter or a click
+    // goes straight to the section.
+    function activate(lobe: SVGAElement, byTap = false) {
+      if (active !== lobe) {
+        deactivate();
+        active = lobe;
+        setActive(lobe, true);
+        startCascade(lobe);
+      }
+      root.classList.toggle('by-tap', byTap);
     }
 
     // The press before a click says what made it: a mouse, a finger, or a
@@ -626,7 +636,7 @@ const look = Object.entries({
         press = null;
         if (tapAction(own, event.detail, active === lobe) === 'preview') {
           event.preventDefault(); // the first tap previews; the second goes
-          activate(lobe);
+          activate(lobe, true);
           return;
         }
         // On its way to the section: the highlight lets go once it has shown.
@@ -1116,7 +1126,8 @@ const look = Object.entries({
   }
 
   .pointer,
-  .phone {
+  .phone,
+  .again {
     display: none;
   }
 
@@ -1211,6 +1222,12 @@ const look = Object.entries({
     }
 
     .phone.is-active {
+      display: inline;
+    }
+
+    /* "Tap again to go there." follows the phone line only when a tap put
+       it up. */
+    .by-tap .phone.is-active .again {
       display: inline;
     }
   }
