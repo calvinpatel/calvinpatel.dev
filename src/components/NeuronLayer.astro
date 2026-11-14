@@ -774,8 +774,12 @@ const files = readCellIndex().map((cell) => `/cells/${cell.file}`);
     let trail: { x: number; y: number; at: number } | null = null;
 
     // The pointer is gone, or the page has moved under it: it is on nothing,
-    // so whatever it touches next is a new crossing.
+    // so whatever it touches next is a new crossing. What it touched on its
+    // way here is worked out first, by what it was on then. Left for the next
+    // frame, a finger's last move before its swipe became a scroll counted
+    // against nothing, and sent the dendrite it started on a second input.
     function forget() {
+      for (const sample of samples.splice(0)) touch(sample.x, sample.y, sample.reach);
       trail = null;
       for (const neuron of neurons) neuron.crossing = noCrossing();
     }
