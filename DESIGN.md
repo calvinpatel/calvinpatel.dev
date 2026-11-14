@@ -466,7 +466,7 @@ One motion language runs through the whole site: a signal travels at a set speed
 - **Pointer and finger.** Input works at any time, by the crossing rule above. A mouse sends an input for each branch it crosses. A finger's tap sends an input to the branch it lands on, or fires the cell if it lands on a soma; each new touch starts afresh, so a second tap in the same place is a second crossing. A swipe sends an input for each branch it crosses until the browser takes it over as a scroll. The layer never blocks a scroll or a tap: the hero sets no `touch-action`, and the canvas takes no pointer events.
 - **Brightness behind text.** Behind the hero text, every brain-label position, the hint, and the top bar's links, the layer is dimmed and held under the canvas cap (see Color: Contrast).
 - **When nothing runs.** No frame is drawn while the hero is off screen or the tab is hidden, and a signal picks up where it was. When nothing is moving, the canvas holds its last frame and draws no more.
-- **Reduced motion.** Signals appear in place with no travel: a signal's whole path lights at once and fades. Nothing drifts, no cell fires on its own, the soma's glow fades without spreading, and the layer appears at once.
+- **Reduced motion.** Signals appear in place with no travel: a signal's whole path lights at once and fades. Nothing drifts, no cell fires on its own, the soma's glow fades without spreading, and the layer appears at once. Switched on mid-play, the layer stops within a few frames while it rebuilds, and a signal already travelling ends there; switched off inside the five-second window, the layer and the brain move for what is left of it.
 
 ### Brain callouts and labels
 
@@ -492,7 +492,7 @@ One motion language runs through the whole site: a signal travels at a set speed
 - **The five-second window.** Firing on their own, the drift, and the breathing all stop when the window closes. A cell fires on its own only if it can finish inside the window, and the nuclei hold where they are. The cascade and the cursor response work at any time, because the visitor starts them.
 - **Nothing runs** while the hero is off screen or the tab is hidden.
 
-**Reduced motion:** no firing, no drift, and no breathing.
+**Reduced motion:** no firing, no drift, and no breathing. Switched on or off mid-play, the nuclei go to or from rest at once.
 
 ### Scrolling to a section
 
