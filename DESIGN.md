@@ -483,14 +483,14 @@ One motion language runs through the whole site: a signal travels at a set speed
 ### Brain cells and nuclei
 
 - **A cell fires** in three beats: a pulse runs in along its apical dendrite to the soma (`--brain-cell-in`), the soma flashes (fading over `--brain-cell-flash`), and a pulse runs out along the axon (`--brain-cell-out`). Meanwhile the whole cell brightens and settles over `--brain-cell-fire`, and it can't fire again until that ends. The pulses travel at constant speed.
-- **Nothing inside the brain animates `opacity`.** The flash fades with `fill-opacity`, and the pulses show and hide with `visibility`. A browser hands an opacity animation to its compositor, which then splits the brain's drawing into layers for every cell that fires; with the CPU slowed 4x that dropped about one frame in ten while the pointer crossed the brain. The painted properties look the same and drop about one in a hundred.
+- **The brain's small cells never animate `opacity`:** their flash fades with `fill-opacity` and their pulses show with `visibility`, because animating `opacity` on many firing cells made Chrome rebuild the brain's layers (step 7). The nuclei's breathing, the callout's pulse and end dot, the label, and the hint may animate `opacity`; in See it they added layers but no slow frames at full speed or with the CPU slowed 4x. The flash fades with `fill-opacity`, and the pulses show and hide with `visibility`. A browser hands an opacity animation to its compositor, which then splits the brain's drawing into layers for every cell that fires; with the CPU slowed 4x that dropped about one frame in ten while the pointer crossed the brain. The painted properties look the same and drop about one in a hundred.
 - **Three things fire a cell.**
   - On its own: one cell at a time, every `--brain-cell-idle-min` to `--brain-cell-idle-max`.
   - A cascade across the hovered or focused lobe: each of its cells fires once per wave, at a random moment in the first `--brain-cascade-spread`, with a wave every `--brain-cascade`.
   - The cell nearest the cursor, when the cursor is close to its soma.
 - **The nuclei drift and breathe.** In each depth band, half the nuclei drift one way over `--brain-drift-a` and half another over `--brain-drift-b`, a few units, back and forth. The second half also fade to 70% and back over `--brain-breathe`.
 - **The five-second window.** Firing on their own, the drift, and the breathing all stop when the window closes. A cell fires on its own only if it can finish inside the window, and the nuclei hold where they are. The cascade and the cursor response work at any time, because the visitor starts them.
-- **Nothing runs** while the hero is off screen or the tab is hidden.
+- **Nothing runs** while the hero is off screen or the tab is hidden. A cell firing when the tab hides goes to rest and doesn't resume when the tab shows.
 
 **Reduced motion:** no firing, no drift, and no breathing. Switched on or off mid-play, the nuclei go to or from rest at once.
 
