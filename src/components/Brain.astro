@@ -738,6 +738,9 @@ const look = Object.entries({
   .lobe {
     --cell-on: var(--brain-cell-rest);
     outline: none; /* the ring below replaces it */
+    /* A tap's response is the lobe's own preview. The browser's highlight
+       would cover the link's whole box, which is most of the brain. */
+    -webkit-tap-highlight-color: transparent;
     transition: --cell-on var(--hover) var(--ease-out);
   }
 
