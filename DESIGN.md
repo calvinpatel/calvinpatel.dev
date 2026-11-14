@@ -179,7 +179,7 @@ Media queries can't read custom properties, so these widths are written as numbe
 
 **Links.** A link keeps the color of the text around it, with an underline in `--color-link-underline` set `--link-underline-offset` (4px) below the text. On hover, the underline brightens to `--color-text` instantly; nothing else changes. Visited links look the same as unvisited ones. The top bar's section links and the CP mark are the one exception: no underline at rest, and the standard underline appears on hover.
 
-**Focus.** Every link and every brain lobe shows a ring on keyboard focus: `--focus-width` (2px) solid in `--color-focus`, with `--focus-offset` (4px) of space. Use `:focus-visible`, and never remove the ring without replacing it with this one. A lobe's ring follows the lobe's own shape, `--focus-offset` outside its edge. The lobes tile, so along a shared border the ring runs over the neighboring lobe. It lifts with the lobe, and it works without the script.
+**Focus.** Every link and every brain lobe shows a ring on keyboard focus: `--focus-width` (2px) solid in `--color-focus`, with `--focus-offset` (4px) of space. Use `:focus-visible`, and never remove the ring without replacing it with this one. A lobe's ring follows the lobe's own shape, `--focus-offset` outside its edge. The lobes tile, so along a shared border the ring runs over the neighboring lobe. It lifts with the lobe, and it works without the script. When focus scrolls a link into view, its whole ring shows: every link has a scroll margin of `--focus-offset` plus `--focus-width`.
 
 **Buttons.** The designs have none: every control is a link or a brain lobe, and the lobes are links too. If a real action ever needs a `<button>`, style it like a link. No filled or outlined pills.
 

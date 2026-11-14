@@ -118,6 +118,8 @@ a {
   text-decoration-line: underline;
   text-decoration-color: var(--color-link-underline);
   text-underline-offset: var(--link-underline-offset);
+  /* When focus scrolls a link into view, its whole ring comes with it. */
+  scroll-margin: calc(var(--focus-offset) + var(--focus-width));
 }
 
 a:hover {
