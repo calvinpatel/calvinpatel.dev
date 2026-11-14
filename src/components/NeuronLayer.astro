@@ -191,7 +191,7 @@ const files = readCellIndex().map((cell) => `/cells/${cell.file}`);
 
     // Every piece of text over the canvas, in px from the canvas's corner:
     // the hero text's ink, each brain label where it would show, the hint
-    // (and the phone line that takes its place), and the top bar's links.
+    // (and the phone's label that takes its place), and the top bar's links.
     function measureZones(): Box[] {
       const origin = canvas.getBoundingClientRect();
       const boxes: Box[] = [];

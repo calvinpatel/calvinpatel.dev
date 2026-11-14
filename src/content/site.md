@@ -16,34 +16,30 @@ sections:
     label: About
     lobe: frontal
     lobeLine: "Frontal lobe: personality and planning"
-    phoneLine: "About: frontal lobe, personality and planning."
   - id: projects
     label: Projects
     lobe: occipital
     lobeLine: "Occipital lobe: vision"
-    phoneLine: "Projects: occipital lobe, vision."
   - id: experience
     label: Experience
     lobe: temporal
     lobeLine: "Temporal lobe: memory"
-    phoneLine: "Experience: temporal lobe, memory."
   - id: skills
     label: Skills
     lobe: cerebellum
     lobeLine: "Cerebellum: learned skill and movement"
-    phoneLine: "Skills: cerebellum, learned skill and movement."
   - id: contact
     label: Contact
     lobe: parietal
     lobeLine: "Parietal lobe: guides reaching"
-    phoneLine: "Contact: parietal lobe, guides reaching."
 
 # What a screen reader calls the brain's five lobe links.
 brainLabel: Brain map
 
 # Under the brain. Pointer devices see the first; touch screens the second.
-# On phones a lobe's phoneLine takes the hint's place, and tapAgain follows it
-# only when a tap put it there: keyboard focus and hover show the phoneLine alone.
+# On phones a lobe's label and lobeLine take the hint's place, and tapAgain
+# follows them only when a tap put them there: keyboard focus and hover show
+# the two lines alone.
 brainHint:
   pointer: Hover a region to preview it, click to go there
   touch: Tap a region to preview it, tap again to go there

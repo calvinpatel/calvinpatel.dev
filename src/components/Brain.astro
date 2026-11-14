@@ -347,9 +347,13 @@ const look = Object.entries({
     {
       lobes.map(({ id, copy }) => (
         <span class="phone" data-for={id}>
-          <Copy text={copy.phoneLine} />
+          <span class="name">
+            <Copy text={copy.label} />
+          </span>
+          <span class="line">
+            <Copy text={copy.lobeLine} />
+          </span>
           <span class="again">
-            {' '}
             <Copy text={site.brainHint.tapAgain} />
           </span>
         </span>
@@ -587,9 +591,9 @@ const look = Object.entries({
       active = null;
       stopCascade();
     }
-    // `byTap` is for the phone line, which says to tap again only when a tap
-    // put it up. Keyboard focus and hover show it without: Enter or a click
-    // goes straight to the section.
+    // `byTap` is for the phone's label, which says to tap again only when a
+    // tap put it up. Keyboard focus and hover show it without: Enter or a
+    // click goes straight to the section.
     function activate(lobe: SVGAElement, byTap = false) {
       if (active !== lobe) {
         deactivate();
@@ -1207,17 +1211,21 @@ const look = Object.entries({
     }
 
     /* No callouts or labels on phones: the first tap swaps the hint for the
-       lobe's phone line, which can take two lines. The hint keeps room for
-       the second line without counting it in the hero's centered group, so
-       nothing moves when the phone line shows. */
+       lobe's label, the desktop label's two lines, with a third after a tap.
+       The hint keeps room for all three and counts only its own one line in
+       the hero's centered group, so nothing moves when the label shows. */
     .callouts,
     .labels {
       display: none;
     }
 
     .hint {
-      min-height: calc(2 * var(--line-box));
-      margin-bottom: calc(-1 * var(--line-box));
+      --label-room: calc(
+        var(--step-text-4) * var(--leading-lede) + var(--step-text-7) * var(--leading-label) + var(--space-3xs) +
+          var(--line-box)
+      );
+      min-height: var(--label-room);
+      margin-bottom: calc(var(--line-box) - var(--label-room));
     }
 
     .has-active .rest {
@@ -1225,13 +1233,20 @@ const look = Object.entries({
     }
 
     .phone.is-active {
-      display: inline;
+      display: block;
     }
 
-    /* "Tap again to go there." follows the phone line only when a tap put
-       it up. */
+    /* The name is in the main text color, as on the desktop label, where the
+       hint's own color is muted. */
+    .phone .name {
+      color: var(--color-text);
+    }
+
+    /* "Tap again to go there." follows the two lines only when a tap put the
+       label up. */
     .by-tap .phone.is-active .again {
-      display: inline;
+      display: block;
+      margin-top: var(--space-3xs);
     }
   }
 
