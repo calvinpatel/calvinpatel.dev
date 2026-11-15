@@ -153,7 +153,7 @@ Spacing inside sections follows the artboards, using the nearest token from this
 ### Page
 
 - **Width.** Content sits in one centered column at most `--page-max` (1320px) wide including the gutters, which leaves 1192px of content at full width.
-- **Reading widths.** Long reading text sits in `--reading-max` (680px): the case study column and the About story. Descriptions stop at `--measure` (66 characters per line). The About lede stops at `--lede-measure` (22ch) and is balanced, so it sets three lines at every width, as on both artboards.
+- **Reading widths.** Long reading text sits in `--reading-max` (680px): the case study column and the About story. Descriptions stop at `--measure` (66ch). A `ch` is the width of "0", which is wider than Plex's average letter, so 66ch sets about 85 to 93 characters a line. The About lede stops at `--lede-measure` (22ch) and is balanced, so it sets three lines at every width, as on both artboards.
 - **Tap targets.** Every standalone link and control is at least `--tap-min` (44px) in both directions on touch screens. Links inside a sentence are exempt, as WCAG allows. Don't enlarge their tap area, because it would overlap the lines around them. A tap box never moves its text: the box grows by its padding, and an equal negative margin takes the room back, as on the Contact email. The other standalone links are tap-height boxes whose rows give the same room back.
 
 ### Section grids
