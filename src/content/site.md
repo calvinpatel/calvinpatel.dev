@@ -46,7 +46,9 @@ brainHint:
   tapAgain: Tap again to go there.
 
 footer:
-  credit: Neuron reconstructions from NeuroMorpho.Org, used under CC BY 4.0.
+  # "CC BY 4.0" is written with two non-breaking spaces (U+00A0), so it never
+  # splits across lines (DESIGN.md, Type).
+  credit: Neuron reconstructions from NeuroMorpho.Org, used under CC BY 4.0.
   creditsLabel: Credits
   copyright: © 2026 Calvin Patel
 ---
