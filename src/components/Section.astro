@@ -1,6 +1,7 @@
 ---
-// One home-page section: its id for the top bar and brain links, its heading
-// from site.md, and then its content.
+// One home-page section: its heading from site.md, and then its content. The
+// id the top bar and brain links point at is on the heading, which can take
+// focus, so following a link moves focus there (DESIGN.md, Accessibility).
 import Copy from './Copy.astro';
 
 interface Props {
@@ -11,9 +12,9 @@ interface Props {
 const { id, label } = Astro.props;
 ---
 
-<section id={id} aria-labelledby={`${id}-heading`}>
+<section aria-labelledby={id}>
   <div class="container">
-    <h2 id={`${id}-heading`}><Copy text={label} /></h2>
+    <h2 id={id} tabindex="-1"><Copy text={label} /></h2>
     <slot />
   </div>
 </section>
@@ -31,5 +32,11 @@ const { id, label } = Astro.props;
     margin-bottom: var(--section-heading-gap);
     font-size: var(--step-display-3);
     line-height: var(--leading-display);
+    /* A link to this section points at the heading. The page still lands on
+       the section's top edge: this is the section's top padding. */
+    scroll-margin-top: var(--space-section);
+    /* It takes focus so a screen reader follows the link. It isn't a control,
+       so it shows no ring (DESIGN.md, Accessibility). */
+    outline: none;
   }
 </style>
