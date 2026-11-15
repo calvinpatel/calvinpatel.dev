@@ -2,6 +2,8 @@
 # The NotePilot case study, at /projects/notepilot. Its title, status, and
 # links come from projects/notepilot.md. An axon divider comes before each
 # part from "What it does" on.
+# Each number is joined to its word by a non-breaking space (U+00A0), so the
+# two stay on one line (DESIGN.md, Type).
 project: notepilot
 lede: >-
   A clinical SOAP-note summarizer that links every claim to the exact source
@@ -64,7 +66,7 @@ parts:
           still taking, and my checks read it as apixaban stopped. "Pt left AMA"
           names no side, and "R/O PE" is not a diagnosis. Every rule that fixed
           one phrasing broke another. The first fix I prototyped for stop orders
-          kept only 15 of 36 everyday stops reading as stopped. Of the first
+          kept only 15 of 36 everyday stops reading as stopped. Of the first
           seven reading rules I approved in one round, six needed a follow-up
           fix.
         figure: comma
@@ -87,27 +89,28 @@ parts:
     showResults: true
     blocks:
       - text: >-
-          I tested the live model on 24 synthetic encounters, running each one 3
-          times. In the latest run, it kept safety-critical facts in 100% of
+          I tested the live model on 24 synthetic encounters, running each one
+          3 times. In the latest run, it kept safety-critical facts in 100% of
           fidelity traps. The pipeline surfaced 100% of planted dangers, and
           clean notes stayed clean 100% of the time. Across all eight recorded
-          runs, 576 live model calls, the model never dropped or invented a
+          runs, 576 live model calls, the model never dropped or invented a
           labeled safety-critical fact, so the safety layer had nothing to catch
-          live. Its catching is proven instead on 29 injected cases, drafts with
+          live. Its catching is proven instead on 29 injected cases, drafts with
           a mistake planted in them, scored on every commit.
       - text: >-
           The first two runs scored 75% on fidelity traps and 87.5% on clean
           controls. Every miss was a check flagging a correct note, and changing
           what the checks read, not the model, brought both to 100%.
       - text: >-
-          At 24 cases, the corpus is a regression tripwire, not an accuracy
+          At 24 cases, the corpus is a regression tripwire, not an accuracy
           estimate: it shows whether a change made things worse on these cases,
           not how often the model is right in general.
       - text: >-
           The public version runs with rate limiting, a daily spend cap, and
-          logging that keeps patient information out. It costs about $0.0003 per
-          note, and 2,637 automated tests run on every push: 2,548 backend test
-          cases, many of them table-driven, plus 89 frontend tests.
+          logging that keeps patient information out. It costs about
+          $0.0003 per note, and 2,637 automated tests run on every push:
+          2,548 backend test cases, many of them table-driven, plus 89 frontend
+          tests.
 
   - id: whats-next
     heading: What's next

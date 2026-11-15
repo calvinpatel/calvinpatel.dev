@@ -129,7 +129,7 @@ Rules:
 - **Labels are plain.** Status words (Live, Building now, Up next), dates, and captions are Plex in the muted color at their normal case and spacing. The banned list rules out letter-spaced monospace labels.
 - **Headlines are always Fraunces at 400.** No bold Fraunces anywhere.
 - **Curly punctuation.** Every rendered apostrophe and quotation mark is typographic (’ “ ”). Content files may use straight ones; the build converts them. Straight marks stay only in code.
-- **"CC BY 4.0" never splits.** In running copy a content file writes it with non-breaking spaces (U+00A0), the character itself. On the Credits page CSS keeps it whole (see Credits page).
+- **A number stays on the line with its word, and "CC BY 4.0" never splits.** That covers a count or a measure and the word after it ("40+ patients", "$0.0003 per note", "15 of 36 everyday"), a named number and the word before it ("Phase 0"), and a citation's year and its journal. Content files write a non-breaking space (U+00A0) between them, the character itself. A percentage carries its own unit, so the word after it may start the next line. On the Credits page CSS keeps the license whole (see Credits page).
 - **Nothing clips.** If a visitor enlarges text, lines may wrap, including the hero name, but text never overflows, clips, or overlaps.
 
 ## Spacing and layout

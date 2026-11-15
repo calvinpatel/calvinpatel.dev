@@ -2,6 +2,8 @@
 # NotePilot's row in the Projects section. Its results show large here and at
 # the top of the case study's Results; every number traces to the master
 # sheet's Done column (checked against commit 6676a52 on Nov 10, 2026).
+# Each number is joined to its word by a non-breaking space (U+00A0), so the
+# two stay on one line (DESIGN.md, Type).
 name: NotePilot
 order: 1
 status: Live
@@ -20,8 +22,8 @@ results:
   - value: "576"
     label: live calls without a dropped or invented safety fact
 measurementNote: >-
-  Rates are from the latest of eight runs, on 24 synthetic encounters run 3
-  times each; 576 counts every live call across all eight runs. A regression
+  Rates are from the latest of eight runs, on 24 synthetic encounters run
+  3 times each; 576 counts every live call across all eight runs. A regression
   tripwire, not an accuracy estimate.
 
 links:

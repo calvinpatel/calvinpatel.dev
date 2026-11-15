@@ -3,6 +3,8 @@
 # from site.md. Entries are newest first.
 # dates: shown as written. start/end: for the raster's time axis (2020 to now).
 # schedule: drives raster spike density (full-time dense, part-time sparse).
+# Each number is joined to its word by a non-breaking space (U+00A0), so the
+# two stay on one line (DESIGN.md, Type).
 entries:
   - role: AI Engineer
     org: Coastal Pain & Spinal Diagnostics
@@ -15,8 +17,8 @@ entries:
       I built per-patient AI workspaces on Claude that bring a patient's charts,
       medications, appointment history, and outside-provider reports into one place,
       so the physician can ask for a patient's current status before each visit. In a
-      pilot across about 20 patients, they cut pre-visit prep by about 10 minutes per
-      patient, for a physician who sees 40+ patients a day. Patients authorize their
+      pilot across about 20 patients, they cut pre-visit prep by about 10 minutes per
+      patient, for a physician who sees 40+ patients a day. Patients authorize their
       use, no identifying information enters the AI, and only the physician holds the
       key that links each workspace to its patient. I'm also leading Prelude, an AI
       pre-visit intake system (see [Projects](#projects)).
@@ -52,7 +54,7 @@ entries:
     end: 2021-09
     schedule: full-time
     description: >-
-      Analyzed burst firing in recordings from about 1,600 human hippocampal and
+      Analyzed burst firing in recordings from about 1,600 human hippocampal and
       amygdala neurons in an open dataset, comparing memory-selective, visually
       selective, and non-tuned cells. Most of the bursting came from non-tuned cells,
       and I presented the results in an end-of-internship research talk.
@@ -65,10 +67,10 @@ entries:
     end: 2021-07
     schedule: part-time
     description: >-
-      Reconstructed the 3D dendritic structure of about 400 striatal medium spiny and
+      Reconstructed the 3D dendritic structure of about 400 striatal medium spiny and
       cortical pyramidal neurons from microscopy image stacks, for large-scale studies
       of the basal ganglia in Huntington's and Parkinson's disease mouse models. The
-      team is acknowledged in Park et al., *Nature Neuroscience* (2025).
+      team is acknowledged in Park et al., *Nature Neuroscience* (2025).
 
   - role: Undergraduate Researcher
     org: Mehta Lab, UCLA

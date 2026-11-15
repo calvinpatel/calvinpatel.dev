@@ -2,15 +2,17 @@
 # About. The lede is set in Fraunces, each sentence on its own line; the story
 # has exactly five paragraphs, one per turning point of the dendrite in the
 # margin (soma, pruned branch, both sides, two branches, growth cone).
+# Each number is joined to its word by a non-breaking space (U+00A0), so the
+# two stay on one line (DESIGN.md, Type).
 lede:
   - Medicine taught me what clinicians need.
   - Engineering lets me build it.
 
 story:
   - >-
-    I started in neuroscience labs at UCLA. I reconstructed about 400 neurons by
+    I started in neuroscience labs at UCLA. I reconstructed about 400 neurons by
     hand for the Yang Lab's dendritome study (the same kinds of cells drifting
-    behind this page) and analyzed burst firing across roughly 1,600 human
+    behind this page) and analyzed burst firing across roughly 1,600 human
     neurons at Cedars-Sinai.
   - >-
     Then came medical school at the University of Maryland, and somewhere in my
@@ -21,7 +23,7 @@ story:
     discovery, possibilities that never run out.
   - >-
     I'd felt that before, in the life science and neuroscience coding courses
-    I'd taken. So, mostly for fun, I took Harvard's CS50 and Angela Yu's 100 Days
+    I'd taken. So, mostly for fun, I took Harvard's CS50 and Angela Yu's 100 Days
     of Code, and I kept building. Making something from the ground up through
     trial and error turned out to be frustratingly amazing. Then the AI boom
     pushed the possibilities wider than my horizon, and I realized my two loves
