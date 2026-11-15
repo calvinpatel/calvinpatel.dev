@@ -5,13 +5,17 @@ import { getEntry } from 'astro:content';
 import Copy from './Copy.astro';
 
 const { footer } = (await getEntry('site', 'site'))!.data;
+
+// On the Credits page the link leads to the page it is on, and tells a
+// screen reader so (DESIGN.md, Components: Footer).
+const onCredits = Astro.url.pathname.replace(/\/$/, '') === '/credits';
 ---
 
 <footer>
   <div class="container">
     <div class="row">
       <p>
-        <span class="credit"><Copy text={footer.credit} /></span>{' '}<a href="/credits"><Copy text={footer.creditsLabel} /></a>
+        <span class="credit"><Copy text={footer.credit} /></span>{' '}<a href="/credits" aria-current={onCredits ? 'page' : undefined}><Copy text={footer.creditsLabel} /></a>
       </p>
       <p><Copy text={footer.copyright} /></p>
     </div>
