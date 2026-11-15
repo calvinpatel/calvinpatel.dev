@@ -498,6 +498,8 @@ One motion language runs through the whole site: a signal travels at a set speed
 
 Clicking a lobe, a top bar link, or any other link to a section on the same page scrolls there smoothly, at the browser's own pace (CSS can't set it, so it has no token). Arriving from another page, such as from the case study's "Back to projects," lands on the section at once: smooth scrolling starts only after the page has loaded. **Reduced motion:** it jumps.
 
+Focus moves to the section's heading (see Accessibility: Focus after a link to a section).
+
 ### Axon dividers (Projects, case study)
 
 A signal hops along each divider, one node every `--hop` (130ms).
@@ -612,6 +614,7 @@ Plays once. Times are measured from the first hop:
 
 - **Contrast.** WCAG 2.2 AA for every text pair, plus the dimmed-label floor, the line-art floor, and the canvas cap above.
 - **Keyboard.** Every link and lobe is reachable with Tab, in reading order, with a visible focus ring. On the brain, hover and keyboard focus do the same thing. Skills tracing is for a mouse or a pen only, because the diagram reads fully at rest and is hidden from screen readers, so it holds nothing focusable.
+- **Focus after a link to a section.** Following a link to a section (a lobe, a top bar link, a link in the text, or one from another page such as "Back to projects") moves focus to that section's heading. The heading is the link's target and can take focus (`tabindex="-1"`), so the browser moves focus itself, with no script. Otherwise the browser drops focus to the page when the link is followed, and VoiceOver on an iPhone then goes back to the top. The heading is out of the Tab order and shows no focus ring, because it isn't a control: the next Tab goes to the section's first link, and Shift+Tab to the link before the section. Its `scroll-margin-top` is the section's top padding (`--space-section`), so the page lands on the section's top edge.
 - **Touch.** Brain lobes need two taps: the first shows the label, the second goes to the section. A screen reader's activation goes straight to the section. Nothing depends on hover on phones. Tap targets are at least 44px, the brain's lobes included (see Brain navigation). A tap or a swipe over the neuron layer never blocks a scroll or a link. A tap on the Skills diagram does nothing.
 - **Screen readers.**
   - The neuron canvas is hidden from screen readers (`aria-hidden="true"`) and takes no focus.
