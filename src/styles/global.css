@@ -131,6 +131,16 @@ a:hover {
   outline-offset: var(--focus-offset);
 }
 
+/* The skip link's target: each page's h1. It takes focus so that a screen
+   reader follows the link, and it isn't a control, so it shows no ring, as a
+   section heading (DESIGN.md, Accessibility). Every h1 is in the first
+   screen, and the scroll margin is a screen tall, so following the link
+   never scrolls the page. */
+#content {
+  outline: none;
+  scroll-margin-top: 100svh;
+}
+
 ::selection {
   background: var(--color-selection);
   color: var(--color-text);

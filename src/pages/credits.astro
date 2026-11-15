@@ -22,7 +22,8 @@ const licenseStart = (credit: string) => credit.lastIndexOf(', ') + 2;
 <Layout title={`${copyText(credits.heading)} – ${copyText(hero.name)}`}>
   <div class="container page">
     <div class="column">
-      <h1><Copy text={credits.heading} /></h1>
+      {/* The skip link's target (Layout.astro). */}
+      <h1 id="content" tabindex="-1"><Copy text={credits.heading} /></h1>
       <p class="intro"><Copy text={credits.intro} /></p>
       <ul class="cells" role="list">
         {

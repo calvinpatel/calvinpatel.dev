@@ -18,7 +18,8 @@ const hero = (await getEntry('hero', 'hero'))!.data;
   <div class="container grid">
     {/* The brain's labels keep clear of this text (Brain.astro's script). */}
     <div class="text" data-brain-clear>
-      <h1><Copy text={hero.name} /></h1>
+      {/* The skip link's target (Layout.astro). */}
+      <h1 id="content" tabindex="-1"><Copy text={hero.name} /></h1>
       <p>
         {
           hero.lines.map((line) => (

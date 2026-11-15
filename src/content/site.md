@@ -4,6 +4,10 @@
 # its brain label. DESIGN.md fixes which lobe leads to which section.
 mark: CP
 
+# The first link on every page, shown only while it has keyboard focus. It
+# moves focus past the top bar to the page's heading.
+skipLabel: Skip to content
+
 # What a screen reader says for the top bar. The mark's name is its visible
 # text, then one of these: the first on the home page, the second elsewhere.
 markLabel:

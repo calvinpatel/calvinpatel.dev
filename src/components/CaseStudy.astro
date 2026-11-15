@@ -30,7 +30,8 @@ const links = project.links.filter((link) => link.href !== `/projects/${study.pr
     <p class="status">
       <Copy text={project.status} />
     </p>
-    <h1>
+    {/* The skip link's target (Layout.astro). */}
+    <h1 id="content" tabindex="-1">
       <Copy text={project.name} />
     </h1>
     <p class="lede">

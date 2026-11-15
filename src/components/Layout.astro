@@ -1,7 +1,10 @@
 ---
-// The shared layout for every page: the top bar, <main>, and the footer.
+// The shared layout for every page: the skip link, the top bar, <main>, and
+// the footer.
 import { Font } from 'astro:assets';
+import { getEntry } from 'astro:content';
 
+import Copy from './Copy.astro';
 import Footer from './Footer.astro';
 import TopBar from './TopBar.astro';
 import '../styles/global.css';
@@ -14,6 +17,7 @@ interface Props {
 }
 
 const { title, description, home = false } = Astro.props;
+const site = (await getEntry('site', 'site'))!.data;
 ---
 
 <!doctype html>
@@ -33,6 +37,10 @@ const { title, description, home = false } = Astro.props;
     </script>
   </head>
   <body>
+    {/* The skip link (DESIGN.md, Accessibility): the first link on every page,
+        shown only while it has focus. Its target is the page's h1, which
+        carries id="content" and takes focus (global.css). */}
+    <a class="skip" href="#content"><Copy text={site.skipLabel} /></a>
     {/* The home page's neuron canvas sits behind the top bar and the hero.
         It is measured from the page's top, so body and main stay
         unpositioned and without a background (NeuronLayer.astro). */}
@@ -43,3 +51,34 @@ const { title, description, home = false } = Astro.props;
     <Footer />
   </body>
 </html>
+
+<style>
+  /* At the top left, where the CP mark sits, and over it: the mark's box is
+     positioned, so the link needs a z-index to lie on top. It is a top bar
+     link's size on the page's own background, underlined as any link. The
+     page stays unpositioned, so this is measured from the page's top left
+     corner (NeuronLayer.astro has why). */
+  .skip {
+    position: absolute;
+    top: var(--space-2xs);
+    left: var(--gutter);
+    z-index: 1;
+    display: inline-flex;
+    align-items: center;
+    min-height: var(--tap-min);
+    background: var(--color-bg);
+    font-size: var(--step-text-5);
+    line-height: var(--leading-snug);
+  }
+
+  /* Until it has focus it is read by screen readers and not shown:
+     global.css's .visually-hidden, applied here because it depends on focus. */
+  .skip:not(:focus) {
+    width: 1px;
+    height: 1px;
+    min-height: 0;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+</style>
