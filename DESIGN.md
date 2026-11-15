@@ -153,7 +153,7 @@ Spacing inside sections follows the artboards, using the nearest token from this
 
 - **Width.** Content sits in one centered column at most `--page-max` (1320px) wide including the gutters, which leaves 1192px of content at full width.
 - **Reading widths.** Long reading text sits in `--reading-max` (680px): the case study column and the About story. Descriptions stop at `--measure` (66 characters per line). The About lede stops at `--lede-measure` (22ch) and is balanced, so it sets three lines at every width, as on both artboards.
-- **Tap targets.** Every standalone link and control is at least `--tap-min` (44px) in both directions on touch screens. Links inside a sentence are exempt, as WCAG allows. Don't enlarge their tap area, because it would overlap the lines around them.
+- **Tap targets.** Every standalone link and control is at least `--tap-min` (44px) in both directions on touch screens. Links inside a sentence are exempt, as WCAG allows. Don't enlarge their tap area, because it would overlap the lines around them. A tap box never moves its text: the box grows by its padding, and an equal negative margin takes the room back, as on the Contact email. The other standalone links are tap-height boxes whose rows give the same room back.
 
 ### Section grids
 
@@ -192,7 +192,7 @@ Media queries can't read custom properties, so these widths are written as numbe
 - **A label slides along its shelf to stay in bounds.** It keeps `--space-2xs` from the viewport's right edge and `--space-xs` from the hero text's letters. The callout's tip stays on the shelf, so a slid label's shelf runs both ways from the tip and grows outward from it. Where both limits can't be met, the viewport wins. The script measures the real label and the real text, so the rule also holds for enlarged text.
 - **Where it applies today.** The Projects and Skills labels slide left in windows from 760px to about 1120px wide (62px at 760px). The Experience label slides right below 800px (10px at 760px). From about 1150px up, every label sits as drawn.
 
-**Footer.** The neuron credit line (NeuroMorpho.Org, CC BY 4.0) with a Credits link, plus the copyright, in `--step-text-7` muted. It stacks on phones.
+**Footer.** The neuron credit line (NeuroMorpho.Org, CC BY 4.0) with a Credits link, plus the copyright, in `--step-text-7` muted. A `--line` rule in `--color-hairline` runs above it, across the content width. It stacks on phones.
 
 **Selection.** Selected text uses `--color-selection` behind the main text color.
 
