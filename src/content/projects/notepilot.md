@@ -31,6 +31,10 @@ links:
     href: /projects/notepilot
   - label: Live demo
     href: https://notepilot-kuptj5n2ra-uw.a.run.app
+  # spokenName: the link's name for a screen reader in the Projects section.
+  # Contact has a "GitHub" link too, and a list of the page's links can't tell
+  # two with one name apart.
   - label: GitHub
+    spokenName: "GitHub: NotePilot's code"
     href: https://github.com/calvinpatel/notepilot
 ---

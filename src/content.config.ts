@@ -162,7 +162,21 @@ const projects = defineCollection({
       description: inline,
       results: z.array(result).length(4).optional(), // shown large; NotePilot only for now
       measurementNote: inline.optional(),
-      links: z.array(link).default([]),
+      // spokenName: what a screen reader calls the link in the Projects
+      // section, where its label alone is shared with another link on the
+      // page. It starts with the label, so voice control still finds the link
+      // by the word on screen (WCAG 2.5.3).
+      links: z
+        .array(
+          link
+            .extend({ spokenName: text.optional() })
+            .strict()
+            .refine((l) => !l.spokenName || l.spokenName.startsWith(l.label), {
+              message: "A link's spokenName must start with its label.",
+              path: ['spokenName'],
+            }),
+        )
+        .default([]),
     })
     .strict()
     .refine((p) => !p.results === !p.measurementNote, {

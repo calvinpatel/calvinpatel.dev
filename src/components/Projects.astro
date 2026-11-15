@@ -4,11 +4,16 @@
 // under the heading, a divider after each project, and its terminal at the
 // end. A project with results (NotePilot) shows them large under its
 // description, which is set a step larger in the main text color.
+//
+// A link with a spokenName carries it as its name for a screen reader: the
+// label on screen, then what tells it from a link of the same label
+// elsewhere on the page.
 import { getCollection } from 'astro:content';
 
 import Axon from './Axon.astro';
 import Copy from './Copy.astro';
 import Results from './Results.astro';
+import { copyText } from '../lib/copy.ts';
 
 const projects = (await getCollection('projects')).sort((a, b) => a.data.order - b.data.order);
 ---
@@ -40,7 +45,7 @@ const projects = (await getCollection('projects')).sort((a, b) => a.data.order -
             <ul class="links" role="list">
               {project.links.map((link) => (
                 <li>
-                  <a href={link.href}>
+                  <a href={link.href} aria-label={link.spokenName && copyText(link.spokenName)}>
                     <Copy text={link.label} />
                   </a>
                 </li>
