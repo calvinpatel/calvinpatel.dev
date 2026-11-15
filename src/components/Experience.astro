@@ -3,6 +3,11 @@
 // under its own spike raster. Every raster shares one time axis, from
 // January 1 of the earliest start year to "now", so a role's spikes sit where
 // its dates fall.
+//
+// A raster's spike density is the only thing on screen that shows a role's
+// schedule, and the rasters are hidden from screen readers. So each entry's
+// dates are followed by its schedule from experience.md, read out and not
+// shown: "May 2026 – present, full-time" (DESIGN.md, Sections: Experience).
 import { getEntry } from 'astro:content';
 
 import Copy from './Copy.astro';
@@ -24,7 +29,7 @@ const now = new Date().toISOString().slice(0, 10);
         <Raster start={entry.start} end={entry.end} schedule={entry.schedule} axisStart={axisStart} now={now} />
         <div class="row">
           <p class="when">
-            <span class="dates"><Copy text={entry.dates} /></span><span class="comma">, </span><span class="location"><Copy text={entry.location} /></span>
+            <span class="dates"><Copy text={entry.dates} /><span class="visually-hidden">, {entry.schedule}</span></span><span class="comma">, </span><span class="location"><Copy text={entry.location} /></span>
           </p>
           <div class="body">
             <h3 id={`experience-${i + 1}`}>

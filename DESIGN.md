@@ -222,7 +222,7 @@ Media queries can't read custom properties, so these widths are written as numbe
 **About.** The heading, the opener as a Fraunces lede, then the story with the photo to its right. "Prelude" links to the Projects section and "NotePilot" to its case study. A thin dendrite grows down the margin beside the story. It has a soma at the first paragraph, a fainter pruned branch at medical school, branches on both sides at building, two branches at today, and a growth cone lined up with the last paragraph. On phones, the dendrite moves into the 20px left edge so the story keeps its full width, with each turning point as a single short twig angled toward the edge. The photo sits right after the opener, up to `--about-photo-phone` (300px) wide at 4:5.
 
 **Experience.** Six entries, newest first. Each entry is preceded by a full-width spike raster on one shared time axis from 2020 to now, with spikes across that role's dates (see Drawings).
-- Spike density shows only full-time (dense) versus part-time (sparse).
+- Spike density shows only full-time (dense) versus part-time (sparse). A screen reader gets the same fact as text, because the rasters are hidden from it: each entry's dates are followed by its `schedule` from experience.md, read out and not shown, as in "May 2026 – present, full-time." Nothing on screen states the schedule in words.
 - Each row carries faint year marks and "2020" and "now" labels at its ends, so it reads without a separate axis.
 - The ongoing role gets a brighter marker where its spikes end.
 - Each entry shows dates (secondary color) and location (muted) in the left column, lined up with the role's first line. Then come the role in Fraunces, the organization in muted text, and the description.
