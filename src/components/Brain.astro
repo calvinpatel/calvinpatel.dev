@@ -628,7 +628,12 @@ const look = Object.entries({
         if (event.pointerType === 'mouse') activate(lobe);
       });
       lobe.addEventListener('pointerleave', (event) => {
-        if (event.pointerType === 'mouse' && active === lobe && !lobe.matches(':focus-visible')) deactivate();
+        if (event.pointerType !== 'mouse' || active !== lobe || lobe.matches(':focus-visible')) return;
+        // From 760px up the label holds while the pointer is still over the
+        // brain or on the label, so the pointer can reach the label and rest
+        // on it (WCAG 1.4.13). Another lobe shows its own label instead.
+        if (wide.matches && event.relatedTarget instanceof Node && root.contains(event.relatedTarget)) return;
+        deactivate();
       });
       // Keyboard focus does what hover does. A tap or a click also focuses a
       // link, but not visibly, and has its own rules below.
@@ -651,6 +656,11 @@ const look = Object.entries({
         leaving = setTimeout(deactivate, hover);
       });
     }
+    // From 760px up, a label that hover put up goes when the pointer leaves
+    // the brain and the label. Below that, leaving the lobe has cleared it.
+    root.addEventListener('pointerleave', (event) => {
+      if (event.pointerType === 'mouse' && wide.matches && active && !active.matches(':focus-visible')) deactivate();
+    });
   }
 </script>
 
@@ -1045,9 +1055,13 @@ const look = Object.entries({
     translate: var(--slide) 0;
   }
 
+  /* While it shows, a label takes the pointer, so a mouse can move onto it
+     and rest there without it leaving (DESIGN.md, Motion: Brain callouts and
+     labels). */
   .label.is-active {
     opacity: 1;
     transition: none;
+    pointer-events: auto;
   }
 
   /* The shelf: it grows from the callout's tip once the pulse lands. */
