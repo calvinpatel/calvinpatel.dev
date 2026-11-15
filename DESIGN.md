@@ -192,7 +192,7 @@ Media queries can't read custom properties, so these widths are written as numbe
 - **A label slides along its shelf to stay in bounds.** It keeps `--space-2xs` from the viewport's right edge and `--space-xs` from the hero text's letters. The callout's tip stays on the shelf, so a slid label's shelf runs both ways from the tip and grows outward from it. Where both limits can't be met, the viewport wins. The script measures the real label and the real text, so the rule also holds for enlarged text.
 - **Where it applies today.** The Projects and Skills labels slide left in windows from 760px to about 1120px wide (62px at 760px). The Experience label slides right below 800px (10px at 760px). From about 1150px up, every label sits as drawn.
 
-**Footer.** The neuron credit line (NeuroMorpho.Org, CC BY 4.0) with a Credits link, plus the copyright, in `--step-text-7` muted. A `--line` rule in `--color-hairline` runs above it, across the content width. It stacks on phones.
+**Footer.** The neuron credit line (NeuroMorpho.Org, CC BY 4.0) with a Credits link, plus the copyright, in `--step-text-7` muted. A `--line` rule in `--color-hairline` runs above it, across the content width. It stacks on phones. `--space-3xs` follows the credit sentence before Credits, so the link's focus ring clears the sentence's full stop. Credits sits in the credit line's paragraph after its sentence, as on the artboards, so it counts as a link in a line of text and takes no tap box (see Page: Tap targets).
 
 **Selection.** Selected text uses `--color-selection` behind the main text color.
 

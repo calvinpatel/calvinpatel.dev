@@ -11,7 +11,7 @@ const { footer } = (await getEntry('site', 'site'))!.data;
   <div class="container">
     <div class="row">
       <p>
-        <Copy text={footer.credit} />{' '}<a href="/credits"><Copy text={footer.creditsLabel} /></a>
+        <span class="credit"><Copy text={footer.credit} /></span>{' '}<a href="/credits"><Copy text={footer.creditsLabel} /></a>
       </p>
       <p><Copy text={footer.copyright} /></p>
     </div>
@@ -29,6 +29,13 @@ const { footer } = (await getEntry('site', 'site'))!.data;
     color: var(--color-text-muted);
     font-size: var(--step-text-7);
     line-height: var(--leading-label);
+  }
+
+  /* Room after the sentence, so the Credits link's focus ring clears its full
+     stop. On the sentence, not the link: where the link starts a line of its
+     own, the room stays at the end of the line above. */
+  .credit {
+    margin-inline-end: var(--space-3xs);
   }
 
   @media (width < 760px) {
