@@ -8,6 +8,11 @@
 // A link with a spokenName carries it as its name for a screen reader: the
 // label on screen, then what tells it from a link of the same label
 // elsewhere on the page.
+//
+// In the page's source each project starts with its name, the heading, so a
+// screen reader moving by headings hears the status after it and doesn't
+// skip it. The grid puts the status where it shows: left of the name, and
+// above it below 900px.
 import { getCollection } from 'astro:content';
 
 import Axon from './Axon.astro';
@@ -24,13 +29,13 @@ const projects = (await getCollection('projects')).sort((a, b) => a.data.order -
     projects.map(({ id, data: project }, i) => (
       <>
         <article class:list={['project', { featured: project.results }]} aria-labelledby={`project-${id}`}>
+          <h3 id={`project-${id}`}>
+            <Copy text={project.name} />
+          </h3>
           <p class="status">
             <Copy text={project.status} />
           </p>
           <div class="body">
-            <h3 id={`project-${id}`}>
-              <Copy text={project.name} />
-            </h3>
             <p class="description">
               <Copy text={project.description} />
             </p>
@@ -71,7 +76,10 @@ const projects = (await getCollection('projects')).sort((a, b) => a.data.order -
     gap: var(--space-m);
   }
 
-  /* Status | name, description, results | links. */
+  /* Status | name, description, results | links. The name is its own row,
+     first in the source; the links span both rows beside it. Any height the
+     links need beyond the text goes to the second row, so the name and the
+     description never part. */
   .project {
     /* The name's first line. The status and the first link sit in its middle. */
     --name-line: calc(var(--step-display-5) * var(--leading-heading));
@@ -81,11 +89,14 @@ const projects = (await getCollection('projects')).sort((a, b) => a.data.order -
 
     display: grid;
     grid-template-columns: var(--col-status) minmax(0, 1fr) var(--col-links);
+    grid-template-rows: auto 1fr;
     column-gap: var(--col-gap);
     align-items: start;
   }
 
   .status {
+    grid-row: 1;
+    grid-column: 1;
     display: flex;
     align-items: center;
     min-height: var(--name-line);
@@ -95,8 +106,15 @@ const projects = (await getCollection('projects')).sort((a, b) => a.data.order -
   }
 
   h3 {
+    grid-row: 1;
+    grid-column: 2;
     font-size: var(--step-display-5);
     line-height: var(--leading-heading);
+  }
+
+  .body {
+    grid-row: 2;
+    grid-column: 2;
   }
 
   /* Running text avoids a one-word last line (DESIGN.md, Type). */
@@ -127,6 +145,8 @@ const projects = (await getCollection('projects')).sort((a, b) => a.data.order -
   }
 
   .links {
+    grid-row: 1 / span 2;
+    grid-column: 3;
     display: flex;
     flex-direction: column;
     align-items: flex-start;
@@ -157,11 +177,22 @@ const projects = (await getCollection('projects')).sort((a, b) => a.data.order -
     /* One column: status, name, description, results, links. */
     .project {
       grid-template-columns: minmax(0, 1fr);
+      grid-template-rows: none;
     }
 
     .status {
       min-height: 0;
       margin-bottom: var(--space-2xs);
+    }
+
+    h3 {
+      grid-row: 2;
+      grid-column: 1;
+    }
+
+    .body {
+      grid-row: 3;
+      grid-column: 1;
     }
 
     .results {
@@ -171,6 +202,8 @@ const projects = (await getCollection('projects')).sort((a, b) => a.data.order -
     /* The links run in a row. A tap-height box keeps its text where a plain
        line of text would sit. */
     .links {
+      grid-row: 4;
+      grid-column: 1;
       flex-flow: row wrap;
       gap: var(--link-gap) var(--space-m);
       margin-top: calc(var(--space-m) - (var(--link-box) - 1lh) / 2);

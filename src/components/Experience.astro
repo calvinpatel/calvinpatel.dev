@@ -8,6 +8,11 @@
 // schedule, and the rasters are hidden from screen readers. So each entry's
 // dates are followed by its schedule from experience.md, read out and not
 // shown: "May 2026 – present, full-time" (DESIGN.md, Sections: Experience).
+//
+// In the page's source each entry starts with its role, the heading, so a
+// screen reader moving by headings hears the dates and location after it and
+// doesn't skip them. The grid puts them where they show: left of the role,
+// and above it on phones.
 import { getEntry } from 'astro:content';
 
 import Copy from './Copy.astro';
@@ -28,13 +33,13 @@ const now = new Date().toISOString().slice(0, 10);
       <article class="entry" aria-labelledby={`experience-${i + 1}`}>
         <Raster start={entry.start} end={entry.end} schedule={entry.schedule} axisStart={axisStart} now={now} />
         <div class="row">
+          <h3 id={`experience-${i + 1}`}>
+            <Copy text={entry.role} />
+          </h3>
           <p class="when">
             <span class="dates"><Copy text={entry.dates} /><span class="visually-hidden">, {entry.schedule}</span></span><span class="comma">, </span><span class="location"><Copy text={entry.location} /></span>
           </p>
           <div class="body">
-            <h3 id={`experience-${i + 1}`}>
-              <Copy text={entry.role} />
-            </h3>
             <p class="org">
               <Copy text={entry.org} />
             </p>
@@ -55,13 +60,17 @@ const now = new Date().toISOString().slice(0, 10);
     gap: var(--space-l);
   }
 
-  /* Dates and location | role, organization, description. */
+  /* Dates and location | role, organization, description. The role is its
+     own row, first in the source; the dates span both rows beside it. Any
+     height the dates need beyond the text goes to the second row, so the
+     role and the organization never part. */
   .row {
     /* The role's first line. The dates sit in its middle. */
     --role-line: calc(var(--step-display-8) * var(--leading-heading));
 
     display: grid;
     grid-template-columns: var(--col-dates) minmax(0, 1fr);
+    grid-template-rows: auto 1fr;
     column-gap: var(--col-gap);
     align-items: start;
     margin-top: var(--space-s);
@@ -69,6 +78,8 @@ const now = new Date().toISOString().slice(0, 10);
 
   /* The dates, with the location on the line under them. */
   .when {
+    grid-row: 1 / span 2;
+    grid-column: 1;
     padding-top: calc((var(--role-line) - 1lh) / 2);
     color: var(--color-text-secondary);
     font-size: var(--step-text-6);
@@ -89,8 +100,15 @@ const now = new Date().toISOString().slice(0, 10);
   }
 
   h3 {
+    grid-row: 1;
+    grid-column: 2;
     font-size: var(--step-display-8);
     line-height: var(--leading-heading);
+  }
+
+  .body {
+    grid-row: 2;
+    grid-column: 2;
   }
 
   .org {
@@ -110,11 +128,23 @@ const now = new Date().toISOString().slice(0, 10);
     /* One column: dates and location on one line, then the role. */
     .row {
       grid-template-columns: minmax(0, 1fr);
+      grid-template-rows: none;
     }
 
     .when {
+      grid-row: 1;
       padding-top: 0;
       margin-bottom: var(--space-3xs);
+    }
+
+    h3 {
+      grid-row: 2;
+      grid-column: 1;
+    }
+
+    .body {
+      grid-row: 3;
+      grid-column: 1;
     }
 
     .dates,
