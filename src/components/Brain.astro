@@ -156,9 +156,12 @@ const look = Object.entries({
 <div class="brain" data-brain style={look}>
   <div class="figure">
     <nav aria-label={copyText(site.brainLabel)}>
-      {/* role="none": a screen reader hears the nav and its five links, not a picture holding them. */}
+      {/* role="none": a screen reader hears the nav and its five links, not a picture holding them.
+          Everything else in the drawing is hidden from it: the shapes in <defs>, the layers under
+          and over the lobes, and each lobe's own drawing, which Safari otherwise gives VoiceOver
+          as some five hundred unnamed images. A lobe's name is its aria-label. */}
       <svg viewBox={`${VIEW.x} ${VIEW.y} ${VIEW.width} ${VIEW.height}`} preserveAspectRatio="xMinYMin" role="none">
-        <defs>
+        <defs aria-hidden="true">
           {/* Every shape that is drawn more than once is written once, here. */}
           <path id="brain-outline" d={pathD(brain.outline, true)}></path>
           <path id="brain-cerebellum" d={pathD(brain.cerebellum, true)}></path>
@@ -238,7 +241,7 @@ const look = Object.entries({
                   aria-label={`${copyText(lobe.copy.label)}, ${copyText(lobe.copy.lobeLine)}`}
                   data-lobe={lobe.id}
                 >
-                  <g class="body" style={origin(lobe.origin)}>
+                  <g class="body" style={origin(lobe.origin)} aria-hidden="true">
                     <use class="hit" href={`#lobe-${lobe.id}`} fill="url(#brain-tissue)" />
                     <g clip-path={clip}>
                       <use
