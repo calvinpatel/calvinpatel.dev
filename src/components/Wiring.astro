@@ -204,13 +204,16 @@ const drop = `${LABEL_DROP_EM}em`;
     });
   }
 
+  // A label's width as drawn, in px: its box, which counts a visitor's own
+  // letter and word spacing in every browser. getComputedTextLength leaves
+  // them out in Safari.
+  const widthOf = (label: SVGTextElement) => label.getBBox().width;
+
   // The widest label of one kind across every group's diagram, in px.
   const longest = (selector: string) =>
     Math.max(
       0,
-      ...groupDiagrams.flatMap((diagram) =>
-        [...diagram.querySelectorAll<SVGTextElement>(selector)].map((text) => text.getComputedTextLength()),
-      ),
+      ...groupDiagrams.flatMap((diagram) => [...diagram.querySelectorAll<SVGTextElement>(selector)].map(widthOf)),
     );
 
   // Dev only. The desktop diagram shows from 45rem of content (Skills.astro),
@@ -300,9 +303,10 @@ const drop = `${LABEL_DROP_EM}em`;
   const trace = desktopDiagram && tracing(desktopDiagram);
 
   // Draws each diagram that is showing when it is first measured, and again
-  // whenever its width, its row height, or the longest labels change. Where
-  // the diagram sits on the page doesn't matter: the browser paints an SVG
-  // from the nearest screen pixel, so its whole pixels stay whole.
+  // whenever its width, its row height, or the width of a label it is laid
+  // out from changes. Where the diagram sits on the page doesn't matter: the
+  // browser paints an SVG from the nearest screen pixel, so its whole pixels
+  // stay whole.
   let drawn = new WeakMap<Element, string>();
   function draw() {
     let fit: Fit | undefined;
@@ -323,8 +327,17 @@ const drop = `${LABEL_DROP_EM}em`;
       // One line of a place's label, which is larger than a skill's in the
       // desktop diagram: its hover row is at least that tall.
       const placeLine = desktop ? parseFloat(getComputedStyle(diagram.querySelector('.place text')!).fontSize) * labelLeading : undefined;
+      // A group's hover target is as wide as its label.
+      const groupLabels = desktop ? [...diagram.querySelectorAll<SVGTextElement>('.group text')] : [];
 
-      const state = [width, row, fit?.skillLabel, fit?.placeLabel, placeLine].join(' ');
+      const state = [
+        width,
+        row,
+        fit?.skillLabel,
+        fit?.placeLabel,
+        placeLine,
+        ...groupLabels.map(widthOf),
+      ].join(' ');
       if (drawn.get(diagram) === state) continue;
       drawn.set(diagram, state);
 
@@ -341,11 +354,10 @@ const drop = `${LABEL_DROP_EM}em`;
         placeTargets(diagram, '.skill', targets.skills);
         placeTargets(diagram, '.place', targets.places);
         // A group's target is measured from its label, once the label is in place.
-        const labels = diagram.querySelectorAll<SVGTextElement>('.group text');
         placeTargets(
           diagram,
           '.group',
-          layout.groups.map(({ dot }, i) => groupTarget(labels[i].getBBox(), dot, desktopSizes.groupDot)),
+          layout.groups.map(({ dot }, i) => groupTarget(groupLabels[i].getBBox(), dot, desktopSizes.groupDot)),
         );
         if (import.meta.env.DEV) warnOutside(diagram, width);
       } else {
@@ -360,6 +372,10 @@ const drop = `${LABEL_DROP_EM}em`;
 
   const sizes = new ResizeObserver(draw);
   diagrams.forEach((diagram) => sizes.observe(diagram));
+  // A label's width can change while its diagram's doesn't: a visitor's own
+  // letter or word spacing, say (WCAG 1.4.12). An SVG label is observed by
+  // its bounding box.
+  for (const diagram of diagrams) diagram.querySelectorAll('text').forEach((label) => sizes.observe(label));
 
   // Label widths feed the small-phone fit, and they change when the fonts
   // arrive. Draw everything once more then.
