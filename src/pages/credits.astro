@@ -52,8 +52,10 @@ const licenseStart = (credit: string) => credit.lastIndexOf(', ') + 2;
     line-height: var(--leading-display);
   }
 
+  /* Running text avoids a one-word last line (DESIGN.md, Type). */
   .intro {
     color: var(--color-text-secondary);
+    text-wrap: pretty;
   }
 
   /* The intro's one link is the license, "CC BY 4.0", which never splits

@@ -127,10 +127,12 @@ const sizes = `(width < 900px) ${PHOTO.phone}px, ${PHOTO.desktop}px`;
     line-height: var(--leading-prose);
   }
 
-  /* Each paragraph places its own turning point. */
+  /* Each paragraph places its own turning point. Running text avoids a
+     one-word last line (DESIGN.md, Type). */
   .story p {
     position: relative;
     grid-column: 2;
+    text-wrap: pretty;
   }
 
   @media (width < 900px) {

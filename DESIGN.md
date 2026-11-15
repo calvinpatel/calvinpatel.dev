@@ -130,6 +130,7 @@ Rules:
 - **Headlines are always Fraunces at 400.** No bold Fraunces anywhere.
 - **Curly punctuation.** Every rendered apostrophe and quotation mark is typographic (’ “ ”). Content files may use straight ones; the build converts them. Straight marks stay only in code.
 - **A number stays on the line with its word, and "CC BY 4.0" never splits.** That covers a count or a measure and the word after it ("40+ patients", "$0.0003 per note", "15 of 36 everyday"), a named number and the word before it ("Phase 0"), and a citation's year and its journal. Content files write a non-breaking space (U+00A0) between them, the character itself. A percentage carries its own unit, so the word after it may start the next line. On the Credits page CSS keeps the license whole (see Credits page).
+- **Running text avoids a one-word last line.** It uses `text-wrap: pretty`: the About story's paragraphs, the case study's paragraphs and list items, project and Experience descriptions, and the Credits intro. Nothing else does. The hero sentences and the two ledes are balanced instead, and headings, labels, captions, the measurement note, the comma figure, and the footer wrap plainly. A browser without `pretty` wraps as before.
 - **Nothing clips.** If a visitor enlarges text, lines may wrap, including the hero name, but text never overflows, clips, or overlaps.
 
 ## Spacing and layout

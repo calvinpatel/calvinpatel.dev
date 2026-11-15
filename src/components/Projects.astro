@@ -94,10 +94,12 @@ const projects = (await getCollection('projects')).sort((a, b) => a.data.order -
     line-height: var(--leading-heading);
   }
 
+  /* Running text avoids a one-word last line (DESIGN.md, Type). */
   .description {
     max-width: var(--measure);
     margin-top: var(--space-xs);
     color: var(--color-text-secondary);
+    text-wrap: pretty;
   }
 
   .featured .description {

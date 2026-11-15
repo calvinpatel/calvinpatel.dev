@@ -215,6 +215,13 @@ const links = project.links.filter((link) => link.href !== `/projects/${study.pr
     line-height: var(--leading-heading);
   }
 
+  /* Running text avoids a one-word last line (DESIGN.md, Type): the
+     paragraphs and the list's items, not the heading, results, or figure. */
+  .part p,
+  .list li {
+    text-wrap: pretty;
+  }
+
   .emphasis {
     color: var(--color-text);
   }

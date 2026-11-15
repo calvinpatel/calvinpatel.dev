@@ -93,10 +93,12 @@ const now = new Date().toISOString().slice(0, 10);
     color: var(--color-text-muted);
   }
 
+  /* Running text avoids a one-word last line (DESIGN.md, Type). */
   .description {
     max-width: var(--measure);
     margin-top: var(--space-xs);
     color: var(--color-text-secondary);
+    text-wrap: pretty;
   }
 
   @media (width < 760px) {
