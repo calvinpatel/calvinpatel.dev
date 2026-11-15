@@ -622,10 +622,13 @@ Plays once. Times are measured from the first hop:
 - **Touch.** Brain lobes need two taps: the first shows the label, the second goes to the section. A screen reader's activation goes straight to the section. Nothing depends on hover on phones. Tap targets are at least 44px, the brain's lobes included (see Brain navigation). A tap or a swipe over the neuron layer never blocks a scroll or a link. A tap on the Skills diagram does nothing.
 - **Screen readers.**
   - The neuron canvas is hidden from screen readers (`aria-hidden="true"`) and takes no focus.
+  - The CP mark's name is its visible text, then site.md's `markLabel`: "CP, Calvin Patel, back to top" on the home page and "CP, Calvin Patel, home" elsewhere. The top bar's nav is named by site.md's `navLabel`, "Sections."
   - Each brain lobe is a real link with a name a screen reader can say: its section label, then its lobe line. The five sit in a nav named "Brain map."
   - The brain's labels and the hint are hidden from screen readers, because the lobes' names already say everything.
   - Decorative drawings (dividers, the dendrite, the rasters, the synapse) are hidden from screen readers, because the text beside them already says everything they show.
   - The Skills diagram has a plain list behind it for screen readers.
   - Every image has real alt text.
+  - **Headings.** Each page has one `h1`: the name on the home page, the project's name on a case study, and "Credits" on Credits. On the home page each section's heading is an `h2`. Under them, each project and each Experience entry is an `article` named by its `h3`, which comes first in it, and each group in the Skills list has an `h3`. A case study's parts are `h2`s.
+  - A result reads as its number, then its label: "100%", then "fidelity traps passed."
 - **Motion.** Reduced motion is honored everywhere. Automatic motion stops after 5 seconds. Nothing animates off screen or in a hidden tab. Escape dismisses a brain label without moving focus.
 - **Resizing.** Text stays readable and layouts reflow at 200% zoom and with enlarged default fonts. Lines may wrap; nothing clips or overlaps.
