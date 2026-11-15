@@ -19,7 +19,8 @@ import Synapse from './Synapse.astro';
 const contact = (await getEntry('contact', 'contact'))!.data;
 
 // The email may wrap in one place, after its "@", so it never splits
-// mid-name. It is an address, not prose, so it prints as written.
+// mid-name. It is an address, not prose, so it prints as written, and
+// translate="no" tells a browser's translation to leave it that way.
 const at = contact.email.indexOf('@') + 1;
 const name = contact.email.slice(0, at);
 const domain = contact.email.slice(at);
@@ -31,7 +32,7 @@ const domain = contact.email.slice(at);
   </div>
   <div class="block">
     <p class="email display">
-      <a href={`mailto:${contact.email}`}>{name}<wbr />{domain}</a>
+      <a href={`mailto:${contact.email}`} translate="no">{name}<wbr />{domain}</a>
     </p>
     <ul class="links" role="list">
       {

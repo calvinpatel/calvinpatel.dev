@@ -215,7 +215,7 @@ Media queries can't read custom properties, so these widths are written as numbe
 
 **Credits page** (`/credits`). Linked from the footer's Credits link on every page.
 - **Content, in order.** The heading; then credits.md's intro in the secondary color, which names NeuroMorpho.Org, links the license, and says each neuron was flattened to 2D and simplified; then one line per neuron, in `public/cells/index.json`'s order.
-- **Each line** is the converter's credit text, printed exactly as written, and the whole line links to that neuron's NeuroMorpho page.
+- **Each line** is the converter's credit text, printed exactly as written, and the whole line links to that neuron's NeuroMorpho page. Each carries `translate="no"`: a neuron's name is an identifier, so a browser's translation leaves the line as written.
 - **Layout.** Everything sits in the reading column (`--reading-max`). Heading to intro `--space-l`, intro to list `--space-m`, and credits `--space-s` apart.
 - **Wrapping and touch.** The license after a credit's last comma never wraps, and neither does the intro's license link. On touch screens each credit link gets a `--tap-min` (44px) tap box.
 
@@ -240,6 +240,7 @@ Media queries can't read custom properties, so these widths are written as numbe
 **Contact.**
 - **Desktop.** A myelinated axon with three sheaths curves up from the lower left. A short bare stretch leads into a terminal that flares open toward the contact side, with vesicles packed at its face. Across the gap, the receiving membrane and its bright receptor band sit right against the contact block. The email is large in Fraunces, with GitHub and LinkedIn beneath it.
 - **Phones.** The figure turns so the axon comes down from above and the terminal opens downward onto the email. GitHub and LinkedIn get 44px tap targets.
+- **The email** carries `translate="no"`: it is an address, so a browser's translation leaves it as written.
 
 ## Drawings
 

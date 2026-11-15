@@ -28,9 +28,10 @@ const licenseStart = (credit: string) => credit.lastIndexOf(', ') + 2;
         {
           cells.map(({ credit, url }) => (
             <li>
-              {/* A credit line is data, not copy: it prints exactly as the converter wrote it.
+              {/* A credit line is data, not copy: it prints exactly as the converter wrote it,
+                  and translate="no" keeps a browser's translation off the neuron's name.
                   The outer span keeps the text one piece inside the link's flex box. */}
-              <a href={url}>
+              <a href={url} translate="no">
                 <span>{credit.slice(0, licenseStart(credit))}<span class="license">{credit.slice(licenseStart(credit))}</span></span>
               </a>
             </li>
