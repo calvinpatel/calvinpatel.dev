@@ -20,9 +20,14 @@ interface Props {
   description: string;
   /** The home page: section links stay on the page and the mark goes to its top. */
   home?: boolean;
+  /**
+   * The 404 page: search engines leave it out, and it stands in for any
+   * address, so it has no canonical URL and no link preview.
+   */
+  notFound?: boolean;
 }
 
-const { title, description, home = false } = Astro.props;
+const { title, description, home = false, notFound = false } = Astro.props;
 const site = (await getEntry('site', 'site'))!.data;
 
 // The page's one address, as the site serves it (src/lib/address.ts).
@@ -46,18 +51,26 @@ const preview = {
     <meta name="generator" content={Astro.generator} />
     <title>{title}</title>
     <meta name="description" content={description} />
-    <link rel="canonical" href={url} />
-    <meta property="og:type" content="website" />
-    <meta property="og:title" content={title} />
-    <meta property="og:description" content={description} />
-    <meta property="og:url" content={url} />
-    <meta property="og:image" content={preview.url} />
-    <meta property="og:image:width" content={preview.width} />
-    <meta property="og:image:height" content={preview.height} />
-    <meta property="og:image:alt" content={preview.alt} />
-    <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:image" content={preview.url} />
-    <meta name="twitter:image:alt" content={preview.alt} />
+    {
+      notFound ? (
+        <meta name="robots" content="noindex" />
+      ) : (
+        <>
+          <link rel="canonical" href={url} />
+          <meta property="og:type" content="website" />
+          <meta property="og:title" content={title} />
+          <meta property="og:description" content={description} />
+          <meta property="og:url" content={url} />
+          <meta property="og:image" content={preview.url} />
+          <meta property="og:image:width" content={preview.width} />
+          <meta property="og:image:height" content={preview.height} />
+          <meta property="og:image:alt" content={preview.alt} />
+          <meta name="twitter:card" content="summary_large_image" />
+          <meta name="twitter:image" content={preview.url} />
+          <meta name="twitter:image:alt" content={preview.alt} />
+        </>
+      )
+    }
     {/* The site is dark only. A meta tag can't read a custom property, so
         both values are read from tokens.css as it is written: the page's
         background, and the color scheme it declares. */}

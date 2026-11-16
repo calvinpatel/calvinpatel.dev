@@ -96,6 +96,7 @@ const site = defineCollection({
       // pointerNarrow is for a mouse in a window under 760px, where hover shows no label;
       // tapAgain follows a phone's label when a tap put it up
       brainHint: z.object({ pointer: text, pointerNarrow: text, touch: text, tapAgain: text }).strict(),
+      notFound: z.object({ title: text, heading: text, sentence: text, link: text }).strict(), // the 404 page
       linkPreview: z.object({ alt: text }).strict(), // the link preview picture's alt text
       footer: z.object({ credit: text, creditsLabel: text, copyright: text }).strict(),
     })

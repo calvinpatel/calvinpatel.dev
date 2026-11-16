@@ -1,0 +1,65 @@
+---
+// The 404 page, for an address that leads nowhere. It builds as 404.html,
+// which the host serves with a 404 status for any unknown address. The top
+// bar and footer as on every page, then a heading, one sentence, and a link
+// home, in the reading column, with no drawing (DESIGN.md, Sections: 404
+// page). Its words are site.md's `notFound`.
+import { getEntry } from 'astro:content';
+
+import Copy from '../components/Copy.astro';
+import Layout from '../components/Layout.astro';
+import { copyText } from '../lib/copy.ts';
+
+const { notFound } = (await getEntry('site', 'site'))!.data;
+---
+
+<Layout title={copyText(notFound.title)} description={copyText(notFound.sentence)} notFound>
+  <div class="container page">
+    <div class="column">
+      {/* The skip link's target (Layout.astro). */}
+      <h1 id="content" tabindex="-1"><Copy text={notFound.heading} /></h1>
+      <p class="sentence"><Copy text={notFound.sentence} /></p>
+      <p class="home"><a href="/"><Copy text={notFound.link} /></a></p>
+    </div>
+  </div>
+</Layout>
+
+<style>
+  .column {
+    /* The link's box: its line of text, or a tap-height box on touch screens. */
+    --link-box: 1lh;
+    /* How far a tap-height box reaches above its text. The space above the
+       link gives this much back, so the text stays where a plain line of
+       text would sit. */
+    --link-slack: calc((var(--link-box) - 1lh) / 2);
+
+    max-width: var(--reading-max);
+  }
+
+  h1 {
+    margin-bottom: var(--space-l);
+    font-size: var(--step-display-3);
+    line-height: var(--leading-display);
+  }
+
+  .sentence {
+    color: var(--color-text-secondary);
+  }
+
+  .home {
+    margin-top: calc(var(--space-m) - var(--link-slack));
+  }
+
+  .home a {
+    display: inline-flex;
+    align-items: center;
+    min-height: var(--link-box);
+  }
+
+  /* Touch screens: the link stands alone, so a tap-height box. */
+  @media (pointer: coarse) {
+    .column {
+      --link-box: max(var(--tap-min), 1lh);
+    }
+  }
+</style>

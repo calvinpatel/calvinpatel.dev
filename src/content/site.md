@@ -52,6 +52,14 @@ brainHint:
   touch: Tap a region to preview it, tap again to go there
   tapAgain: Tap again to go there.
 
+# The 404 page, for an address that leads nowhere: its title, its heading, the
+# one sentence under it (also its description), and its link to the home page.
+notFound:
+  title: Page not found – Calvin Patel
+  heading: No signal here
+  sentence: This page doesn't exist.
+  link: Back to the home page
+
 # The link preview: the picture a link to the site shows in a message or a
 # post (public/link-preview.png). This is what a screen reader says for it.
 linkPreview:
