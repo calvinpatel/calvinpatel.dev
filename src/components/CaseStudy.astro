@@ -27,13 +27,15 @@ const links = project.links.filter((link) => link.href !== `/projects/${study.pr
 
 <article class="container page study">
   <header class="intro">
-    <p class="status">
-      <Copy text={project.status} />
-    </p>
-    {/* The skip link's target (Layout.astro). */}
+    {/* The title comes first in the source, so a screen reader that lands on
+        it (the skip link's target, Layout.astro) hears the status after it.
+        The status still shows above it (see .status below). */}
     <h1 id="content" tabindex="-1">
       <Copy text={project.name} />
     </h1>
+    <p class="status">
+      <Copy text={project.status} />
+    </p>
     <p class="lede">
       <Copy text={study.lede} />
     </p>
@@ -145,7 +147,9 @@ const links = project.links.filter((link) => link.href !== `/projects/${study.pr
     max-width: var(--reading-max);
   }
 
+  /* Shown first, above the title; second in the source. */
   .status {
+    order: -1;
     color: var(--color-text-muted);
     font-size: var(--step-text-6);
     line-height: var(--leading-label);
