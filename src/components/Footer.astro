@@ -3,12 +3,13 @@
 import { getEntry } from 'astro:content';
 
 import Copy from './Copy.astro';
+import { pagePath } from '../lib/address.ts';
 
 const { footer } = (await getEntry('site', 'site'))!.data;
 
 // On the Credits page the link leads to the page it is on, and tells a
 // screen reader so (DESIGN.md, Components: Footer).
-const onCredits = Astro.url.pathname.replace(/\/$/, '') === '/credits';
+const onCredits = pagePath(Astro.url.pathname) === '/credits';
 ---
 
 <footer>

@@ -15,6 +15,11 @@ const plex = {
 
 // https://astro.build/config
 export default defineConfig({
+  // Each page builds as a file, credits.html, which Cloudflare serves at
+  // /credits: the address every link on the site already uses, with no
+  // redirect. src/lib/address.ts turns the path Astro then reports,
+  // /credits.html, back into that address.
+  build: { format: 'file' },
   fonts: [
     {
       // Weight 400 only, with the optical size, softness, and wonk axes.
