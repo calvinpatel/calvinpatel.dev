@@ -1,5 +1,9 @@
 // @ts-check
+import { readFileSync, readdirSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 import { defineConfig, fontProviders } from 'astro/config';
+
+import { uncoveredCharacters } from './src/lib/font-coverage.ts';
 
 // Fonts are downloaded when the site builds and served from this site, so no
 // page links to a font service. Astro gives each family a hashed name and
@@ -13,8 +17,34 @@ const plex = {
   fallbacks: ['system-ui', 'sans-serif'],
 };
 
+// The build's font check (src/lib/font-coverage.ts). When the build has
+// written its pages, every character each page draws must be in the font file
+// that draws it; one that isn't stops the build, and so stops a deploy. The
+// two names are the families' CSS variables, as set below.
+/** @type {import('astro').AstroIntegration} */
+const fontCoverage = {
+  name: 'font-coverage',
+  hooks: {
+    'astro:build:done': ({ dir, logger }) => {
+      const root = fileURLToPath(dir);
+      const pages = readdirSync(root, { recursive: true, encoding: 'utf8' })
+        .filter((file) => file.endsWith('.html'))
+        .map((file) => ({ path: `/${file}`, html: readFileSync(`${root}${file}`, 'utf8') }));
+      const problems = uncoveredCharacters(pages, (url) => readFileSync(`${root}${url}`), {
+        display: '--font-fraunces',
+        text: '--font-plex',
+      });
+      if (problems.length) {
+        throw new Error(`A page draws a character its font file doesn't hold:\n  ${problems.join('\n  ')}`);
+      }
+      logger.info(`Every character on ${pages.length} pages is in the font file that draws it.`);
+    },
+  },
+};
+
 // https://astro.build/config
 export default defineConfig({
+  integrations: [fontCoverage],
   // Where the site lives. Every canonical URL, link preview address, and
   // sitemap entry is built on it.
   site: 'https://calvinpatel.dev',

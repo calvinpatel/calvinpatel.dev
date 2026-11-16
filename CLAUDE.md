@@ -28,6 +28,7 @@ Cal Patel's portfolio site. It reads as a nervous system: real neuron reconstruc
 │                      cells.ts, which reads public/cells/index.json for the Credits page;
 │                      address.ts, a page's address as it is served, for the canonical URL, the footer, and the sitemap;
 │                      png.ts, which reads the link preview picture's size for its tags;
+│                      font-coverage.ts, the build's check that every drawn character is in its font file;
 │                      brain.ts, the hero brain's geometry; brain-nav.ts, the brain navigation's rules;
 │                      spontaneous.ts, the five-second window's clock, which the brain and the neuron layer share;
 │                      play-once.ts, the trigger that plays a section drawing once, and flash.ts, the flash an axon
@@ -45,7 +46,7 @@ Cal Patel's portfolio site. It reads as a nervous system: real neuron reconstruc
 │                      favicon.ico, favicon.svg, and apple-touch-icon.png, the CP mark as outlines
 ├── data/swc/          raw downloaded reconstructions + sources.csv
 ├── scripts/           swc_to_web.py; link-preview.mjs, which renders public/link-preview.png
-├── tests/             test_swc_to_web.py, and one .test.ts per src/lib/ module: copy, raster, sweep, wiring, pixels, tokens, cells, address, png,
+├── tests/             test_swc_to_web.py, and one .test.ts per src/lib/ module: copy, raster, sweep, wiring, pixels, tokens, cells, address, png, font-coverage,
 │                      brain, brain-nav, spontaneous, play-once, flash, axon, dendrite, contact, neuron-field, neuron-cell,
 │                      neuron-crossing, neuron-signal, neuron-zones
 └── docs/              cell-web-v1.md (the neuron file format), design/ (chosen artboards, 1x PNG),
@@ -58,7 +59,7 @@ Cal Patel's portfolio site. It reads as a nervous system: real neuron reconstruc
 | --- | --- |
 | `npm run dev` | Runs the site at http://localhost:4321 |
 | `npm run dev -- --host` | Same, and reachable from a phone on the same Wi-Fi |
-| `npx astro build` | Builds the site into `dist/`; must finish with no errors or warnings |
+| `npx astro build` | Builds the site into `dist/`; must finish with no errors or warnings. It stops if a page draws a character its font file doesn't hold, and names the character |
 | `uv run scripts/swc_to_web.py data/swc public/cells --sources data/swc/sources.csv` | Converts every SWC file into cell-web/1 JSON and updates `public/cells/index.json` |
 | add `--preview <folder>` | Also writes an SVG of each cell for a quick visual check |
 | `uv run --with pytest --with numpy pytest tests/test_swc_to_web.py` | Runs the converter's tests (from the repo root) |
