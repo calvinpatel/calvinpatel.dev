@@ -98,6 +98,9 @@ How the layer keeps to the cap (`src/lib/neuron-zones.ts`):
 - **IBM Plex Sans** for everything else: weight 400, plus 400 italic for titles of works (such as *Nature Neuroscience*) and 500 for brain-label names only, normal letter spacing.
 - Both use the Open Font License and are self-hosted. Only these weights and axes are needed.
 - Fraunces has no → glyph, so every arrow is set in Plex, even inside a Fraunces line.
+- **Loading.** The fonts use `font-display: swap`: text shows at once in a fallback and changes when its font arrives. Each family's first fallback is size-matched to it (Times New Roman for Fraunces, Arial for Plex), made from `astro.config.mjs`, so the change moves as little as it can. Fraunces and Plex 400 are preloaded; Plex 500 and the italic load only where a page draws them.
+- **Nothing is faked.** `font-synthesis: none`, so a browser never makes a bold or an italic the files don't hold.
+- **Every drawn character is in its file.** The files are the providers' Latin subsets: Plex's holds ↑ and ↓ and no →, and Fraunces's holds no arrows. When the site builds, `src/lib/font-coverage.ts` reads each file's character map and every page's text by the face that draws it, and a character with no glyph stops the build and is named. So the first → on the site needs a file that holds it before it can ship.
 
 ### Scale
 
@@ -220,6 +223,12 @@ Media queries can't read custom properties, so these widths are written as numbe
 - **Layout.** Everything sits in the reading column (`--reading-max`). Heading to intro `--space-l`, intro to list `--space-m`, and credits `--space-s` apart.
 - **Wrapping and touch.** The license after a credit's last comma never wraps, and neither does the intro's license link. On touch screens each credit link gets a `--tap-min` (44px) tap box.
 
+**404 page.** What a visitor sees at an address that leads nowhere. The top bar and the footer, as on every page, and no drawing.
+- **Content, in order.** A heading, one sentence in the secondary color, and a link to the home page. The words are site.md's `notFound`.
+- **Layout.** Everything sits in the reading column (`--reading-max`), as on Credits. The heading is at the section-heading size (`--step-display-3`). Heading to sentence `--space-l`, and sentence to link `--space-m`.
+- **Touch.** The link stands alone, so on touch screens it gets a `--tap-min` (44px) tap box, which doesn't move its text (see Page: Tap targets).
+- **Its head** says to leave it out of search results, and has no canonical URL and no link preview, because it stands in for any address (see Page head).
+
 **About.** The heading, the opener as a Fraunces lede, then the story with the photo to its right. "Prelude" links to the Projects section and "NotePilot" to its case study. A thin dendrite grows down the margin beside the story. It has a soma at the first paragraph, a fainter pruned branch at medical school, branches on both sides at building, two branches at today, and a growth cone lined up with the last paragraph. On phones, the dendrite moves into the 20px left edge so the story keeps its full width, with each turning point as a single short twig angled toward the edge. The photo sits right after the opener, up to `--about-photo-phone` (300px) wide at 4:5.
 
 **Experience.** Six entries, newest first. Each entry is preceded by a full-width spike raster on one shared time axis from 2020 to now, with spikes across that role's dates (see Drawings).
@@ -242,6 +251,26 @@ Media queries can't read custom properties, so these widths are written as numbe
 - **Desktop.** A myelinated axon with three sheaths curves up from the lower left. A short bare stretch leads into a terminal that flares open toward the contact side, with vesicles packed at its face. Across the gap, the receiving membrane and its bright receptor band sit right against the contact block. The email is large in Fraunces, with GitHub and LinkedIn beneath it.
 - **Phones.** The figure turns so the axon comes down from above and the terminal opens downward onto the email. GitHub and LinkedIn get 44px tap targets.
 - **The email** carries `translate="no"`: it is an address, so a browser's translation leaves it as written.
+
+## Page head
+
+What a browser's tab, a search engine, and a link preview read. `src/components/Layout.astro` writes it on every page.
+
+- **Title.** The home page's title is the name, "Calvin Patel". Every other page's is its own name, an en dash, and the name: "NotePilot – Calvin Patel", "Credits – Calvin Patel", "Page not found – Calvin Patel".
+- **Description.** Each page's description is its opening text, as plain text: the two hero lines on the home page, the lede on a case study, the first sentence of the intro on Credits, and the sentence on the 404 page.
+- **Address.** Every page has one address, with no trailing slash: `/credits`, `/projects/notepilot`, and `/` for the home page. The pages build as files (`credits.html`), which is what serves them there, and the form with a slash redirects. `src/lib/address.ts` gives that address to everything that needs it: the canonical URL, the footer's Credits link, and the sitemap.
+- **Canonical URL.** The page's address on `https://calvinpatel.dev` (`site` in `astro.config.mjs`).
+- **Link preview.** Open Graph tags (title, description, url, type "website", and the picture with its width, height, and alt text) and Twitter's `summary_large_image` card with the same picture and alt text.
+  - Every page shows the same picture, `public/link-preview.png`: the hero at 1200 × 630 without the top bar and the hint, so the name, the two sentences, the brain, and the neurons. Nothing else moves, so it is the page's own layout.
+  - `scripts/link-preview.mjs` renders it from the built site with reduced motion on, at twice the size and scaled down. It is a PNG, because a JPEG small enough to matter puts a halo around the letters. **Render it again whenever the hero changes.**
+  - Its alt text is site.md's `linkPreview.alt`. The width and height tags are read from the file.
+- **Theme color and color scheme.** The site is dark only, so `theme-color` is `--color-bg` and `color-scheme` is `dark`, in CSS and as meta tags. A meta tag can't read a custom property, so both are read from tokens.css when the site builds.
+- **Favicon.** The CP mark in the main text color on a true-black square with rounded corners.
+  - The letters are outlines of the mark as the top bar sets it (Fraunces 400, softness 100, wonky letters on, optical size 22, letter spacing −0.01em), so the icon needs no font.
+  - In a 64-unit square: the corners' radius is 12, and the letters are 56 wide and centered, with their cap height centered top to bottom.
+  - Three files, linked from every page: `favicon.ico` (16 and 32px), `favicon.svg`, and `apple-touch-icon.png` (180px). The touch icon is a full square with the letters 100 of 180 wide, because a phone rounds the corners itself.
+  - A favicon can't read CSS, so its two colors are the tokens' values written as numbers (`--color-text` and `--color-bg`). A test holds them to tokens.css.
+- **Search engines.** `/robots.txt` allows everything and names the sitemap. `/sitemap.xml` lists the home page, Credits, and each case study, at their addresses. The 404 page is in neither: it carries `noindex`, and has no canonical URL and no link preview.
 
 ## Drawings
 
@@ -633,7 +662,7 @@ Plays once. Times are measured from the first hop:
   - Decorative drawings (dividers, the dendrite, the rasters, the synapse) are hidden from screen readers, because the text beside them already says everything they show.
   - The Skills diagram has a list over it for screen readers, each item on its skill's label (see Skills: The plain list).
   - Every image has real alt text.
-  - **Headings.** Each page has one `h1`: the name on the home page, the project's name on a case study, and "Credits" on Credits. On the home page each section's heading is an `h2`. Under them, each project and each Experience entry is an `article` named by its `h3`, which comes first in it, and each group in the Skills list has an `h3`. A case study's `h1` comes before its status ("Live") in the source, with the status still shown above it. A case study's parts are `h2`s.
+  - **Headings.** Each page has one `h1`: the name on the home page, the project's name on a case study, "Credits" on Credits, and the heading on the 404 page. On the home page each section's heading is an `h2`. Under them, each project and each Experience entry is an `article` named by its `h3`, which comes first in it, and each group in the Skills list has an `h3`. A case study's `h1` comes before its status ("Live") in the source, with the status still shown above it. A case study's parts are `h2`s.
   - A result reads as its number, then its label: "100%", then "fidelity traps passed."
 - **Motion.** Reduced motion is honored everywhere. Automatic motion stops after 5 seconds. Nothing animates off screen or in a hidden tab. Escape dismisses a brain label without moving focus.
 - **Resizing.** Text stays readable and layouts reflow at 200% zoom and with enlarged default fonts. Lines may wrap; nothing clips or overlaps.
