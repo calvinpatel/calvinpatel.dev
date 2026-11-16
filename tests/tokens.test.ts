@@ -143,6 +143,12 @@ test('a token reads from the stylesheet as it is declared, comments left out', (
   assert.throws(() => tokenDeclared(css, '--color'), /declares no --color\./);
 });
 
+test("the head's two values are in tokens.css: the page's background and its color scheme", () => {
+  const css = readFileSync(TOKENS, 'utf8');
+  assert.equal(tokenDeclared(css, '--color-bg'), '#000000');
+  assert.equal(tokenDeclared(css, 'color-scheme'), 'dark');
+});
+
 // A favicon can't read CSS, so its two colors are written as numbers
 // (DESIGN.md, Page head). They must stay the tokens' values.
 test("the favicon's colors are the page's background and main text color", () => {

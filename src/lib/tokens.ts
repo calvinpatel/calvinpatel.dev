@@ -54,7 +54,8 @@ export function tokenReader(): (name: string) => number {
 
 /**
  * A token's value as tokens.css declares it, from the stylesheet's text:
- * `#000000` for `--color-bg`. A token the text doesn't declare is an error.
+ * `#000000` for `--color-bg`. It reads a plain property the same way, such as
+ * `color-scheme`. A name the text doesn't declare is an error.
  */
 export function tokenDeclared(css: string, name: string): string {
   const rules = css.replace(/\/\*[\s\S]*?\*\//g, '');

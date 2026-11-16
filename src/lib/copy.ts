@@ -142,3 +142,13 @@ export function copyHtml(source: string): string {
 export function copyText(source: string): string {
   return toText(curlPieces(parse(source)));
 }
+
+/**
+ * The first sentence of plain text, with its full stop: up to the first `.`,
+ * `!`, or `?` that a space or the text's end follows. A stop inside a word,
+ * as in "NeuroMorpho.Org" or "4.0", doesn't end it. For a meta description
+ * taken from a longer field.
+ */
+export function firstSentence(text: string): string {
+  return /^.*?[.!?](?=\s|$)/s.exec(text.trim())?.[0] ?? text.trim();
+}

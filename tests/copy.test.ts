@@ -1,9 +1,10 @@
 // Tests for the copy helper. Run from the repo root:
 //   node --test tests/copy.test.ts
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import { test } from 'node:test';
 
-import { copyHtml, copyText } from '../src/lib/copy.ts';
+import { copyHtml, copyText, firstSentence } from '../src/lib/copy.ts';
 
 test('plain text passes through', () => {
   assert.equal(copyHtml('AI engineer with clinical training.'), 'AI engineer with clinical training.');
@@ -81,5 +82,27 @@ test('copyText drops the marks and keeps the words', () => {
   assert.equal(
     copyText("I also built [NotePilot](/projects/notepilot), a *clinical* note summarizer that's live."),
     'I also built NotePilot, a clinical note summarizer that’s live.',
+  );
+});
+
+test('the first sentence ends at its full stop, not at a stop inside a word', () => {
+  assert.equal(
+    firstSentence(
+      'The neurons drifting behind the hero are real reconstructions from NeuroMorpho.Org, each shared under the CC BY 4.0 license. For this site, each one was flattened to 2D and simplified.',
+    ),
+    'The neurons drifting behind the hero are real reconstructions from NeuroMorpho.Org, each shared under the CC BY 4.0 license.',
+  );
+  assert.equal(firstSentence('Is it live? Yes.'), 'Is it live?');
+  assert.equal(firstSentence('  One sentence only.  '), 'One sentence only.');
+  assert.equal(firstSentence('No stop at all'), 'No stop at all');
+});
+
+test("the Credits page's description is its intro's first sentence, as plain text", () => {
+  const intro = /^intro: >-\n((?: {2}.*\n)+)/m.exec(readFileSync(new URL('../src/content/credits.md', import.meta.url), 'utf8'));
+  assert.ok(intro, 'credits.md has no folded intro');
+  const text = intro[1].replace(/\s+/g, ' ').trim();
+  assert.equal(
+    firstSentence(copyText(text)),
+    'The neurons drifting behind the hero are real reconstructions from NeuroMorpho.Org, each shared under the CC BY 4.0 license.',
   );
 });

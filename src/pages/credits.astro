@@ -7,7 +7,7 @@ import { getEntry } from 'astro:content';
 import Copy from '../components/Copy.astro';
 import Layout from '../components/Layout.astro';
 import { readCellIndex } from '../lib/cells.ts';
-import { copyText } from '../lib/copy.ts';
+import { copyText, firstSentence } from '../lib/copy.ts';
 
 const credits = (await getEntry('credits', 'credits'))!.data;
 const hero = (await getEntry('hero', 'hero'))!.data;
@@ -19,7 +19,8 @@ const cells = readCellIndex();
 const licenseStart = (credit: string) => credit.lastIndexOf(', ') + 2;
 ---
 
-<Layout title={`${copyText(credits.heading)} – ${copyText(hero.name)}`}>
+{/* The description is the page's opening: the intro's first sentence, as plain text. */}
+<Layout title={`${copyText(credits.heading)} – ${copyText(hero.name)}`} description={firstSentence(copyText(credits.intro))}>
   <div class="container page">
     <div class="column">
       {/* The skip link's target (Layout.astro). */}

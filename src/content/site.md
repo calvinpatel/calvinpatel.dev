@@ -52,6 +52,11 @@ brainHint:
   touch: Tap a region to preview it, tap again to go there
   tapAgain: Tap again to go there.
 
+# The link preview: the picture a link to the site shows in a message or a
+# post (public/link-preview.png). This is what a screen reader says for it.
+linkPreview:
+  alt: Calvin Patel, AI engineer with clinical training, beside a lateral-view brain over glowing neuron reconstructions.
+
 footer:
   # "CC BY 4.0" is written with two non-breaking spaces (U+00A0), so it never
   # splits across lines (DESIGN.md, Type).

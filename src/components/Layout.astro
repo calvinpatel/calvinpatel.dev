@@ -1,23 +1,41 @@
 ---
-// The shared layout for every page: the skip link, the top bar, <main>, and
-// the footer.
+// The shared layout for every page: the head, the skip link, the top bar,
+// <main>, and the footer. DESIGN.md's Page head says what the head holds.
+import { readFileSync } from 'node:fs';
 import { Font } from 'astro:assets';
 import { getEntry } from 'astro:content';
 
 import Copy from './Copy.astro';
 import Footer from './Footer.astro';
 import TopBar from './TopBar.astro';
+import { pageUrl } from '../lib/address.ts';
+import { copyText } from '../lib/copy.ts';
+import { pngSize } from '../lib/png.ts';
+import { tokenDeclared } from '../lib/tokens.ts';
 import '../styles/global.css';
+import tokens from '../styles/tokens.css?raw';
 
 interface Props {
   title: string;
-  description?: string;
+  description: string;
   /** The home page: section links stay on the page and the mark goes to its top. */
   home?: boolean;
 }
 
 const { title, description, home = false } = Astro.props;
 const site = (await getEntry('site', 'site'))!.data;
+
+// The page's one address, as the site serves it (src/lib/address.ts).
+const url = pageUrl(Astro.url.pathname, Astro.site);
+
+// The link preview picture. Its size is read from the file, so the tags
+// can't say anything else.
+const PREVIEW = 'link-preview.png';
+const preview = {
+  url: new URL(`/${PREVIEW}`, Astro.site).href,
+  alt: copyText(site.linkPreview.alt),
+  ...pngSize(readFileSync(`public/${PREVIEW}`)),
+};
 ---
 
 <!doctype html>
@@ -27,7 +45,24 @@ const site = (await getEntry('site', 'site'))!.data;
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="generator" content={Astro.generator} />
     <title>{title}</title>
-    {description && <meta name="description" content={description} />}
+    <meta name="description" content={description} />
+    <link rel="canonical" href={url} />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:url" content={url} />
+    <meta property="og:image" content={preview.url} />
+    <meta property="og:image:width" content={preview.width} />
+    <meta property="og:image:height" content={preview.height} />
+    <meta property="og:image:alt" content={preview.alt} />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:image" content={preview.url} />
+    <meta name="twitter:image:alt" content={preview.alt} />
+    {/* The site is dark only. A meta tag can't read a custom property, so
+        both values are read from tokens.css as it is written: the page's
+        background, and the color scheme it declares. */}
+    <meta name="theme-color" content={tokenDeclared(tokens, '--color-bg')} />
+    <meta name="color-scheme" content={tokenDeclared(tokens, 'color-scheme')} />
     {/* The favicon (DESIGN.md, Page head): the .ico for browsers that read
         nothing else, the SVG for the rest, and a 180px icon for a phone's
         home screen. `sizes` on the .ico is what lets a browser prefer the SVG. */}

@@ -15,6 +15,9 @@ const plex = {
 
 // https://astro.build/config
 export default defineConfig({
+  // Where the site lives. Every canonical URL, link preview address, and
+  // sitemap entry is built on it.
+  site: 'https://calvinpatel.dev',
   // Each page builds as a file, credits.html, which Cloudflare serves at
   // /credits: the address every link on the site already uses, with no
   // redirect. src/lib/address.ts turns the path Astro then reports,
