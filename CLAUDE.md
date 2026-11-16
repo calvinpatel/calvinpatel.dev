@@ -40,8 +40,9 @@ Cal Patel's portfolio site. It reads as a nervous system: real neuron reconstruc
 │                      ink.ts, which measures text for the brain and the neuron layer
 ├── src/styles/        tokens.css and global styles
 ├── public/cells/      neuron files the hero loads (generated; don't edit by hand)
+├── public/            link-preview.png, the picture a link to the site shows (rendered; see Commands)
 ├── data/swc/          raw downloaded reconstructions + sources.csv
-├── scripts/           swc_to_web.py
+├── scripts/           swc_to_web.py; link-preview.mjs, which renders public/link-preview.png
 ├── tests/             test_swc_to_web.py, and one .test.ts per src/lib/ module: copy, raster, sweep, wiring, pixels, tokens, cells, address,
 │                      brain, brain-nav, spontaneous, play-once, flash, axon, dendrite, contact, neuron-field, neuron-cell,
 │                      neuron-crossing, neuron-signal, neuron-zones
@@ -62,6 +63,7 @@ Cal Patel's portfolio site. It reads as a nervous system: real neuron reconstruc
 | `node --test tests/*.test.ts` | Runs every `src/lib/` module's tests (from the repo root) |
 | `npx astro dev --background` | Runs the dev server in the background so Claude Code can keep working; `npx astro dev status`, `logs`, and `stop` manage it |
 | `npx astro preview` | Serves the built site from `dist/` at http://localhost:4321, in the background; checks and screenshots run against this (rule 16). `npx astro preview status`, `logs`, and `stop` manage it, and `--port` moves it when the dev server has 4321 |
+| `node scripts/link-preview.mjs` | Renders `public/link-preview.png`, the picture a link to the site shows, from the built hero; `npx astro preview` must be running. Run it again whenever the hero changes: its copy, the brain, or the neuron layer |
 | `http://localhost:4321/?carry=0.8` | Dev server only: tries another value for how far a neuron's input carries along its dendrite (0.55 without it; `SIGNAL.input.length` in `src/lib/neuron-signal.ts`). The parameter isn't in the built site |
 
 Deploys happen through Workers Builds. Don't run `wrangler deploy` unless Cal asks.
