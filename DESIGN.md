@@ -227,7 +227,7 @@ Media queries can't read custom properties, so these widths are written as numbe
 - **Content, in order.** A heading, one sentence in the secondary color, and a link to the home page. The words are site.md's `notFound`.
 - **Layout.** Everything sits in the reading column (`--reading-max`), as on Credits. The heading is at the section-heading size (`--step-display-3`). Heading to sentence `--space-l`, and sentence to link `--space-m`.
 - **Touch.** The link stands alone, so on touch screens it gets a `--tap-min` (44px) tap box, which doesn't move its text (see Page: Tap targets).
-- **Its head** says to leave it out of search results, and has no canonical URL and no link preview, because it stands in for any address (see Page head).
+- **Its head** carries `noindex` and no canonical URL or link preview tags (no Open Graph and no Twitter card), because it is served at any missing address and stands for none of its own (see Page head).
 
 **About.** The heading, the opener as a Fraunces lede, then the story with the photo to its right. "Prelude" links to the Projects section and "NotePilot" to its case study. A thin dendrite grows down the margin beside the story. It has a soma at the first paragraph, a fainter pruned branch at medical school, branches on both sides at building, two branches at today, and a growth cone lined up with the last paragraph. On phones, the dendrite moves into the 20px left edge so the story keeps its full width, with each turning point as a single short twig angled toward the edge. The photo sits right after the opener, up to `--about-photo-phone` (300px) wide at 4:5.
 
@@ -269,8 +269,10 @@ What a browser's tab, a search engine, and a link preview read. `src/components/
   - The letters are outlines of the mark as the top bar sets it (Fraunces 400, softness 100, wonky letters on, optical size 22, letter spacing −0.01em), so the icon needs no font.
   - In a 64-unit square: the corners' radius is 12, and the letters are 56 wide and centered, with their cap height centered top to bottom.
   - Three files, linked from every page: `favicon.ico` (16 and 32px), `favicon.svg`, and `apple-touch-icon.png` (180px). The touch icon is a full square with the letters 100 of 180 wide, because a phone rounds the corners itself.
-  - A favicon can't read CSS, so its two colors are the tokens' values written as numbers (`--color-text` and `--color-bg`). A test holds them to tokens.css.
-- **Search engines.** `/robots.txt` allows everything and names the sitemap. `/sitemap.xml` lists the home page, Credits, and each case study, at their addresses. The 404 page is in neither: it carries `noindex`, and has no canonical URL and no link preview.
+  - A favicon can't read CSS, so its two colors are the tokens' values written as numbers (`--color-text` and `--color-bg`). `scripts/favicon.mjs` draws the three files, reading the colors from tokens.css, and a test holds `favicon.svg` to them.
+- **Search engines.** `/robots.txt` allows everything and names the sitemap. `/sitemap.xml` lists the home page, Credits, and each case study, at their addresses.
+  - A case study is listed as soon as its file is in the content. Any other new top-level page needs its own line in the sitemap's endpoint, `src/pages/sitemap.xml.ts`, as Credits has.
+  - The 404 page is in neither file: it carries `noindex`, and has no canonical URL and no link preview tags.
 
 ## Drawings
 
