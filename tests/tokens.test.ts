@@ -6,7 +6,7 @@ import { readFileSync, readdirSync } from 'node:fs';
 import { test } from 'node:test';
 import { fileURLToPath } from 'node:url';
 
-import { tokenNumber, tokenRgb } from '../src/lib/tokens.ts';
+import { tokenDeclared, tokenNumber, tokenRgb } from '../src/lib/tokens.ts';
 
 const TOKENS = new URL('../src/styles/tokens.css', import.meta.url);
 
@@ -133,4 +133,21 @@ test("every color a script reads comes out the same before and after the build's
   for (const [name, before] of written) {
     if (/^#([0-9a-f]{3}|[0-9a-f]{6})$/i.test(before)) assert.deepEqual(tokenRgb(built.get(name)!), tokenRgb(before), `${name}: ${before} is ${built.get(name)} once minified`);
   }
+});
+
+test('a token reads from the stylesheet as it is declared, comments left out', () => {
+  const css = '/* --color-bg: #111111; */ :root { --color-bg:   #000000; --color-bg-2: #222222; --ink: var(--color-text); }';
+  assert.equal(tokenDeclared(css, '--color-bg'), '#000000');
+  assert.equal(tokenDeclared(css, '--color-bg-2'), '#222222');
+  assert.equal(tokenDeclared(css, '--ink'), 'var(--color-text)');
+  assert.throws(() => tokenDeclared(css, '--color'), /declares no --color\./);
+});
+
+// A favicon can't read CSS, so its two colors are written as numbers
+// (DESIGN.md, Page head). They must stay the tokens' values.
+test("the favicon's colors are the page's background and main text color", () => {
+  const css = readFileSync(TOKENS, 'utf8');
+  const icon = readFileSync(new URL('../public/favicon.svg', import.meta.url), 'utf8');
+  const fills = [...icon.matchAll(/fill="([^"]+)"/g)].map((match) => match[1]);
+  assert.deepEqual(fills, [tokenDeclared(css, '--color-bg'), tokenDeclared(css, '--color-text')]);
 });

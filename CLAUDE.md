@@ -40,7 +40,8 @@ Cal Patel's portfolio site. It reads as a nervous system: real neuron reconstruc
 │                      ink.ts, which measures text for the brain and the neuron layer
 ├── src/styles/        tokens.css and global styles
 ├── public/cells/      neuron files the hero loads (generated; don't edit by hand)
-├── public/            link-preview.png, the picture a link to the site shows (rendered; see Commands)
+├── public/            link-preview.png, the picture a link to the site shows (rendered; see Commands);
+│                      favicon.ico, favicon.svg, and apple-touch-icon.png, the CP mark as outlines
 ├── data/swc/          raw downloaded reconstructions + sources.csv
 ├── scripts/           swc_to_web.py; link-preview.mjs, which renders public/link-preview.png
 ├── tests/             test_swc_to_web.py, and one .test.ts per src/lib/ module: copy, raster, sweep, wiring, pixels, tokens, cells, address,

@@ -28,6 +28,12 @@ const site = (await getEntry('site', 'site'))!.data;
     <meta name="generator" content={Astro.generator} />
     <title>{title}</title>
     {description && <meta name="description" content={description} />}
+    {/* The favicon (DESIGN.md, Page head): the .ico for browsers that read
+        nothing else, the SVG for the rest, and a 180px icon for a phone's
+        home screen. `sizes` on the .ico is what lets a browser prefer the SVG. */}
+    <link rel="icon" href="/favicon.ico" sizes="32x32" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <Font cssVariable="--font-fraunces" preload />
     <Font cssVariable="--font-plex" preload={[{ weight: 400, style: 'normal' }]} />
     {/* Smooth scrolling to a section starts only after the page has loaded and

@@ -7,8 +7,11 @@
 // the build writes it in, and tests/tokens.test.ts minifies tokens.css the
 // way the build does to check that each token still reads the same.
 //
-// tokenNumber and tokenRgb have no DOM, so Node can run the tests against
-// them directly. tokenReader is browser only.
+// tokenNumber, tokenRgb, and tokenDeclared have no DOM, so Node can run the
+// tests against them directly. tokenReader is browser only.
+//
+// tokenDeclared is for the build: a meta tag can't read a custom property, so
+// the page's head asks tokens.css's own text for the value (theme-color).
 
 /**
  * A token's number, from its value as the page holds it: 4 for `4px`. A time
@@ -47,4 +50,15 @@ export function tokenRgb(value: string): Rgb {
 export function tokenReader(): (name: string) => number {
   const tokens = getComputedStyle(document.documentElement);
   return (name) => tokenNumber(tokens.getPropertyValue(name));
+}
+
+/**
+ * A token's value as tokens.css declares it, from the stylesheet's text:
+ * `#000000` for `--color-bg`. A token the text doesn't declare is an error.
+ */
+export function tokenDeclared(css: string, name: string): string {
+  const rules = css.replace(/\/\*[\s\S]*?\*\//g, '');
+  const found = new RegExp(`(?:^|[\\s;{])${name}\\s*:\\s*([^;}]+)`).exec(rules);
+  if (!found) throw new Error(`tokens.css declares no ${name}.`);
+  return found[1].trim();
 }
