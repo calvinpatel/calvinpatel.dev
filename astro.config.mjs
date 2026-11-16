@@ -60,8 +60,10 @@ export default defineConfig({
   },
   fonts: [
     {
-      // Weight 400 only, with the optical size, softness, and wonk axes.
-      // Optical size stays automatic; --display-settings sets the other two.
+      // Weight 400 only, with the optical size axis. Softness and wonk are
+      // fixed in the file at the one value each the site uses, 100 and 1
+      // (--display-settings), which makes it about half the size. Optical
+      // size stays automatic.
       name: 'Fraunces',
       cssVariable: '--font-fraunces',
       provider: fontProviders.google(),
@@ -73,8 +75,8 @@ export default defineConfig({
         experimental: {
           variableAxis: {
             opsz: [['9', '144']],
-            SOFT: [['0', '100']],
-            WONK: [['0', '1']],
+            SOFT: ['100'],
+            WONK: ['1'],
           },
         },
       },

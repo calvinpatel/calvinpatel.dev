@@ -97,6 +97,7 @@ How the layer keeps to the cap (`src/lib/neuron-zones.ts`):
 - **Fraunces** for headlines: weight 400, softness 100, wonky letters on (`--display-settings`), letter spacing −0.01em (`--display-tracking`), optical size automatic so it adjusts with the size.
 - **IBM Plex Sans** for everything else: weight 400, plus 400 italic for titles of works (such as *Nature Neuroscience*) and 500 for brain-label names only, normal letter spacing.
 - Both use the Open Font License and are self-hosted. Only these weights and axes are needed.
+- **Fraunces's file has softness and wonk fixed.** It comes from Google's API at weight 400 with SOFT fixed at 100 and WONK at 1, the one value of each the site uses, and it keeps the optical size axis. That makes it about half the size of the file with all three axes: 33 KB against 60 KB. A headline with any other softness, or with wonk off, would need another file; `font-variation-settings` can't reach an axis the file doesn't have.
 - Fraunces has no → glyph, so every arrow is set in Plex, even inside a Fraunces line.
 - **Loading.** The fonts use `font-display: swap`: text shows at once in a fallback and changes when its font arrives. Each family's first fallback is size-matched to it (Times New Roman for Fraunces, Arial for Plex), made from `astro.config.mjs`, so the change moves as little as it can. Fraunces and Plex 400 are preloaded; Plex 500 and the italic load only where a page draws them.
 - **Nothing is faked.** `font-synthesis: none`, so a browser never makes a bold or an italic the files don't hold.
