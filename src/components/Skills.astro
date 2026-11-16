@@ -14,6 +14,14 @@
 // The diagrams, the group names above them, and the hint are hidden from
 // screen readers, and the list is there for them at every width. Nothing in
 // the section is focusable.
+//
+// While the diagrams show, the list lies over them, unseen: each item over
+// its own skill's label, each group's heading over its group's label. A
+// screen reader's box then lands on the label it is reading, and the page
+// doesn't scroll away from the diagram to find the list. The list takes no
+// pointer and no text selection there, so the diagram underneath behaves as
+// if the list weren't over it. The script below sets each one's place from
+// the drawn diagram; the styles do the rest.
 import { getEntry } from 'astro:content';
 
 import Copy from './Copy.astro';
@@ -29,7 +37,7 @@ const line = (skill: (typeof skills.groups)[number]['skills'][number]) =>
   `${skill.name}${skill.detail ? ` (${skill.detail})` : ''}: ${skill.places.map((place) => placeLabel.get(place)).join(', ')}`;
 ---
 
-<div class="skills">
+<div class="skills" data-skills>
   <p class="hint" aria-hidden="true">
     <Copy text={skills.hint} />
   </p>
@@ -70,9 +78,55 @@ const line = (skill: (typeof skills.groups)[number]['skills'][number]) =>
   </ul>
 </div>
 
+<script>
+  // Lays the screen reader's list over the diagram that is showing (see the
+  // top of this file). Each item and heading gets its label's box as four
+  // custom properties, measured from the section's corner; the styles use
+  // them only while a diagram shows, so the visible list is never touched.
+  const skills = document.querySelector<HTMLElement>('[data-skills]');
+  if (skills) {
+    const items = [...skills.querySelectorAll<HTMLElement>('.list li li')];
+    const headings = [...skills.querySelectorAll<HTMLElement>('.list h3')];
+    const desktop = skills.querySelector<HTMLElement>('[data-wiring="desktop"]')!;
+    // Above each group's own diagram, its name.
+    const names = [...skills.querySelectorAll<HTMLElement>('.narrow .group-name')];
+
+    const over = (el: HTMLElement, label: Element | null | undefined, origin: DOMRect) => {
+      const box = label?.getBoundingClientRect();
+      if (!box || box.width === 0) return;
+      el.style.setProperty('--x', `${box.left - origin.left}px`);
+      el.style.setProperty('--y', `${box.top - origin.top}px`);
+      el.style.setProperty('--w', `${box.width}px`);
+      el.style.setProperty('--h', `${box.height}px`);
+    };
+
+    // A skill carries the same number in the list, in the desktop diagram,
+    // and in its group's own (Wiring.astro).
+    const place = () => {
+      const origin = skills.getBoundingClientRect();
+      const wide = desktop.getBoundingClientRect().width > 0;
+      const diagram = wide ? 'desktop' : 'group';
+      items.forEach((item, n) =>
+        over(item, skills.querySelector(`[data-wiring="${diagram}"] .skill[data-skill="${n}"] text`), origin),
+      );
+      headings.forEach((heading, g) =>
+        over(heading, wide ? desktop.querySelector(`.group[data-group="${g}"] text`) : names[g], origin),
+      );
+    };
+
+    // Whenever Wiring.astro's script has drawn or checked the diagrams, and
+    // whenever the section's own box changes: the hint above the diagram
+    // wrapping to a second line moves every label.
+    document.addEventListener('wiring:drawn', place);
+    new ResizeObserver(place).observe(skills);
+  }
+</script>
+
 <style>
-  /* The section's own width is what the layouts below ask about. */
+  /* The section's own width is what the layouts below ask about. It is
+     positioned so that the unseen list can lie over the diagrams. */
   .skills {
+    position: relative;
     container-type: inline-size;
   }
 
@@ -122,8 +176,13 @@ const line = (skill: (typeof skills.groups)[number]['skills'][number]) =>
   }
 
   /* With JavaScript on and room for a diagram's labels, the diagrams show and
-     the list is only read out, not shown: global.css's .visually-hidden,
-     applied here because it depends on these conditions.
+     the list is only read out, not shown. It fills the section's box, unseen
+     (opacity 0, which screen readers still read), and takes no pointer and
+     no selection. Each item and each group's heading is a box over its label
+     in the diagram, at the place the script measured (--x, --y, --w, --h);
+     its text, which says more than the label, is cut at that box. Until the
+     script has run they sit where the list starts, and the list's own box
+     cuts anything that would reach past the section.
 
      17.5rem is a 320px window at default text, the narrowest the per-group
      layout fits once its columns have shifted (src/lib/wiring.ts). */
@@ -135,11 +194,24 @@ const line = (skill: (typeof skills.groups)[number]['skills'][number]) =>
 
       .list {
         position: absolute;
-        width: 1px;
-        height: 1px;
+        inset: 0;
+        display: block;
         margin: 0;
         overflow: hidden;
-        clip-path: inset(50%);
+        opacity: 0;
+        pointer-events: none;
+        user-select: none;
+        -webkit-user-select: none;
+      }
+
+      .list :is(li li, h3) {
+        position: absolute;
+        top: var(--y);
+        left: var(--x);
+        width: var(--w);
+        height: var(--h);
+        margin: 0;
+        overflow: hidden;
         white-space: nowrap;
       }
     }

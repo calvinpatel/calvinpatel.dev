@@ -368,6 +368,9 @@ const drop = `${LABEL_DROP_EM}em`;
       }
       diagram.querySelector('svg')!.dataset.drawn = '';
     }
+    // For Skills.astro, which lays the screen reader's list over the labels:
+    // they are where they will stay until the next call.
+    document.dispatchEvent(new CustomEvent('wiring:drawn'));
   }
 
   const sizes = new ResizeObserver(draw);
