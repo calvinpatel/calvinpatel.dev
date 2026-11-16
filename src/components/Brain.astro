@@ -1187,9 +1187,11 @@ const look = Object.entries({
   }
 
   @media (width >= 760px) {
-    /* The hint gives way to the label, which can reach where it sits. */
+    /* The hint gives way to the label, which can reach where it sits. Hidden,
+       it takes no pointer, so a label lying over its line takes it. */
     .has-active .hint {
       opacity: 0;
+      pointer-events: none;
       transition: opacity var(--fade-out) var(--ease-out);
     }
 
