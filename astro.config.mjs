@@ -23,6 +23,11 @@ export default defineConfig({
   // redirect. src/lib/address.ts turns the path Astro then reports,
   // /credits.html, back into that address.
   build: { format: 'file' },
+  // The About photo is served as AVIF with a WebP fallback. At quality 60 the
+  // AVIF measures as close to the source as the WebP does at its default, 80.
+  image: {
+    service: { entrypoint: 'astro/assets/services/sharp', config: { avif: { quality: 60 } } },
+  },
   fonts: [
     {
       // Weight 400 only, with the optical size, softness, and wonk axes.

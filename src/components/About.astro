@@ -2,7 +2,7 @@
 // The About section: the lede, the photo, and the story with the dendrite down
 // its margin. In the page's source the photo comes right after the lede, which
 // is where it sits below 900px; on desktop the grid moves it beside the story.
-import { Image } from 'astro:assets';
+import { Picture } from 'astro:assets';
 import { getEntry } from 'astro:content';
 
 import Copy from './Copy.astro';
@@ -14,7 +14,10 @@ const about = (await getEntry('about', 'about'))!.data;
 // The photo's two display widths, --about-photo-phone and --about-photo. An
 // <img>'s attributes can't read custom properties, so both are restated here,
 // like the breakpoint. Each gets a file for 1x, 2x, and 3x screens, so a phone
-// downloads a file made for its own width.
+// downloads a file made for its own width. Every width comes as AVIF, which
+// measures as close to the source as the WebP at about three quarters of its
+// bytes, and as WebP for a browser that can't read AVIF. astro.config.mjs
+// sets the AVIF's quality.
 const PHOTO = { phone: 300, desktop: 340 };
 const widths = [1, 2, 3].flatMap((density) => [PHOTO.phone * density, PHOTO.desktop * density]);
 const sizes = `(width < 900px) ${PHOTO.phone}px, ${PHOTO.desktop}px`;
@@ -33,9 +36,11 @@ const sizes = `(width < 900px) ${PHOTO.phone}px, ${PHOTO.desktop}px`;
   {
     about.photo && (
       <figure class="photo">
-        <Image
+        <Picture
           src={about.photo.src}
           alt={copyText(about.photo.alt)}
+          formats={['avif']}
+          fallbackFormat="webp"
           widths={widths}
           sizes={sizes}
           width={PHOTO.desktop * 2}
