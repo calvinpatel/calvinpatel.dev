@@ -43,9 +43,9 @@ Cal Patel's portfolio site. It reads as a nervous system: real neuron reconstruc
 ├── src/styles/        tokens.css and global styles
 ├── public/cells/      neuron files the hero loads (generated; don't edit by hand)
 ├── public/            link-preview.png, the picture a link to the site shows (rendered; see Commands);
-│                      favicon.ico, favicon.svg, and apple-touch-icon.png, the CP mark as outlines
+│                      favicon.ico, favicon.svg, and apple-touch-icon.png, the CP mark as outlines (drawn; see Commands)
 ├── data/swc/          raw downloaded reconstructions + sources.csv
-├── scripts/           swc_to_web.py; link-preview.mjs, which renders public/link-preview.png
+├── scripts/           swc_to_web.py; link-preview.mjs, which renders public/link-preview.png; favicon.mjs, which draws the favicon files
 ├── tests/             test_swc_to_web.py, and one .test.ts per src/lib/ module: copy, raster, sweep, wiring, pixels, tokens, cells, address, png, font-coverage,
 │                      brain, brain-nav, spontaneous, play-once, flash, axon, dendrite, contact, neuron-field, neuron-cell,
 │                      neuron-crossing, neuron-signal, neuron-zones
@@ -67,6 +67,7 @@ Cal Patel's portfolio site. It reads as a nervous system: real neuron reconstruc
 | `npx astro dev --background` | Runs the dev server in the background so Claude Code can keep working; `npx astro dev status`, `logs`, and `stop` manage it |
 | `npx astro preview` | Serves the built site from `dist/` at http://localhost:4321, in the background; checks and screenshots run against this (rule 16). `npx astro preview status`, `logs`, and `stop` manage it, and `--port` moves it when the dev server has 4321 |
 | `node scripts/link-preview.mjs` | Renders `public/link-preview.png`, the picture a link to the site shows, from the built hero; `npx astro preview` must be running. Run it again whenever the hero changes: its copy, the brain, or the neuron layer |
+| `node scripts/favicon.mjs` | Draws the favicon files in `public/` again (`favicon.svg`, `favicon.ico`, `apple-touch-icon.png`) from the CP mark's outlines, in tokens.css's two colors. Run it if `--color-text` or `--color-bg` changes, or the icon's layout does |
 | `http://localhost:4321/?carry=0.8` | Dev server only: tries another value for how far a neuron's input carries along its dendrite (0.55 without it; `SIGNAL.input.length` in `src/lib/neuron-signal.ts`). The parameter isn't in the built site |
 
 Deploys happen through Workers Builds. Don't run `wrangler deploy` unless Cal asks.
