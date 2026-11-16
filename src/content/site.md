@@ -40,12 +40,15 @@ sections:
 # What a screen reader calls the brain's five lobe links.
 brainLabel: Brain map
 
-# Under the brain. Pointer devices see the first; touch screens the second.
+# Under the brain. Pointer devices see the first; touch screens see touch.
+# pointerNarrow is for a mouse in a window under 760px, where hovering a lobe
+# lights it and shows no label.
 # On phones a lobe's label and lobeLine take the hint's place, and tapAgain
-# follows them only when a tap put them there: keyboard focus and hover show
-# the two lines alone.
+# follows them only when a tap put them there: keyboard focus shows the two
+# lines alone.
 brainHint:
   pointer: Hover a region to preview it, click to go there
+  pointerNarrow: Click a region to go there.
   touch: Tap a region to preview it, tap again to go there
   tapAgain: Tap again to go there.
 

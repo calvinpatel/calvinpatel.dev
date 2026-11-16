@@ -345,6 +345,7 @@ const look = Object.entries({
   <p class="hint" aria-hidden="true" data-brain-hint>
     <span class="rest">
       <span class="pointer"><Copy text={site.brainHint.pointer} /></span>
+      <span class="narrow"><Copy text={site.brainHint.pointerNarrow} /></span>
       <span class="touch"><Copy text={site.brainHint.touch} /></span>
     </span>
     {
@@ -590,21 +591,28 @@ const look = Object.entries({
       clearTimeout(leaving);
       if (!active) return;
       setActive(active, false);
-      root.classList.remove('by-tap');
+      root.classList.remove('by-tap', 'by-hover');
       active = null;
       stopCascade();
     }
-    // `byTap` is for the phone's label, which says to tap again only when a
-    // tap put it up. Keyboard focus and hover show it without: Enter or a
-    // click goes straight to the section.
-    function activate(lobe: SVGAElement, byTap = false) {
+    // `by` says what made the lobe active, for the phone's label under the
+    // brain (below 760px):
+    //   - 'tap': the label says to tap again. Keyboard focus shows it
+    //     without: Enter goes straight to the section.
+    //   - 'hover': a lobe the mouse lit shows no label there. Only the hover
+    //     that lights a lobe counts: a mouse arriving on a lobe whose label a
+    //     tap or focus already put up leaves the label showing.
+    function activate(lobe: SVGAElement, by?: 'tap' | 'hover') {
       if (active !== lobe) {
         deactivate();
         active = lobe;
         setActive(lobe, true);
         startCascade(lobe);
+        root.classList.toggle('by-hover', by === 'hover');
+      } else if (by !== 'hover') {
+        root.classList.remove('by-hover');
       }
-      root.classList.toggle('by-tap', byTap);
+      root.classList.toggle('by-tap', by === 'tap');
     }
 
     // The press before a click says what made it: a mouse, a finger, or a
@@ -625,7 +633,7 @@ const look = Object.entries({
 
     for (const lobe of lobes) {
       lobe.addEventListener('pointerenter', (event) => {
-        if (event.pointerType === 'mouse') activate(lobe);
+        if (event.pointerType === 'mouse') activate(lobe, 'hover');
       });
       lobe.addEventListener('pointerleave', (event) => {
         if (event.pointerType !== 'mouse' || active !== lobe || lobe.matches(':focus-visible')) return;
@@ -648,7 +656,7 @@ const look = Object.entries({
         press = null;
         if (tapAction(own, event.detail, active === lobe) === 'preview') {
           event.preventDefault(); // the first tap previews; the second goes
-          activate(lobe, true);
+          activate(lobe, 'tap');
           return;
         }
         // On its way to the section: the highlight lets go once it has shown.
@@ -1150,6 +1158,7 @@ const look = Object.entries({
   }
 
   .pointer,
+  .narrow,
   .phone,
   .again {
     display: none;
@@ -1162,6 +1171,18 @@ const look = Object.entries({
 
     .touch {
       display: none;
+    }
+  }
+
+  /* A window under 760px with a mouse: hovering shows no label there (see
+     the phone layout below), so the hint doesn't promise a preview. */
+  @media (hover: hover) and (width < 760px) {
+    .pointer {
+      display: none;
+    }
+
+    .narrow {
+      display: inline;
     }
   }
 
@@ -1251,6 +1272,19 @@ const look = Object.entries({
 
     .phone.is-active {
       display: block;
+    }
+
+    /* A lobe that a mouse's hover lit shows no label here: the hint stays.
+       The label would sit under the brain, where the way to it crosses the
+       other lobes, and in a window zoomed to 200% it is off the screen
+       (DESIGN.md, Sections: Brain navigation). Keyboard focus and a tap
+       still show it. */
+    .by-hover.has-active .rest {
+      display: inline;
+    }
+
+    .by-hover .phone.is-active {
+      display: none;
     }
 
     /* The name is in the main text color, as on the desktop label, where the
