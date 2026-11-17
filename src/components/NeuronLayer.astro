@@ -104,7 +104,10 @@ const files = readCellIndex().map((cell) => `/cells/${cell.file}`);
     // alpha: false is a hint where it's supported. Every frame starts with an
     // opaque fill either way, which is what the cap's clamp relies on.
     const context = canvas.getContext('2d', { alpha: false })!;
+    // The signals' own canvas has pixels only while a signal is lit: it is as
+    // large as the canvas, and most of the time nothing is firing.
     const signals = document.createElement('canvas');
+    signals.width = signals.height = 0;
     const signalsContext = signals.getContext('2d')!;
 
     const token = tokenReader();
@@ -179,8 +182,9 @@ const files = readCellIndex().map((cell) => `/cells/${cell.file}`);
       [width, height, scale] = [w, h, s];
       canvas.style.height = `${h}px`;
       if (clampBox) clampBox.style.height = `${h}px`;
-      canvas.width = signals.width = Math.round(w * s);
-      canvas.height = signals.height = Math.round(h * s);
+      canvas.width = Math.round(w * s);
+      canvas.height = Math.round(h * s);
+      free(signals); // made again at the new size by the next signal
       if (import.meta.env.DEV) {
         const at = canvas.getBoundingClientRect();
         if (Math.abs(at.top + scrollY) > 0.5 || Math.abs(at.left + scrollX) > 0.5) {
@@ -714,24 +718,30 @@ const files = readCellIndex().map((cell) => `/cells/${cell.file}`);
       g.globalAlpha = 1 - veil.rest;
       drawMask(g, veilMask);
 
-      if (changed) {
+      if (lighted) {
+        // The first lit frame after a quiet spell makes the signals' canvas again.
+        if (signals.width !== canvas.width || signals.height !== canvas.height) {
+          signals.width = canvas.width;
+          signals.height = canvas.height;
+        }
         const s = signalsContext;
         s.save();
         s.setTransform(scale, 0, 0, scale, 0, 0);
-        clipTo(s, changed);
+        clipTo(s, changed!);
         s.globalCompositeOperation = 'source-over';
         s.clearRect(0, 0, width, height);
-        if (lighted) drawSignals(s);
+        drawSignals(s);
         s.restore();
-        if (lighted) {
-          g.save();
-          clipTo(g, changed);
-          g.setTransform(1, 0, 0, 1, 0, 0);
-          g.globalAlpha = 1;
-          g.globalCompositeOperation = 'lighter';
-          g.drawImage(signals, 0, 0);
-          g.restore();
-        }
+        g.save();
+        clipTo(g, changed!);
+        g.setTransform(1, 0, 0, 1, 0, 0);
+        g.globalAlpha = 1;
+        g.globalCompositeOperation = 'lighter';
+        g.drawImage(signals, 0, 0);
+        g.restore();
+      } else if (changed) {
+        // The last signal has just faded: nothing is lit, so its canvas is let go.
+        free(signals);
       }
 
       // The guarantee is the page's clamp. Where the page can't blend, the
