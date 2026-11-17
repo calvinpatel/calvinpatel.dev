@@ -11,6 +11,7 @@ import {
   coverage,
   coverageMask,
   luminance,
+  maskPlace,
   pickToFire,
   sameZones,
   somaDimming,
@@ -99,7 +100,8 @@ test('coverage has no edge: it never jumps from one px to the next', () => {
 
 // The mask's alpha where a canvas px samples it, mixing the nearest `taps`
 // mask pixels each way on each axis with the weights that favor the darkest:
-// the least alpha a browser's smoothing could give.
+// the least alpha a browser's smoothing could give, whether the canvas draws
+// the mask (the veils) or the page shows it scaled up (the clamp).
 function leastAlpha(mask: ReturnType<typeof coverageMask>, x: number, y: number, taps: number): number {
   const column = Math.floor(x / ZONE.scale - 0.5) + ZONE.margin;
   const row = Math.floor(y / ZONE.scale - 0.5) + ZONE.margin;
@@ -133,6 +135,31 @@ test("the mask is fully opaque over every px of a zone, however it's smoothed", 
         assert.equal(leastAlpha(mask, x + 0.5, y + 0.5, 2), 255, `(${x}, ${y})`);
       }
     }
+  }
+});
+
+test('a mask is placed so that each of its pixels lies where its coverage was worked out', () => {
+  // A width that divides by the mask's scale, and a phone's, which doesn't.
+  for (const [width, height] of [
+    [1440, 900],
+    [375, 812],
+  ]) {
+    const mask = coverageMask([NAME], width, height);
+    const at = maskPlace(mask);
+    // Exactly `scale` px per mask pixel, so the page scales it by a whole number.
+    assert.equal(at.width, mask.columns * ZONE.scale);
+    assert.equal(at.height, mask.rows * ZONE.scale);
+    // A mask pixel's center on the canvas is the point coverageMask sampled.
+    for (const column of [0, ZONE.margin, mask.columns - 1]) {
+      assert.equal(at.left + ((column + 0.5) * at.width) / mask.columns, (column - ZONE.margin + 0.5) * ZONE.scale);
+    }
+    for (const row of [0, ZONE.margin, mask.rows - 1]) {
+      assert.equal(at.top + ((row + 0.5) * at.height) / mask.rows, (row - ZONE.margin + 0.5) * ZONE.scale);
+    }
+    // The margin lies outside the canvas on every side, so smoothing never meets the mask's own edge.
+    assert.ok(at.left <= -ZONE.margin * ZONE.scale && at.top <= -ZONE.margin * ZONE.scale);
+    assert.ok(at.left + at.width >= width + ZONE.margin * ZONE.scale - (ZONE.scale - 1));
+    assert.ok(at.top + at.height >= height + ZONE.margin * ZONE.scale - (ZONE.scale - 1));
   }
 });
 

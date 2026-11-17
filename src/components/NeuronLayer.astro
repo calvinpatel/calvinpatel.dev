@@ -13,12 +13,17 @@
 // (one cell), neuron-signal.ts (input and firing), neuron-zones.ts (the
 // brightness cap behind text). The script loads the cells after the first
 // paint, draws, and listens.
+//
+// The second canvas is the cap's clamp (DESIGN.md, Color: Contrast). It holds
+// the text zones' mask in the cap's gray, and lies over the first with the
+// darken blend, so the page keeps every channel under that gray behind text.
 import { readCellIndex } from '../lib/cells.ts';
 
 const files = readCellIndex().map((cell) => `/cells/${cell.file}`);
 ---
 
 <canvas class="neurons" aria-hidden="true" data-neurons data-cells={JSON.stringify(files)}></canvas>
+<div class="clamp" aria-hidden="true" data-neurons-clamp><canvas></canvas></div>
 
 <script>
   import type { Box } from '../lib/brain-nav.ts';
@@ -55,9 +60,9 @@ const files = readCellIndex().map((cell) => `/cells/${cell.file}`);
   import type { Membrane, Timing, Wave } from '../lib/neuron-signal.ts';
   import { blurSprite } from '../lib/neuron-sprite.ts';
   import {
-    ZONE,
     capGray,
     coverageMask,
+    maskPlace,
     pickToFire,
     sameZones,
     somaDimming,
@@ -97,7 +102,7 @@ const files = readCellIndex().map((cell) => `/cells/${cell.file}`);
     const topBar = document.querySelector('.top-bar');
 
     // alpha: false is a hint where it's supported. Every frame starts with an
-    // opaque fill either way, which is what the cap's last step relies on.
+    // opaque fill either way, which is what the cap's clamp relies on.
     const context = canvas.getContext('2d', { alpha: false })!;
     const signals = document.createElement('canvas');
     const signalsContext = signals.getContext('2d')!;
@@ -142,6 +147,12 @@ const files = readCellIndex().map((cell) => `/cells/${cell.file}`);
     // text, and how far the layer is dimmed there first.
     const gray = capGray(token('--canvas-cap-luminance'), token('--canvas-cap-brain'));
     const veil = veils(gray, REST_MAX);
+    // The clamp is the page's: the mask over the canvas, with the darken
+    // blend. A canvas that draws that blend itself makes Firefox copy the
+    // whole canvas off the GPU and back every frame.
+    const clampBox = hero.querySelector<HTMLElement>('[data-neurons-clamp]');
+    const blends = clampBox !== null && CSS.supports('mix-blend-mode', 'darken');
+    // Where the page can't blend, the canvas clamps as each frame's last step.
     // A browser that doesn't know a blend mode keeps the one before it.
     context.globalCompositeOperation = 'darken';
     const darkens = context.globalCompositeOperation === 'darken';
@@ -167,6 +178,7 @@ const files = readCellIndex().map((cell) => `/cells/${cell.file}`);
       if (w === width && h === height && s === scale) return false;
       [width, height, scale] = [w, h, s];
       canvas.style.height = `${h}px`;
+      if (clampBox) clampBox.style.height = `${h}px`;
       canvas.width = signals.width = Math.round(w * s);
       canvas.height = signals.height = Math.round(h * s);
       if (import.meta.env.DEV) {
@@ -185,9 +197,10 @@ const files = readCellIndex().map((cell) => `/cells/${cell.file}`);
 
     let zones: Box[] = [];
     let brainBox: Box | null = null; // the brain's silhouette, which hides the layer behind it
-    // The coverage mask twice over: in black, to dim, and in the cap's gray, to clamp.
+    // The coverage mask twice over: in black, to dim, and in the cap's gray, to
+    // clamp. The clamp's is in the page, over the canvas.
     const veilMask = document.createElement('canvas');
-    const clampMask = document.createElement('canvas');
+    const clampMask = clampBox?.querySelector('canvas') ?? document.createElement('canvas');
 
     // Every piece of text over the canvas, in px from the canvas's corner:
     // the hero text's ink, each brain label where it would show, the hint
@@ -233,7 +246,9 @@ const files = readCellIndex().map((cell) => `/cells/${cell.file}`);
     }
 
     // Measures the zones again and, if they moved, redraws. The masks are
-    // written pixel by pixel, so a zone's alpha is exactly full.
+    // written pixel by pixel, so a zone's alpha is exactly full. The clamp's
+    // mask is put where the canvas would draw it, in the same task, so the
+    // page's clamp and the canvas's frame change together.
     function refreshZones(always = false) {
       if (!ready) return;
       const measured = measureZones();
@@ -242,15 +257,22 @@ const files = readCellIndex().map((cell) => `/cells/${cell.file}`);
       const mask = coverageMask(zones, width, height);
       fillMask(veilMask, mask.columns, mask.rows, mask.alpha, 0);
       fillMask(clampMask, mask.columns, mask.rows, mask.alpha, gray);
+      if (blends) {
+        const at = maskPlace(mask);
+        clampMask.style.left = `${at.left}px`;
+        clampMask.style.top = `${at.top}px`;
+        clampMask.style.width = `${at.width}px`;
+        clampMask.style.height = `${at.height}px`;
+      }
       draw(true);
     }
 
-    // A mask is drawn at exactly ZONE.scale times its size, from its margin.
+    // A mask is drawn at exactly its scale times its size, from its margin.
     function drawMask(target: CanvasRenderingContext2D, mask: HTMLCanvasElement) {
-      const offset = -ZONE.margin * ZONE.scale;
+      const at = maskPlace({ columns: mask.width, rows: mask.height });
       target.imageSmoothingEnabled = true;
       target.imageSmoothingQuality = 'low';
-      target.drawImage(mask, offset, offset, mask.width * ZONE.scale, mask.height * ZONE.scale);
+      target.drawImage(mask, at.left, at.top, at.width, at.height);
     }
 
     // --- Cells ---------------------------------------------------------------
@@ -657,8 +679,8 @@ const files = readCellIndex().map((cell) => `/cells/${cell.file}`);
     let lit: Box | null = null; // where the last frame drew signals
 
     // One frame: the resting layer, dimmed behind text; the signals, dimmed
-    // further there, added on top; then every channel held under the cap's
-    // gray behind text, whatever was drawn.
+    // further there, added on top. Over it the page holds every channel under
+    // the cap's gray behind text, whatever was drawn (the clamp).
     //
     // While the cells drift the whole canvas is drawn. Once the resting layer
     // is baked, a frame only redraws where signals are or just were, unless
@@ -712,10 +734,14 @@ const files = readCellIndex().map((cell) => `/cells/${cell.file}`);
         }
       }
 
-      // The guarantee. Without the darken blend, dim everything to the gray instead.
-      g.globalCompositeOperation = darkens ? 'darken' : 'source-over';
-      g.globalAlpha = darkens ? 1 : 1 - gray / 255;
-      drawMask(g, darkens ? clampMask : veilMask);
+      // The guarantee is the page's clamp. Where the page can't blend, the
+      // canvas clamps here; without its own darken blend, it dims everything
+      // to the gray instead.
+      if (!blends) {
+        g.globalCompositeOperation = darkens ? 'darken' : 'source-over';
+        g.globalAlpha = darkens ? 1 : 1 - gray / 255;
+        drawMask(g, darkens ? clampMask : veilMask);
+      }
       g.restore();
     }
 
@@ -953,6 +979,7 @@ const files = readCellIndex().map((cell) => `/cells/${cell.file}`);
           },
           gray,
           veil,
+          blends,
           darkens,
           carry,
           // A point partway along one of a cell's dendrites, in px from the canvas's corner.
@@ -1013,6 +1040,28 @@ const files = readCellIndex().map((cell) => `/cells/${cell.file}`);
     height: 100svh;
     pointer-events: none;
     opacity: 0;
+  }
+
+  /* The cap's clamp: the zones' mask in the cap's gray, over the canvas and
+     under everything else. Darken keeps the lesser of the two on every
+     channel, so nothing behind text is brighter than the gray. The script
+     sizes the box to the canvas and places the mask, whose margin the box
+     cuts off. */
+  .clamp {
+    position: absolute;
+    top: 0;
+    left: 0;
+    z-index: -1;
+    width: 100%;
+    height: 100svh;
+    overflow: hidden;
+    pointer-events: none;
+    mix-blend-mode: darken;
+  }
+
+  .clamp canvas {
+    position: absolute;
+    display: block;
   }
 
   /* Once its cells are in, the layer fades in. */

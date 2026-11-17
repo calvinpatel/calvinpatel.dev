@@ -8,7 +8,9 @@
 //   - Inside a zone the layer is dimmed (the veils), so that one cell's rest
 //     plus its signal lands just under the cap with its color intact.
 //   - Then every channel is held at or under one gray (the clamp). That is
-//     the guarantee: it holds whatever was drawn, overlaps included.
+//     the guarantee: it holds whatever was drawn, overlaps included. The page
+//     does it: the mask, filled with the gray, lies over the canvas with the
+//     darken blend.
 //
 // No DOM and no Astro imports, so Node can run tests/neuron-zones.test.ts
 // against it directly.
@@ -17,8 +19,8 @@ import type { Box } from './brain-nav.ts';
 
 /** The zones' fixed values, in CSS px. */
 export const ZONE = {
-  // How far past a text box the full dimming reaches. The mask is drawn at
-  // 1/scale of the canvas and smoothed back up, and a smoothed pixel inside a
+  // How far past a text box the full dimming reaches. The mask is 1/scale of
+  // the canvas and the browser smooths it back up, and a smoothed pixel inside a
   // box mixes mask pixels up to two away on each axis (11.3px on the
   // diagonal), so the pad has to be more than that.
   pad: 12,
@@ -91,9 +93,9 @@ export interface Mask {
 
 /**
  * The mask for a canvas `width` by `height` px. It is `ZONE.scale` times
- * smaller and `ZONE.margin` mask pixels larger on every side, so it is drawn
- * from -margin × scale at exactly `scale` times its size. Alpha is 255 only
- * where coverage is fully 1, and rounds down everywhere else.
+ * smaller and `ZONE.margin` mask pixels larger on every side, so it goes
+ * where maskPlace says. Alpha is 255 only where coverage is fully 1, and
+ * rounds down everywhere else.
  */
 export function coverageMask(zones: readonly Box[], width: number, height: number): Mask {
   const { scale, margin } = ZONE;
@@ -121,6 +123,17 @@ export function coverageMask(zones: readonly Box[], width: number, height: numbe
     }
   }
   return { columns, rows, alpha };
+}
+
+/**
+ * Where a mask goes over its canvas, in px from the canvas's corner: from
+ * -margin × scale, at exactly `scale` times its size, so a mask pixel's
+ * center lies where coverageMask worked its coverage out. The veils are
+ * drawn there on the canvas, and the page shows the clamp's mask there.
+ */
+export function maskPlace(mask: { columns: number; rows: number }): { left: number; top: number; width: number; height: number } {
+  const offset = -ZONE.margin * ZONE.scale;
+  return { left: offset, top: offset, width: mask.columns * ZONE.scale, height: mask.rows * ZONE.scale };
 }
 
 /**
