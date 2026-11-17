@@ -535,6 +535,7 @@ One motion language runs through the whole site: a signal travels at a set speed
   - The cell nearest the cursor, when the cursor is close to its soma.
 - **The nuclei drift and breathe.** In each depth band, half the nuclei drift one way over `--brain-drift-a` and half another over `--brain-drift-b`, a few units, back and forth. The second half also fade to 70% and back over `--brain-breathe`.
 - **The five-second window.** Firing on their own, the drift, and the breathing all stop when the window closes. A cell fires on its own only if it can finish inside the window, and the nuclei hold where they are. The cascade and the cursor response work at any time, because the visitor starts them.
+- **The nuclei's animations stay paused; they are never taken off.** That is on purpose. Chrome keeps a layer for each animated group, about 36 MB of tiles at 1440 × 900 at 2x, and while those layers exist it draws the whole brain very slightly soft. Taking the animations off after the window frees the memory but makes the brain visibly sharpen at the five-second mark, in Chrome, even though every group keeps its exact offset. The memory isn't worth that.
 - **Nothing runs** while the hero is off screen or the tab is hidden. A cell firing when the tab hides goes to rest and doesn't resume when the tab shows.
 
 **Reduced motion:** no firing, no drift, and no breathing. Switched on or off mid-play, the nuclei go to or from rest at once.
