@@ -8,6 +8,7 @@ import { REST_MAX } from '../src/lib/neuron-field.ts';
 import {
   ZONE,
   capGray,
+  clampBy,
   coverage,
   coverageMask,
   luminance,
@@ -136,6 +137,25 @@ test("the mask is fully opaque over every px of a zone, however it's smoothed", 
       }
     }
   }
+});
+
+test('the canvas clamps everywhere but Firefox, where the page does if it can blend', () => {
+  // Chrome and Safari: not Gecko, and the page could blend.
+  assert.equal(clampBy({ gecko: false, pageBlends: true }), 'canvas');
+  // Firefox.
+  assert.equal(clampBy({ gecko: true, pageBlends: true }), 'page');
+  // A Gecko that can't blend an element, and a browser that is neither.
+  assert.equal(clampBy({ gecko: true, pageBlends: false }), 'canvas');
+  assert.equal(clampBy({ gecko: false, pageBlends: false }), 'canvas');
+});
+
+test("a check can ask for either clamp, but never for a page clamp the browser can't do", () => {
+  assert.equal(clampBy({ gecko: false, pageBlends: true }, 'page'), 'page');
+  assert.equal(clampBy({ gecko: true, pageBlends: true }, 'canvas'), 'canvas');
+  assert.equal(clampBy({ gecko: false, pageBlends: false }, 'page'), 'canvas');
+  // Anything else is no choice at all.
+  assert.equal(clampBy({ gecko: true, pageBlends: true }, 'other'), 'page');
+  assert.equal(clampBy({ gecko: false, pageBlends: true }, ''), 'canvas');
 });
 
 test('a mask is placed so that each of its pixels lies where its coverage was worked out', () => {

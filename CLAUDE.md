@@ -69,6 +69,7 @@ Cal Patel's portfolio site. It reads as a nervous system: real neuron reconstruc
 | `node scripts/link-preview.mjs` | Renders `public/link-preview.png`, the picture a link to the site shows, from the built hero; `npx astro preview` must be running. Run it again whenever the hero changes: its copy, the brain, or the neuron layer |
 | `node scripts/favicon.mjs` | Draws the favicon files in `public/` again (`favicon.svg`, `favicon.ico`, `apple-touch-icon.png`) from the CP mark's outlines, in tokens.css's two colors. Run it if `--color-text` or `--color-bg` changes, or the icon's layout does |
 | `http://localhost:4321/?carry=0.8` | Dev server only: tries another value for how far a neuron's input carries along its dendrite (0.55 without it; `SIGNAL.input.length` in `src/lib/neuron-signal.ts`). The parameter isn't in the built site |
+| `http://localhost:4321/?clamp=page` | Dev server only: the page does the neuron layer's clamp, as in Firefox, in any browser; `?clamp=canvas` makes the canvas do it, as everywhere else (`clampBy` in `src/lib/neuron-zones.ts`; DESIGN.md, Color: Contrast). The parameter isn't in the built site |
 
 Deploys happen through Workers Builds. Don't run `wrangler deploy` unless Cal asks.
 

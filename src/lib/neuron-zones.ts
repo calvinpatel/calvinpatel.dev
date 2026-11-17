@@ -8,9 +8,10 @@
 //   - Inside a zone the layer is dimmed (the veils), so that one cell's rest
 //     plus its signal lands just under the cap with its color intact.
 //   - Then every channel is held at or under one gray (the clamp). That is
-//     the guarantee: it holds whatever was drawn, overlaps included. The page
-//     does it: the mask, filled with the gray, lies over the canvas with the
-//     darken blend.
+//     the guarantee: it holds whatever was drawn, overlaps included. The
+//     canvas does it as each frame's last step, by drawing the mask in the
+//     gray with the darken blend. In Firefox the page does it instead, with
+//     the same mask over the canvas (clampBy says which, and why).
 //
 // No DOM and no Astro imports, so Node can run tests/neuron-zones.test.ts
 // against it directly.
@@ -125,11 +126,31 @@ export function coverageMask(zones: readonly Box[], width: number, height: numbe
   return { columns, rows, alpha };
 }
 
+/** What does the clamp: the canvas, as each frame's last step, or the page, with the mask over the canvas. */
+export type ClampBy = 'canvas' | 'page';
+
+/**
+ * Which does the clamp. The canvas, everywhere but Firefox. Firefox's GPU
+ * canvas can't draw the darken blend: for that one draw it reads the whole
+ * canvas back and sends it up again, every frame. There the page blends the
+ * mask over the canvas instead, where it can.
+ *
+ * `gecko` is a feature only Gecko has, never the browser's name. A Firefox
+ * the test misses takes the canvas: slower, and the cap still holds.
+ * `asked` is a check's own choice, 'page' or 'canvas' (dev only). The page
+ * is never chosen where it can't blend.
+ */
+export function clampBy(can: { gecko: boolean; pageBlends: boolean }, asked: string | null = null): ClampBy {
+  if (asked === 'canvas') return 'canvas';
+  if (asked === 'page') return can.pageBlends ? 'page' : 'canvas';
+  return can.gecko && can.pageBlends ? 'page' : 'canvas';
+}
+
 /**
  * Where a mask goes over its canvas, in px from the canvas's corner: from
  * -margin × scale, at exactly `scale` times its size, so a mask pixel's
- * center lies where coverageMask worked its coverage out. The veils are
- * drawn there on the canvas, and the page shows the clamp's mask there.
+ * center lies where coverageMask worked its coverage out. The canvas draws
+ * its masks there, and the page shows the clamp's mask there.
  */
 export function maskPlace(mask: { columns: number; rows: number }): { left: number; top: number; width: number; height: number } {
   const offset = -ZONE.margin * ZONE.scale;
