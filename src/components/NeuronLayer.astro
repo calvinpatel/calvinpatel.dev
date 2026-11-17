@@ -267,6 +267,9 @@ const files = readCellIndex().map((cell) => `/cells/${cell.file}`);
         clampMask.style.top = `${at.top}px`;
         clampMask.style.width = `${at.width}px`;
         clampMask.style.height = `${at.height}px`;
+        // Shown only once it is in place: a mask that moved there in view
+        // would count as a layout shift, though nothing would be seen to move.
+        clampMask.style.visibility = 'visible';
       }
       draw(true);
     }
@@ -1072,6 +1075,7 @@ const files = readCellIndex().map((cell) => `/cells/${cell.file}`);
   .clamp canvas {
     position: absolute;
     display: block;
+    visibility: hidden;
   }
 
   /* Once its cells are in, the layer fades in. */
