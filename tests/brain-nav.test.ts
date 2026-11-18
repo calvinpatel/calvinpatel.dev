@@ -3,7 +3,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
-import { REACH, nearestCell, pulseMs, slideLabel, tapAction } from '../src/lib/brain-nav.ts';
+import { REACH, mouseLeft, nearestCell, pulseMs, slideLabel, tapAction } from '../src/lib/brain-nav.ts';
 import type { Box, LabelFit } from '../src/lib/brain-nav.ts';
 
 // --space-2xs and --space-xs, as Brain.astro's script reads them.
@@ -102,6 +102,25 @@ test('the nearest cell within reach fires; one out of reach does not', () => {
   assert.equal(nearestCell(cells, 400 + REACH, 300), -1);
   assert.equal(nearestCell(cells, 250, 200), -1);
   assert.equal(nearestCell([], 0, 0), -1);
+});
+
+test('a lobe only the label rule holds stays active and starts no new cascade firing', () => {
+  // From 760px up, the mouse left the lobe for the brain's box or the label.
+  assert.deepEqual(mouseLeft(false, true, true), { active: true, cascade: false });
+});
+
+test('a focused lobe keeps its cascade wherever the mouse goes', () => {
+  for (const wide of [true, false]) {
+    for (const overBrain of [true, false]) {
+      assert.deepEqual(mouseLeft(true, wide, overBrain), { active: true, cascade: true });
+    }
+  }
+});
+
+test('a mouse leaving the brain and the label, or any lobe below 760px, clears the lobe', () => {
+  assert.deepEqual(mouseLeft(false, true, false), { active: false, cascade: false });
+  assert.deepEqual(mouseLeft(false, false, true), { active: false, cascade: false });
+  assert.deepEqual(mouseLeft(false, false, false), { active: false, cascade: false });
 });
 
 test('a first tap previews, and the second goes', () => {

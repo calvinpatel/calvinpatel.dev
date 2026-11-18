@@ -78,6 +78,29 @@ export function nearestCell(cells: readonly { x: number; y: number }[], x: numbe
   return best;
 }
 
+/** What is left of the active lobe when the mouse leaves it. */
+export interface Left {
+  active: boolean; // still lit and lifted, its label showing
+  cascade: boolean; // its cells still fire in waves
+}
+
+/**
+ * What a mouse leaving the active lobe leaves of it (DESIGN.md, Motion: Brain
+ * callouts and labels; Brain cells and nuclei):
+ *
+ *   - a lobe with keyboard focus keeps everything, because it is still the
+ *     focused lobe;
+ *   - from 760px up (`wide`), a lobe whose pointer went on to the brain's box
+ *     or to the label (`overBrain`) stays active by the label rule alone
+ *     (WCAG 1.4.13). It is then neither hovered nor focused, so its cells
+ *     start no new cascade firing;
+ *   - any other lobe goes back to rest.
+ */
+export function mouseLeft(focused: boolean, wide: boolean, overBrain: boolean): Left {
+  if (focused) return { active: true, cascade: true };
+  return { active: wide && overBrain, cascade: false };
+}
+
 /** The press that came just before a click, as its pointerdown event described it. */
 export interface Press {
   pointerType: string;

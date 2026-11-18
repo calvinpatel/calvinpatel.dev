@@ -367,7 +367,7 @@ const look = Object.entries({
 </div>
 
 <script>
-  import { nearestCell, pulseMs, slideLabel, tapAction } from '../lib/brain-nav.ts';
+  import { mouseLeft, nearestCell, pulseMs, slideLabel, tapAction } from '../lib/brain-nav.ts';
   import type { Press } from '../lib/brain-nav.ts';
   import { inkOf } from '../lib/ink.ts';
   import { spontaneousWindow } from '../lib/spontaneous.ts';
@@ -517,7 +517,8 @@ const look = Object.entries({
       idleTimer = setTimeout(idle, idleMin + Math.random() * (idleMax - idleMin));
     }
 
-    // Across the active lobe: every cell, at a random moment in each wave.
+    // Across the hovered or focused lobe: every cell, at a random moment in
+    // each wave. Stopping it leaves a cell that is firing to finish.
     let waves: ReturnType<typeof setInterval> | undefined;
     let waveTimers: ReturnType<typeof setTimeout>[] = [];
     function stopCascade() {
@@ -561,7 +562,7 @@ const look = Object.entries({
       root.classList.toggle('is-live', moving && clock.isOpen());
       if (moving) {
         idle();
-        if (active) startCascade(active);
+        if (active && !held) startCascade(active);
       } else {
         clearTimeout(idleTimer);
         stopCascade();
@@ -579,6 +580,10 @@ const look = Object.entries({
     // --- The active lobe --------------------------------------------------------
 
     let active: SVGAElement | null = null;
+    // The active lobe is held by the label rule alone: the mouse left it for
+    // the brain's box or its label. It is neither hovered nor focused, so its
+    // cascade waits until it is hovered again or focused.
+    let held = false;
 
     function setActive(lobe: SVGAElement, on: boolean) {
       const { callout, label, ring, phone } = partsOf.get(lobe)!;
@@ -593,6 +598,7 @@ const look = Object.entries({
       setActive(active, false);
       root.classList.remove('by-tap', 'by-hover');
       active = null;
+      held = false;
       stopCascade();
     }
     // `by` says what made the lobe active, for the phone's label under the
@@ -609,9 +615,12 @@ const look = Object.entries({
         setActive(lobe, true);
         startCascade(lobe);
         root.classList.toggle('by-hover', by === 'hover');
-      } else if (by !== 'hover') {
-        root.classList.remove('by-hover');
+      } else {
+        // Hovered again, or focused: a lobe the label rule held cascades again.
+        if (held) startCascade(lobe);
+        if (by !== 'hover') root.classList.remove('by-hover');
       }
+      held = false;
       root.classList.toggle('by-tap', by === 'tap');
     }
 
@@ -636,12 +645,19 @@ const look = Object.entries({
         if (event.pointerType === 'mouse') activate(lobe, 'hover');
       });
       lobe.addEventListener('pointerleave', (event) => {
-        if (event.pointerType !== 'mouse' || active !== lobe || lobe.matches(':focus-visible')) return;
+        if (event.pointerType !== 'mouse' || active !== lobe) return;
         // From 760px up the label holds while the pointer is still over the
         // brain or on the label, so the pointer can reach the label and rest
-        // on it (WCAG 1.4.13). Another lobe shows its own label instead.
-        if (wide.matches && event.relatedTarget instanceof Node && root.contains(event.relatedTarget)) return;
-        deactivate();
+        // on it (WCAG 1.4.13). Another lobe shows its own label instead. A
+        // lobe held that way stays lit, and its cells start no new cascade
+        // firing.
+        const overBrain = event.relatedTarget instanceof Node && root.contains(event.relatedTarget);
+        const left = mouseLeft(lobe.matches(':focus-visible'), wide.matches, overBrain);
+        if (!left.active) deactivate();
+        else if (!left.cascade) {
+          held = true;
+          stopCascade();
+        }
       });
       // Keyboard focus does what hover does. A tap or a click also focuses a
       // link, but not visibly, and has its own rules below.
