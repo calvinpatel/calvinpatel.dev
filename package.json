@@ -8,8 +8,9 @@
   "packageManager": "npm@12.2.2",
   "scripts": {
     "dev": "astro dev",
-    "build": "astro build",
+    "build": "astro check && astro build",
     "preview": "astro preview",
+    "test": "node --test tests/*.test.ts",
     "astro": "astro"
   },
   "dependencies": {
@@ -17,5 +18,10 @@
   },
   "allowScripts": {
     "fsevents": false
+  },
+  "devDependencies": {
+    "@astrojs/check": "^0.9.12",
+    "@types/node": "^26.6.6",
+    "typescript": "^6.0.3"
   }
 }

@@ -35,7 +35,7 @@ function line([x0, y0]: Step, [x1, y1]: Step, every = 2): Step[] {
   return Array.from({ length: steps + 1 }, (_, k): Step => [x0 + ((x1 - x0) * k) / steps, y0 + ((y1 - y0) * k) / steps]);
 }
 /** What a pointer following `path` touches, in order: 'soma', or the branch crossed. */
-function follow(over: DrawnCell, path: Step[], reach = MOUSE, crossing = noCrossing()): (number | 'soma')[] {
+function follow(over: DrawnCell, path: Step[], reach: number = MOUSE, crossing = noCrossing()): (number | 'soma')[] {
   const touched: (number | 'soma')[] = [];
   for (const [x, y] of path) {
     const point = cross(crossing, over, x, y, reach);

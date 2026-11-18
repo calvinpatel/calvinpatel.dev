@@ -75,7 +75,7 @@ export function vesicle(tokens: ContactTokens, cx: number, k: number): { drift: 
 }
 
 /** A rise from `rest` to `full` over --flash-in and a settle back over --contact-settle, `delay` ms from now. */
-function brighten<Value>(tokens: ContactTokens, property: string, rest: Value, full: Value, delay: number): Motion {
+function brighten<Value extends string | number>(tokens: ContactTokens, property: string, rest: Value, full: Value, delay: number): Motion {
   const duration = tokens.rise + tokens.settle;
   return {
     keyframes: [

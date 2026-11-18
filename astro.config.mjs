@@ -13,7 +13,9 @@ const plex = {
   name: 'IBM Plex Sans',
   cssVariable: '--font-plex',
   provider: fontProviders.fontsource(),
-  subsets: ['latin'],
+  // Typed as a list that holds a name: the fonts option below accepts no
+  // other kind, and on its own this would read as a list that may be empty.
+  subsets: /** @type {[string]} */ (['latin']),
   fallbacks: ['system-ui', 'sans-serif'],
 };
 
