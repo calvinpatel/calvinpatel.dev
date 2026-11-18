@@ -12,7 +12,7 @@ Cal Patel's portfolio site. It reads as a nervous system: real neuron reconstruc
 - **Section motion** uses CSS and plain JavaScript first. Motion or GSAP gets added only if a section needs it. Neither is chosen yet, so ask before adding one.
 - **Python 3.11+ with NumPy** for the build-time neuron script.
 - **Fonts:** Fraunces and IBM Plex Sans, self-hosted. No Google Fonts link.
-- **Hosting:** Cloudflare Workers static assets. Workers Builds deploys every push to main and gives each branch a preview link.
+- **Hosting:** Cloudflare Workers static assets. `wrangler.jsonc` says what Cloudflare serves, and `public/_headers` sets the cache headers. Workers Builds deploys every push to main and gives each branch a Preview.
 
 ## Layout
 
@@ -20,6 +20,8 @@ Cal Patel's portfolio site. It reads as a nervous system: real neuron reconstruc
 .
 ├── CLAUDE.md
 ├── DESIGN.md
+├── .node-version      the Node version every build uses; package.json's packageManager holds npm's (rule 17)
+├── wrangler.jsonc     what Cloudflare serves: dist/, the 404 page, and each page at its address
 ├── src/content/       one Markdown file per section and per project
 ├── src/components/    the shared layout, hero canvas, brain navigation, section layouts
 ├── src/lib/           copy.ts, which renders every content field; raster.ts, the Experience raster's pattern,
@@ -43,7 +45,8 @@ Cal Patel's portfolio site. It reads as a nervous system: real neuron reconstruc
 ├── src/styles/        tokens.css and global styles
 ├── public/cells/      neuron files the hero loads (generated; don't edit by hand)
 ├── public/            link-preview.png, the picture a link to the site shows (rendered; see Commands);
-│                      favicon.ico, favicon.svg, and apple-touch-icon.png, the CP mark as outlines (drawn; see Commands)
+│                      favicon.ico, favicon.svg, and apple-touch-icon.png, the CP mark as outlines (drawn; see Commands);
+│                      _headers, the cache rule for /_astro/ (rule 18)
 ├── data/swc/          raw downloaded reconstructions + sources.csv
 ├── scripts/           swc_to_web.py; link-preview.mjs, which renders public/link-preview.png; favicon.mjs, which draws the favicon files
 ├── tests/             test_swc_to_web.py, and one .test.ts per src/lib/ module: copy, raster, sweep, wiring, pixels, tokens, cells, address, png, font-coverage,
@@ -60,18 +63,21 @@ Cal Patel's portfolio site. It reads as a nervous system: real neuron reconstruc
 | `npm run dev` | Runs the site at http://localhost:4321 |
 | `npm run dev -- --host` | Same, and reachable from a phone on the same Wi-Fi |
 | `npx astro build` | Builds the site into `dist/`; must finish with no errors or warnings. It stops if a page draws a character its font file doesn't hold, and names the character |
+| `npx astro check` | Type-checks every `.astro` and `.ts` file, and `astro.config.mjs`; must finish with no errors, warnings, or hints |
+| `npm run build` | What Workers Builds runs: `astro check`, then `astro build`. Its build command is `npm test && npm run build`, so a failing test or a type error stops a deploy |
 | `uv run scripts/swc_to_web.py data/swc public/cells --sources data/swc/sources.csv` | Converts every SWC file into cell-web/1 JSON and updates `public/cells/index.json` |
 | add `--preview <folder>` | Also writes an SVG of each cell for a quick visual check |
 | `uv run --with pytest --with numpy pytest tests/test_swc_to_web.py` | Runs the converter's tests (from the repo root) |
-| `node --test tests/*.test.ts` | Runs every `src/lib/` module's tests (from the repo root) |
+| `npm test` | Runs every `src/lib/` module's tests: `node --test tests/*.test.ts`, from the repo root |
 | `npx astro dev --background` | Runs the dev server in the background so Claude Code can keep working; `npx astro dev status`, `logs`, and `stop` manage it |
 | `npx astro preview` | Serves the built site from `dist/` at http://localhost:4321, in the background; checks and screenshots run against this (rule 16). `npx astro preview status`, `logs`, and `stop` manage it, and `--port` moves it when the dev server has 4321 |
+| `npx wrangler dev` | Serves `dist/` at http://localhost:8787 the way Cloudflare does: its redirects, the 404 page and its status, and `public/_headers`. Build first. It is for routing, status, and header checks only; screenshots, timing, and behavior still run against `npx astro preview` (rule 16) |
 | `node scripts/link-preview.mjs` | Renders `public/link-preview.png`, the picture a link to the site shows, from the built hero; `npx astro preview` must be running. Run it again whenever the hero changes: its copy, the brain, or the neuron layer |
 | `node scripts/favicon.mjs` | Draws the favicon files in `public/` again (`favicon.svg`, `favicon.ico`, `apple-touch-icon.png`) from the CP mark's outlines, in tokens.css's two colors. Run it if `--color-text` or `--color-bg` changes, or the icon's layout does |
 | `http://localhost:4321/?carry=0.8` | Dev server only: tries another value for how far a neuron's input carries along its dendrite (0.55 without it; `SIGNAL.input.length` in `src/lib/neuron-signal.ts`). The parameter isn't in the built site |
 | `http://localhost:4321/?clamp=page` | Dev server only: the page does the neuron layer's clamp, as in Firefox, in any browser; `?clamp=canvas` makes the canvas do it, as everywhere else (`clampBy` in `src/lib/neuron-zones.ts`; DESIGN.md, Color: Contrast). The parameter isn't in the built site |
 
-Deploys happen through Workers Builds. Don't run `wrangler deploy` unless Cal asks.
+Deploys happen through Workers Builds. Don't run `wrangler deploy`, `wrangler preview`, or `wrangler versions upload` unless Cal asks. `npx wrangler deploy --dry-run` uploads nothing; it checks `wrangler.jsonc`.
 
 ## Working rules
 
@@ -107,3 +113,8 @@ Deploys happen through Workers Builds. Don't run `wrangler deploy` unless Cal as
 16. Run every check against the production build (`npx astro build`, then `npx astro preview`), not the dev server: screenshots, timing, behavior, and frame times. The build rewrites what scripts read. Its minifier turned every time token from `130ms` into `.13s`, and until 7b14cce the built site ran all its timing a thousand times too short while dev looked right. The dev server is for working, and for comparing against when the build behaves differently.
     - A check of what the page does launches a headless Chrome of its own (`browserType().launch({ channel: 'chrome', headless: true })`). The Playwright MCP's own browser is a real window, and the real mouse passing over it sends the page real input: neurons fire that nothing in the check touched.
     - A frame-time check keeps a real window, so the canvas draws on the GPU. It counts the pointer events it didn't send and reports them with its numbers.
+
+**Shipping**
+
+17. The Node and npm versions live in `.node-version` and `package.json`'s `packageManager`, and change together, only with Cal's okay. Before installing dependencies or building, check `node --version` and `npm --version` against `.node-version` and `packageManager`. If they differ (`brew upgrade node` does this), stop and tell Cal.
+18. `public/_headers` gives a one-year immutable cache to `/_astro/` only. Every file there is named so its name changes when its content would: scripts and styles by a hash of their bytes, fonts by their versioned download address, photos by the source photo and its resize settings. Any other file, and anything added to `/_astro/` that isn't named this way, keeps Cloudflare's default. Known gap: a sharp upgrade could re-encode a photo under the same name, and returning visitors would keep the older encoding.
