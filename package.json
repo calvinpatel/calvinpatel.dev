@@ -17,11 +17,14 @@
     "astro": "^7.4.8"
   },
   "allowScripts": {
-    "fsevents": false
+    "fsevents": false,
+    "esbuild@0.28.2": true,
+    "workerd@1.20261117.1": true
   },
   "devDependencies": {
     "@astrojs/check": "^0.9.12",
     "@types/node": "^26.6.6",
-    "typescript": "^6.0.3"
+    "typescript": "^6.0.3",
+    "wrangler": "^4.164.0"
   }
 }

@@ -1,0 +1,25 @@
+// How Cloudflare serves the site: the files `astro build` writes to dist/, and
+// nothing else. There is no Worker script (no `main`) and no Astro adapter,
+// because every page is built ahead of time.
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  // The Worker's name in the Cloudflare dashboard. Workers Builds stops if
+  // the two differ.
+  "name": "calvinpatel-dev",
+  // The newest date the runtime in this repo's wrangler supports. Nothing in
+  // an assets-only Worker depends on it.
+  "compatibility_date": "2026-11-17",
+  "assets": {
+    "directory": "./dist",
+    // An address with no file gets dist/404.html, with a 404 status.
+    "not_found_handling": "404-page",
+    // Cloudflare's default, written out because the site's links rely on it:
+    // astro.config.mjs builds each page as a file, so /credits serves
+    // credits.html, and /credits/ and /credits.html redirect to /credits.
+    "html_handling": "auto-trailing-slash"
+  },
+  // Worker Previews, which give each branch its own link, need this block to
+  // be here. It holds the settings a Preview has apart from production's, and
+  // the site has none.
+  "previews": {}
+}

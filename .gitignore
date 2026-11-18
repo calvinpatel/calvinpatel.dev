@@ -29,3 +29,6 @@ __pycache__/
 .venv/
 
 .playwright-mcp/
+
+# wrangler's local state
+.wrangler/
