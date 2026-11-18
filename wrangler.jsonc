@@ -9,6 +9,13 @@
   // The newest date the runtime in this repo's wrangler supports. Nothing in
   // an assets-only Worker depends on it.
   "compatibility_date": "2026-11-17",
+  // Production is served at calvinpatel.dev only. Without this line the
+  // Worker also answers at its workers.dev address.
+  "workers_dev": false,
+  // Keeps each branch Preview's workers.dev link, where a load change can be
+  // tried before main. Written out because, with workers.dev off, Cloudflare
+  // may turn Preview links off too when this line is missing.
+  "preview_urls": true,
   "assets": {
     "directory": "./dist",
     // An address with no file gets dist/404.html, with a 404 status.
